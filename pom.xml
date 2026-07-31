@@ -91,7 +91,7 @@
 		  and the presigner. Version pinned via the awssdk BOM (imported below); CVE
 		  management is Dependabot's (the OWASP plugin was retired in #2).
 		-->
-		<awssdk.version>2.49.2</awssdk.version>
+		<awssdk.version>2.49.5</awssdk.version>
 
 		<!--
 		  Azure SDK (MIT, GPL-3.0-compatible; not managed by the Spring Boot BOM).
