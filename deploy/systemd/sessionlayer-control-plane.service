@@ -1,0 +1,58 @@
+# SessionLayer Control Plane — hardened systemd unit.
+#
+# Unlike the Gateway, this process binds no privileged port (REST :8080, mTLS
+# gRPC :9443) and holds no local persistent state — every secret it needs
+# lives in Postgres or the mounted config below, never on local disk. So there
+# is no privilege-drop-after-bind dance and no stable data-dir identity to
+# preserve across restarts: DynamicUser=yes lets systemd allocate a fresh
+# unprivileged UID/GID per start with zero operator setup (no `useradd` step),
+# which is the systemd-native fit for a stateless network service.
+#
+# For a container deployment use deploy/kubernetes/ instead.
+#
+# MemoryDenyWriteExecute is deliberately OMITTED: HotSpot's JIT (C1/C2) needs
+# to map its code cache both writable and executable, which is exactly what
+# that directive forbids — enabling it prevents the JVM from starting.
+
+[Unit]
+Description=SessionLayer Control Plane
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+EnvironmentFile=/etc/sessionlayer/control-plane.env
+ExecStart=/usr/bin/java -jar /opt/sessionlayer/controlplane.jar
+Restart=on-failure
+RestartSec=2s
+
+# No capabilities are needed at all (no privileged bind, no chown/setuid).
+AmbientCapabilities=
+CapabilityBoundingSet=
+
+# OS sandbox.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallFilter=@system-service
+SystemCallFilter=~@mount @swap @reboot @module @debug @cpu-emulation @obsolete
+SystemCallArchitectures=native
+LimitCORE=0
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,65 @@
+# ControlPlane CI — the branch-protection required check is the single job
+# `gate`. Do not rename it, add a `name:`, or introduce a matrix: the required
+# status check is literally "gate" and a mismatch hangs auto-merge.
+#
+# All actions are pinned to a full commit SHA (with a version comment) so a moved
+# tag can never change what runs. Least-privilege: read-only token by default.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+# Cancel a superseded run on the same ref and stop the push+pull_request
+# double-run waste. Keeps the single required job id `gate`.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history so contracts/lint.sh can diff proto against the `main`
+          # baseline (buf breaking). If main carries no contracts/proto, the check
+          # skips cleanly.
+          fetch-depth: 0
+
+      # Real drift gate: clones SessionLayer/Contracts at the tag pinned in
+      # contracts.lock, verifies the resolved SHA, and diffs the vendored tree.
+      - name: Verify vendored contracts match pinned upstream
+        run: ./scripts/vendor-contracts.sh --check
+
+      - name: Set up JDK 25 (Temurin)
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Set up Node 22
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+
+      - name: Set up buf
+        uses: bufbuild/buf-setup-action@a47c93e0b1648d5651a065437926377d060baa99 # v1.50.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # No system protoc step: the ascopes protobuf-maven-plugin resolves the exact
+      # protoc (4.34.2) + protoc-gen-grpc-java (1.80.0) from Maven Central during the
+      # build — more reproducible than a system protoc, and buf lint has its own parser.
+
+      - name: mvnw verify
+        run: ./mvnw -B -ntp verify
+
+      - name: Contract lint (buf + redocly)
+        run: ./contracts/lint.sh

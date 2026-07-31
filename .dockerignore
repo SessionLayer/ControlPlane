@@ -1,0 +1,6 @@
+.git
+target
+audit
+docs
+*.md
+!README.md

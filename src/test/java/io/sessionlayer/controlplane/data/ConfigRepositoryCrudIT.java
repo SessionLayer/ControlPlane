@@ -1,0 +1,139 @@
+package io.sessionlayer.controlplane.data;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import io.sessionlayer.controlplane.data.config.BreakglassPolicy;
+import io.sessionlayer.controlplane.data.config.BreakglassPolicyRepository;
+import io.sessionlayer.controlplane.data.config.CaConfig;
+import io.sessionlayer.controlplane.data.config.CaConfigRepository;
+import io.sessionlayer.controlplane.data.config.CapabilityDef;
+import io.sessionlayer.controlplane.data.config.CapabilityDefRepository;
+import io.sessionlayer.controlplane.data.config.JitPolicy;
+import io.sessionlayer.controlplane.data.config.JitPolicyRepository;
+import io.sessionlayer.controlplane.data.config.PlatformRole;
+import io.sessionlayer.controlplane.data.config.PlatformRoleRepository;
+import io.sessionlayer.controlplane.data.config.RoleBinding;
+import io.sessionlayer.controlplane.data.config.RoleBindingRepository;
+import io.sessionlayer.controlplane.data.config.ServiceAccount;
+import io.sessionlayer.controlplane.data.config.ServiceAccountRepository;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
+import reactor.test.StepVerifier;
+import tools.jackson.databind.ObjectMapper;
+
+class ConfigRepositoryCrudIT extends AbstractDataIT {
+
+	@Autowired
+	private PlatformRoleRepository platformRoles;
+
+	@Autowired
+	private RoleBindingRepository roleBindings;
+
+	@Autowired
+	private CaConfigRepository caConfigs;
+
+	@Autowired
+	private CapabilityDefRepository capabilityDefs;
+
+	@Autowired
+	private JitPolicyRepository jitPolicies;
+
+	@Autowired
+	private BreakglassPolicyRepository breakglassPolicies;
+
+	@Autowired
+	private ServiceAccountRepository serviceAccounts;
+
+	@Autowired
+	private ObjectMapper objectMapper;
+
+	@Test
+	void platformRoleAndRoleBindingWithFk() {
+		var role = platformRoles
+				.save(PlatformRole.create("auditor", List.of("audit:read", "recording:replay"), "Auditors", "api"))
+				.block();
+		assertThat(role).isNotNull();
+		assertThat(role.permissions()).containsExactly("audit:read", "recording:replay");
+
+		var found = platformRoles.findByName("auditor").block();
+		assertThat(found).isNotNull();
+		assertThat(found.id()).isEqualTo(role.id());
+
+		var scope = objectMapper.readTree("{\"nodeLabels\":{\"env\":\"prod\"}}");
+		var binding = roleBindings.save(RoleBinding.create(role.id(), "group", "sre@corp", scope, "api")).block();
+		assertThat(binding).isNotNull();
+		assertThat(roleBindings.findByRoleId(role.id()).collectList().block()).hasSize(1);
+	}
+
+	@Test
+	void caConfigCrudAndUpdate() {
+		var ca = caConfigs
+				.save(CaConfig.create("session-ca", "session", "local", "kek://ref", "ecdsa-p256", "active", "default"))
+				.block();
+		assertThat(ca).isNotNull();
+		assertThat(ca.algorithm()).isEqualTo("ecdsa-p256");
+
+		var updated = caConfigs.save(new CaConfig(ca.id(), ca.name(), ca.caKind(), "aws_kms", "arn://key", "ecdsa-p384",
+				ca.rotationState(), ca.origin(), ca.version(), ca.createdAt(), ca.updatedAt())).block();
+		assertThat(updated).isNotNull();
+		assertThat(updated.version()).isGreaterThan(ca.version()); // @Version bumped on update
+		assertThat(caConfigs.findByCaKindAndRotationState("session", "active").block().backend()).isEqualTo("aws_kms");
+
+		caConfigs.deleteById(ca.id()).block();
+		assertThat(caConfigs.findById(ca.id()).block()).isNull();
+	}
+
+	@Test
+	void caConfigRotationOverlapOneActivePerKind() {
+		caConfigs.save(CaConfig.create("host-active", "host", "local", "ref-a", "ecdsa-p256", "active", "api")).block();
+		var incoming = caConfigs
+				.save(CaConfig.create("host-incoming", "host", "vault", "ref-b", "ecdsa-p256", "incoming", "api"))
+				.block();
+		assertThat(incoming).isNotNull();
+		assertThat(caConfigs.findByCaKind("host").collectList().block()).hasSize(2);
+		StepVerifier
+				.create(caConfigs.save(
+						CaConfig.create("host-active-2", "host", "local", "ref-c", "ecdsa-p256", "active", "api")))
+				.verifyError(DataIntegrityViolationException.class);
+	}
+
+	@Test
+	void capabilityDefCrud() {
+		var cap = capabilityDefs.save(CapabilityDef.create("sftp", "SFTP subsystem", "api")).block();
+		assertThat(cap).isNotNull();
+		assertThat(capabilityDefs.findByName("sftp").block().id()).isEqualTo(cap.id());
+	}
+
+	@Test
+	void jitPolicyWithApprovalChain() {
+		var target = objectMapper.readTree("{\"env\":\"prod\"}");
+		var chain = objectMapper.readTree(
+				"[{\"kind\":\"email\",\"value\":\"lead@corp\"}," + "{\"kind\":\"oidc_group\",\"value\":\"secops\"}]");
+		var jit = jitPolicies.save(JitPolicy.create("prod-jit", target, List.of("shell", "exec"), 3600, chain, "api"))
+				.block();
+		assertThat(jit).isNotNull();
+		var reread = jitPolicies.findById(jit.id()).block();
+		assertThat(reread.approvalChain()).isEqualTo(chain);
+		assertThat(reread.maxTtlSeconds()).isEqualTo(3600);
+	}
+
+	@Test
+	void breakglassPolicyCrud() {
+		var bg = breakglassPolicies
+				.save(BreakglassPolicy.create("bg-default", true, "pagerduty://sev1", true, "fido2", "api")).block();
+		assertThat(bg).isNotNull();
+		assertThat(bg.recordingStrict()).isTrue();
+		assertThat(bg.authPath()).isEqualTo("fido2");
+	}
+
+	@Test
+	void serviceAccountCrud() {
+		var sa = serviceAccounts
+				.save(ServiceAccount.create("ci-runner", "CI deploy bot", "private_key_jwt", "jwks://ref", 900, "api"))
+				.block();
+		assertThat(sa).isNotNull();
+		assertThat(serviceAccounts.findByName("ci-runner").block().authMethod()).isEqualTo("private_key_jwt");
+	}
+}
