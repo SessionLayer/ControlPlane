@@ -1,0 +1,93 @@
+package io.sessionlayer.controlplane.data.runtime;
+
+import io.sessionlayer.controlplane.data.Uuids;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.annotation.Version;
+import org.springframework.data.relational.core.mapping.Table;
+import tools.jackson.databind.JsonNode;
+
+/**
+ * RUNTIME · {@code runtime.jit_request} (FR-ACC-2). The JIT state machine with
+ * two clocks (approval window + grant TTL).
+ * {@code jitPolicyId}/{@code approvalChain} /{@code policyMaxTtlSeconds} are
+ * snapshots of the policy at request time (no FK), so a later policy edit or
+ * delete cannot rewrite history OR widen an in-flight grant. Self-approval
+ * (approver ≠ requester, FR-ACC-4) is a hard invariant enforced by the JIT
+ * approval logic over {@code approvals}. The transition methods below are the
+ * only sanctioned state changes; each is audited by
+ * {@code JitLifecycleService}.
+ */
+@Table(schema = "runtime", name = "jit_request")
+public record JitRequest(@Id UUID id, String requester, UUID targetNodeId, String targetNodeName,
+		JsonNode targetSelector, String principal, List<String> capabilities, String reason, String state,
+		UUID jitPolicyId, String jitPolicyName, Integer policyMaxTtlSeconds, JsonNode approvalChain, JsonNode approvals,
+		Instant approvalDeadline, Instant grantExpiresAt, Instant requestedAt, Instant decidedAt, String decidedBy,
+		String decisionReason, @Version Long version, @CreatedDate Instant createdAt,
+		@LastModifiedDate Instant updatedAt) {
+
+	public static final String REQUESTED = "REQUESTED";
+	public static final String PENDING_APPROVAL = "PENDING_APPROVAL";
+	public static final String APPROVED = "APPROVED";
+	public static final String DENIED = "DENIED";
+	public static final String EXPIRED = "EXPIRED";
+	public static final String ACTIVE = "ACTIVE";
+	public static final String REVOKED = "REVOKED";
+
+	public static JitRequest create(String requester, UUID targetNodeId, String targetNodeName, JsonNode targetSelector,
+			String principal, List<String> capabilities, String reason, String state, UUID jitPolicyId,
+			String jitPolicyName, Integer policyMaxTtlSeconds, JsonNode approvalChain, JsonNode approvals,
+			Instant approvalDeadline, Instant grantExpiresAt, Instant requestedAt) {
+		return new JitRequest(Uuids.v7(), requester, targetNodeId, targetNodeName, targetSelector, principal,
+				capabilities, reason, state, jitPolicyId, jitPolicyName, policyMaxTtlSeconds, approvalChain, approvals,
+				approvalDeadline, grantExpiresAt, requestedAt, null, null, null, null, null, null);
+	}
+
+	public JitRequest withApprovals(JsonNode updatedApprovals) {
+		return new JitRequest(id, requester, targetNodeId, targetNodeName, targetSelector, principal, capabilities,
+				reason, state, jitPolicyId, jitPolicyName, policyMaxTtlSeconds, approvalChain, updatedApprovals,
+				approvalDeadline, grantExpiresAt, requestedAt, decidedAt, decidedBy, decisionReason, version, createdAt,
+				updatedAt);
+	}
+
+	public JitRequest approved(JsonNode updatedApprovals, Instant grantExpiry, String decider, Instant at) {
+		return new JitRequest(id, requester, targetNodeId, targetNodeName, targetSelector, principal, capabilities,
+				reason, APPROVED, jitPolicyId, jitPolicyName, policyMaxTtlSeconds, approvalChain, updatedApprovals,
+				approvalDeadline, grantExpiry, requestedAt, at, decider, "approved", version, createdAt, updatedAt);
+	}
+
+	public JitRequest denied(JsonNode updatedApprovals, String decider, String reasonText, Instant at) {
+		return new JitRequest(id, requester, targetNodeId, targetNodeName, targetSelector, principal, capabilities,
+				reason, DENIED, jitPolicyId, jitPolicyName, policyMaxTtlSeconds, approvalChain, updatedApprovals,
+				approvalDeadline, grantExpiresAt, requestedAt, at, decider, reasonText, version, createdAt, updatedAt);
+	}
+
+	public JitRequest activated() {
+		return new JitRequest(id, requester, targetNodeId, targetNodeName, targetSelector, principal, capabilities,
+				reason, ACTIVE, jitPolicyId, jitPolicyName, policyMaxTtlSeconds, approvalChain, approvals,
+				approvalDeadline, grantExpiresAt, requestedAt, decidedAt, decidedBy, decisionReason, version, createdAt,
+				updatedAt);
+	}
+
+	public JitRequest expired(Instant at) {
+		return new JitRequest(id, requester, targetNodeId, targetNodeName, targetSelector, principal, capabilities,
+				reason, EXPIRED, jitPolicyId, jitPolicyName, policyMaxTtlSeconds, approvalChain, approvals,
+				approvalDeadline, grantExpiresAt, requestedAt, at, "system:expiry", "expired", version, createdAt,
+				updatedAt);
+	}
+
+	public JitRequest revoked(String actor, String reasonText, Instant at) {
+		return new JitRequest(id, requester, targetNodeId, targetNodeName, targetSelector, principal, capabilities,
+				reason, REVOKED, jitPolicyId, jitPolicyName, policyMaxTtlSeconds, approvalChain, approvals,
+				approvalDeadline, grantExpiresAt, requestedAt, at, actor, reasonText, version, createdAt, updatedAt);
+	}
+
+	public boolean usableAt(Instant now) {
+		return (APPROVED.equals(state) || ACTIVE.equals(state)) && grantExpiresAt != null
+				&& grantExpiresAt.isAfter(now);
+	}
+}
