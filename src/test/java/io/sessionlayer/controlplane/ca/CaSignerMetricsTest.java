@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.sessionlayer.controlplane.ca.CaSignerService.NoSignerAvailable;
+import io.sessionlayer.controlplane.ca.backend.aws.AwsKmsSignerFactory;
 import io.sessionlayer.controlplane.ca.backend.azure.AzureKeyVaultSignerFactory;
 import io.sessionlayer.controlplane.data.config.CaConfigRepository;
 import io.sessionlayer.controlplane.data.runtime.CaKeyMaterialRepository;
@@ -33,7 +34,10 @@ class CaSignerMetricsTest {
 		SimpleMeterRegistry registry = new SimpleMeterRegistry();
 		@SuppressWarnings("unchecked")
 		ObjectProvider<AzureKeyVaultSignerFactory> noAzureFactory = mock(ObjectProvider.class);
-		CaSignerService service = new CaSignerService(configs, keys, factory, new SloMetrics(registry), noAzureFactory);
+		@SuppressWarnings("unchecked")
+		ObjectProvider<AwsKmsSignerFactory> noKmsFactory = mock(ObjectProvider.class);
+		CaSignerService service = new CaSignerService(configs, keys, factory, new SloMetrics(registry), noAzureFactory,
+				noKmsFactory);
 
 		StepVerifier.create(service.activeSigner("session")).expectError(NoSignerAvailable.class).verify();
 		// A real request is measured under source=request (the NFR-3 SLI population).

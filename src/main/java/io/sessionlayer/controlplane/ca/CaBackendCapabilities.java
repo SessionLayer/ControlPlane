@@ -17,8 +17,9 @@ public final class CaBackendCapabilities {
 			super("CA backend '" + backend + "' has no signer in this build: it is a key-service integration seam"
 					+ " whose implementation is supplied by the deployment, so a CA configured this way would accept"
 					+ " the write and then fail every signature — no session or host certificate could be issued."
-					+ " 'local' and 'azure_keyvault' are the backends that sign as shipped; protect 'local' with a"
-					+ " real KEK and 'azure_keyvault' with sessionlayer.ca.azure.* configured.");
+					+ " 'local', 'azure_keyvault' and 'aws_kms' are the backends that sign as shipped; protect"
+					+ " 'local' with a real KEK, 'azure_keyvault' with sessionlayer.ca.azure.* configured, and"
+					+ " 'aws_kms' with sessionlayer.ca.aws.* configured.");
 		}
 	}
 
@@ -36,24 +37,24 @@ public final class CaBackendCapabilities {
 	 * {@code CaSignerService.signerFor} asks, asked once so the two cannot diverge.
 	 *
 	 * <p>
-	 * Deliberately not "does a backend class exist". {@code aws_kms} and
-	 * {@code vault} have classes ({@code KmsCaBackend}, {@code VaultCaCertSigner})
-	 * and neither has an implementation of the interface it consumes, no bean
-	 * constructs either, and {@code signerFor} refuses both before per-backend
-	 * dispatch is reached. {@code azure_keyvault} is the one key-service seam with
-	 * a real, bean-backed implementation ({@code AzureKeyVaultSignerFactory}, gated
-	 * on {@code sessionlayer.ca.azure.enabled}) — a build that has it on the
-	 * classpath can sign, a deployment that has not configured a vault still fails
+	 * Deliberately not "does a backend class exist". {@code vault} has a class
+	 * ({@code VaultCaCertSigner}) with no implementation of the interface it
+	 * consumes, no bean constructs it, and {@code signerFor} refuses it before
+	 * per-backend dispatch is reached. {@code azure_keyvault} and {@code aws_kms}
+	 * are the key-service seams with real, bean-backed implementations
+	 * ({@code AzureKeyVaultSignerFactory}, {@code AwsKmsSignerFactory}, each gated
+	 * on its own {@code enabled} property) — a build that has them on the classpath
+	 * can sign, a deployment that has configured neither key service still fails
 	 * closed at {@code signerFor}, which is a deployment question, not a build one.
 	 * A first pass at this method answered the class-existence question and
-	 * reported two of the three as usable — the same mistake as
+	 * reported an unusable backend as usable — the same mistake as
 	 * {@link #forBackend}, which is truthful about algorithms and silent about
 	 * signers.
 	 */
 	public static boolean isImplemented(String backend) {
 		return switch (backend) {
-			case "local", "azure_keyvault" -> true;
-			case "aws_kms", "vault" -> false;
+			case "local", "azure_keyvault", "aws_kms" -> true;
+			case "vault" -> false;
 			default -> throw new IllegalArgumentException("unknown CA backend: " + backend);
 		};
 	}

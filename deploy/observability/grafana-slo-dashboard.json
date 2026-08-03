@@ -64,7 +64,7 @@
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
       "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
-      "targets": [ { "refId": "A", "expr": "sum(rate(calls_total{service_name=\"sessionlayer-gateway\",span_name=\"host_verify\",status_code=\"STATUS_CODE_ERROR\"}[10m]))", "legendFormat": "host_verify errors" } ]
+      "targets": [ { "refId": "A", "expr": "sum(rate(calls_total{service_name=\"sessionlayer-gateway\",span_name=\"gateway.host_verify\",status_code=\"STATUS_CODE_ERROR\"}[10m]))", "legendFormat": "host_verify errors" } ]
     },
     { "type": "row", "title": "Saturation (CP actuator)", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 26 } },
     {

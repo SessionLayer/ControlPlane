@@ -3,6 +3,8 @@ package io.sessionlayer.controlplane.configapi;
 import io.sessionlayer.controlplane.audit.AuditEventStore;
 import io.sessionlayer.controlplane.ca.CaBackendCapabilities;
 import io.sessionlayer.controlplane.ca.CaRotationService;
+import io.sessionlayer.controlplane.ca.backend.aws.AwsKmsSignerFactory;
+import io.sessionlayer.controlplane.ca.backend.aws.KmsKeyArn;
 import io.sessionlayer.controlplane.ca.backend.azure.AzureKeyVaultSignerFactory;
 import io.sessionlayer.controlplane.ca.backend.azure.KeyVaultKeyReference;
 import io.sessionlayer.controlplane.data.config.CaConfig;
@@ -26,6 +28,7 @@ public class CaConfigService {
 	private static final String ORIGIN_API = "api";
 	private static final String ACTIVE = "active";
 	private static final String AZURE_KEYVAULT = "azure_keyvault";
+	private static final String AWS_KMS = "aws_kms";
 
 	private static final Set<String> API_KINDS = Set.of("user", "session", "host");
 
@@ -35,16 +38,19 @@ public class CaConfigService {
 	private final AuditEventStore audit;
 	private final TransactionalOperator tx;
 	private final ObjectProvider<AzureKeyVaultSignerFactory> azureSignerFactory;
+	private final ObjectProvider<AwsKmsSignerFactory> awsKmsSignerFactory;
 
 	public CaConfigService(CaConfigRepository caConfigs, CaRotationService rotation, CursorPages cursorPages,
 			AuditEventStore audit, TransactionalOperator tx,
-			ObjectProvider<AzureKeyVaultSignerFactory> azureSignerFactory) {
+			ObjectProvider<AzureKeyVaultSignerFactory> azureSignerFactory,
+			ObjectProvider<AwsKmsSignerFactory> awsKmsSignerFactory) {
 		this.caConfigs = caConfigs;
 		this.rotation = rotation;
 		this.cursorPages = cursorPages;
 		this.audit = audit;
 		this.tx = tx;
 		this.azureSignerFactory = azureSignerFactory;
+		this.awsKmsSignerFactory = awsKmsSignerFactory;
 	}
 
 	public Mono<CursorPages.Page<CaConfig>> list(String cursor, Integer limit) {
@@ -210,6 +216,9 @@ public class CaConfigService {
 		if (AZURE_KEYVAULT.equals(backend)) {
 			validateAzureKeyReference(keyReference);
 		}
+		if (AWS_KMS.equals(backend)) {
+			validateAwsKmsKeyReference(keyReference);
+		}
 	}
 
 	/**
@@ -227,6 +236,25 @@ public class CaConfigService {
 		try {
 			KeyVaultKeyReference.parse(keyReference, factory.vaultUri());
 		} catch (KeyVaultKeyReference.InvalidKeyReference invalid) {
+			throw ApiProblemException.validation(invalid.getMessage());
+		}
+	}
+
+	/**
+	 * The alias refusal and the configured-account allow-list must hold at the
+	 * write path, not only when a signer is loaded to sign — an alias or a
+	 * foreign-account ARN stored here would otherwise be caught only the first time
+	 * this CA tries to sign, far too late.
+	 */
+	private void validateAwsKmsKeyReference(String keyReference) {
+		AwsKmsSignerFactory factory = awsKmsSignerFactory.getIfAvailable();
+		if (factory == null) {
+			throw ApiProblemException
+					.validation("aws_kms is not configured on this Control Plane (sessionlayer.ca.aws.enabled)");
+		}
+		try {
+			KmsKeyArn.parse(keyReference, factory.anchor());
+		} catch (KmsKeyArn.InvalidKeyReference invalid) {
 			throw ApiProblemException.validation(invalid.getMessage());
 		}
 	}

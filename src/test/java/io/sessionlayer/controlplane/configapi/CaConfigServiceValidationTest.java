@@ -13,6 +13,8 @@ import static org.mockito.Mockito.when;
 import io.sessionlayer.controlplane.audit.AuditEventStore;
 import io.sessionlayer.controlplane.ca.CaKeyProvisioner;
 import io.sessionlayer.controlplane.ca.CaRotationService;
+import io.sessionlayer.controlplane.ca.backend.aws.AwsKmsSignerFactory;
+import io.sessionlayer.controlplane.ca.backend.aws.KmsKeyArn;
 import io.sessionlayer.controlplane.ca.backend.azure.AzureKeyVaultSignerFactory;
 import io.sessionlayer.controlplane.data.config.CaConfig;
 import io.sessionlayer.controlplane.data.config.CaConfigRepository;
@@ -50,7 +52,7 @@ class CaConfigServiceValidationTest {
 	private static final String AZURE_KEY_VERSION = "0123456789abcdef0123456789abcdef";
 
 	private static CaConfigService withNoCollaborators() {
-		return new CaConfigService(null, null, null, null, null, null);
+		return new CaConfigService(null, null, null, null, null, null, null);
 	}
 
 	/**
@@ -72,6 +74,27 @@ class CaConfigServiceValidationTest {
 	private static ObjectProvider<AzureKeyVaultSignerFactory> azureNotConfigured() {
 		@SuppressWarnings("unchecked")
 		ObjectProvider<AzureKeyVaultSignerFactory> provider = mock(ObjectProvider.class);
+		when(provider.getIfAvailable()).thenReturn(null);
+		return provider;
+	}
+
+	/**
+	 * The KMS counterpart: a mock factory pinned to one account/region/partition,
+	 * enough for {@code KmsKeyArn.parse} to run against a real allow-list anchor
+	 * without a live KMS.
+	 */
+	private static ObjectProvider<AwsKmsSignerFactory> awsKmsConfigured() {
+		AwsKmsSignerFactory factory = mock(AwsKmsSignerFactory.class);
+		when(factory.anchor()).thenReturn(new KmsKeyArn.Anchor("aws", "us-east-1", "111122223333"));
+		@SuppressWarnings("unchecked")
+		ObjectProvider<AwsKmsSignerFactory> provider = mock(ObjectProvider.class);
+		when(provider.getIfAvailable()).thenReturn(factory);
+		return provider;
+	}
+
+	private static ObjectProvider<AwsKmsSignerFactory> awsKmsNotConfigured() {
+		@SuppressWarnings("unchecked")
+		ObjectProvider<AwsKmsSignerFactory> provider = mock(ObjectProvider.class);
 		when(provider.getIfAvailable()).thenReturn(null);
 		return provider;
 	}
@@ -102,7 +125,7 @@ class CaConfigServiceValidationTest {
 		when(caConfigs.findById(id)).thenReturn(Mono.just(outgoingSessionCa(id)));
 
 		ApiProblemException problem = catchThrowableOfType(ApiProblemException.class,
-				() -> new CaConfigService(caConfigs, null, null, null, null, null)
+				() -> new CaConfigService(caConfigs, null, null, null, null, null, null)
 						.update(id, ACTOR, 0L, "local", KEY_REFERENCE, algorithm).block());
 
 		assertThat(problem).isNotNull();
@@ -154,38 +177,22 @@ class CaConfigServiceValidationTest {
 	 * ed25519 and RSA.
 	 */
 	/**
-	 * {@code vault}/{@code aws_kms} have no signer in this build, so both are
-	 * refused before the write, whatever the curve. {@code azure_keyvault} is
-	 * deliberately NOT in this list: it is now a real signer, so its refusal cases
-	 * (an unversioned/wrong-vault {@code key_reference}) belong to that backend's
-	 * own tests, not this "no signer at all" rule.
+	 * {@code vault} has no signer in this build, so it is refused before the write,
+	 * whatever the curve. {@code azure_keyvault} and {@code aws_kms} are
+	 * deliberately NOT in this list: both are real signers, so their refusal cases
+	 * (an unversioned/wrong-vault reference, an alias/foreign-account ARN) belong
+	 * to those backends' own tests, not this "no signer at all" rule.
 	 */
 	@ParameterizedTest
-	@ValueSource(strings = {"vault", "aws_kms"})
-	void aBackendWithNoSignerIsRefusedBeforeAnythingIsWritten(String backend) {
-		for (String curve : new String[]{"ecdsa-p256", "ecdsa-p384", "ecdsa-p521"}) {
-			ApiProblemException problem = catchThrowableOfType(ApiProblemException.class, () -> withNoCollaborators()
-					.create(ACTOR, "ca-" + backend + "-" + curve, "user", backend, "handle:x", curve));
-
-			assertThat(problem).as("%s + %s", backend, curve).isNotNull();
-			assertThat(problem.type()).isEqualTo(ApiProblemType.VALIDATION);
-			assertThat(problem.type().status().value()).isEqualTo(422);
-			assertThat(problem.getMessage()).contains(backend).contains("no signer in this build");
-		}
-	}
-
-	/**
-	 * Refusing {@code vault} must not steer an operator onto {@code aws_kms} — the
-	 * other backend with no signer at all. {@code azure_keyvault} is exempt from
-	 * this assertion: it is a real signer now, so naming it alongside {@code
-	 * local} as usable is correct, not a steer onto a dead end.
-	 */
-	@Test
-	void theRefusalDoesNotSendAnOperatorToAnotherUnusableBackend() {
+	@ValueSource(strings = {"ecdsa-p256", "ecdsa-p384", "ecdsa-p521"})
+	void aBackendWithNoSignerIsRefusedBeforeAnythingIsWritten(String curve) {
 		ApiProblemException problem = catchThrowableOfType(ApiProblemException.class,
-				() -> withNoCollaborators().create(ACTOR, "ca-steer", "user", "vault", "handle:x", "ecdsa-p256"));
+				() -> withNoCollaborators().create(ACTOR, "ca-vault-" + curve, "user", "vault", "handle:x", curve));
 
-		assertThat(problem.getMessage()).doesNotContain("aws_kms");
+		assertThat(problem).as(curve).isNotNull();
+		assertThat(problem.type()).isEqualTo(ApiProblemType.VALIDATION);
+		assertThat(problem.type().status().value()).isEqualTo(422);
+		assertThat(problem.getMessage()).contains("vault").contains("no signer in this build");
 	}
 
 	@Test
@@ -216,7 +223,7 @@ class CaConfigServiceValidationTest {
 		when(audit.recordChange(any(), any(), any(), any(), any(), any())).thenReturn(Mono.empty());
 		when(tx.transactional(ArgumentMatchers.<Mono<CaConfig>>any())).thenAnswer(call -> call.getArgument(0));
 
-		CaConfig saved = new CaConfigService(caConfigs, null, null, audit, tx, null)
+		CaConfig saved = new CaConfigService(caConfigs, null, null, audit, tx, null, null)
 				.create(ACTOR, "ca-" + backend + "-" + algorithm, "user", backend, KEY_REFERENCE, algorithm).block();
 
 		assertThat(saved).isNotNull();
@@ -236,7 +243,7 @@ class CaConfigServiceValidationTest {
 		when(caConfigs.findByCaKindAndRotationState("user", "active")).thenReturn(Mono.just(existingActive("user")));
 
 		ApiProblemException problem = catchThrowableOfType(ApiProblemException.class,
-				() -> new CaConfigService(caConfigs, null, null, null, null, null)
+				() -> new CaConfigService(caConfigs, null, null, null, null, null, null)
 						.create(ACTOR, "ca-dup", "user", "local", KEY_REFERENCE, "ecdsa-p256").block());
 
 		assertThat(problem).isNotNull();
@@ -259,7 +266,7 @@ class CaConfigServiceValidationTest {
 		when(caConfigs.findById(id)).thenReturn(Mono.just(activeSessionCa(id)));
 
 		ApiProblemException problem = catchThrowableOfType(ApiProblemException.class,
-				() -> new CaConfigService(caConfigs, rotation, null, null, null, null)
+				() -> new CaConfigService(caConfigs, rotation, null, null, null, null, null)
 						.rotate(id, ACTOR, "vault", null, null).block());
 
 		assertThat(problem).isNotNull();
@@ -290,7 +297,7 @@ class CaConfigServiceValidationTest {
 
 		ApiProblemException problem = catchThrowableOfType(ApiProblemException.class,
 				() -> new CaConfigService(caConfigs, rotation, null, null, null,
-						azureConfiguredFor("https://sl.vault.azure.net"))
+						azureConfiguredFor("https://sl.vault.azure.net"), null)
 						.rotate(id, ACTOR, "azure_keyvault", "https://sl.vault.azure.net/keys/k/" + AZURE_KEY_VERSION,
 								"ecdsa-p256")
 						.block());
@@ -329,7 +336,7 @@ class CaConfigServiceValidationTest {
 		when(audit.recordChange(any(), any(), any(), any(), any(), any())).thenReturn(Mono.empty());
 		when(tx.transactional(ArgumentMatchers.<Mono<CaConfig>>any())).thenAnswer(call -> call.getArgument(0));
 
-		CaConfig result = new CaConfigService(caConfigs, rotation, null, audit, tx, null)
+		CaConfig result = new CaConfigService(caConfigs, rotation, null, audit, tx, null, null)
 				.rotate(id, ACTOR, null, null, null).block();
 
 		assertThat(result).isEqualTo(promoted);
@@ -373,7 +380,7 @@ class CaConfigServiceValidationTest {
 		when(tx.transactional(ArgumentMatchers.<Mono<CaConfig>>any())).thenAnswer(call -> call.getArgument(0));
 
 		CaConfig result = new CaConfigService(caConfigs, rotation, null, audit, tx,
-				azureConfiguredFor("https://sl.vault.azure.net"))
+				azureConfiguredFor("https://sl.vault.azure.net"), null)
 				.rotate(id, ACTOR, "azure_keyvault", newKeyReference, "ecdsa-p256").block();
 
 		assertThat(result.backend()).isEqualTo("azure_keyvault");
@@ -401,7 +408,7 @@ class CaConfigServiceValidationTest {
 		when(caConfigs.findById(id)).thenReturn(Mono.just(activeSessionCa(id)));
 
 		ApiProblemException problem = catchThrowableOfType(ApiProblemException.class,
-				() -> new CaConfigService(caConfigs, null, null, null, null, null).update(id, ACTOR, 0L,
+				() -> new CaConfigService(caConfigs, null, null, null, null, null, null).update(id, ACTOR, 0L,
 						"azure_keyvault", "https://sl.vault.azure.net/keys/k/" + AZURE_KEY_VERSION, "ecdsa-p256")
 						.block());
 
@@ -423,7 +430,7 @@ class CaConfigServiceValidationTest {
 		when(caConfigs.findById(id)).thenReturn(Mono.just(activeSessionCa(id)));
 
 		ApiProblemException problem = catchThrowableOfType(ApiProblemException.class,
-				() -> new CaConfigService(caConfigs, null, null, null, null, null)
+				() -> new CaConfigService(caConfigs, null, null, null, null, null, null)
 						.update(id, ACTOR, 0L, "local", "local:a-different-row", "ecdsa-p256").block());
 
 		assertThat(problem).isNotNull();
@@ -447,7 +454,7 @@ class CaConfigServiceValidationTest {
 		when(caConfigs.findById(id)).thenReturn(Mono.just(existing));
 
 		ApiProblemException problem = catchThrowableOfType(ApiProblemException.class,
-				() -> new CaConfigService(caConfigs, null, null, null, null, null)
+				() -> new CaConfigService(caConfigs, null, null, null, null, null, null)
 						.update(id, ACTOR, 0L, existing.backend(), existing.keyReference(), existing.algorithm())
 						.block());
 
@@ -470,7 +477,7 @@ class CaConfigServiceValidationTest {
 		when(audit.recordChange(any(), any(), any(), any(), any(), any())).thenReturn(Mono.empty());
 		when(tx.transactional(ArgumentMatchers.<Mono<CaConfig>>any())).thenAnswer(call -> call.getArgument(0));
 
-		CaConfig result = new CaConfigService(caConfigs, null, null, audit, tx, null)
+		CaConfig result = new CaConfigService(caConfigs, null, null, audit, tx, null, null)
 				.update(id, ACTOR, 0L, "local", "local:rotated", "ecdsa-p384").block();
 
 		assertThat(result.backend()).isEqualTo("local");
@@ -488,8 +495,8 @@ class CaConfigServiceValidationTest {
 	void createRefusesAVersionLessAzureKeyReferenceAtTheWritePath() {
 		ApiProblemException problem = catchThrowableOfType(ApiProblemException.class,
 				() -> new CaConfigService(null, null, null, null, null,
-						azureConfiguredFor("https://sl.vault.azure.net")).create(ACTOR, "ca-azkv-unpinned", "user",
-								"azure_keyvault", "https://sl.vault.azure.net/keys/session-ca", "ecdsa-p256"));
+						azureConfiguredFor("https://sl.vault.azure.net"), null).create(ACTOR, "ca-azkv-unpinned",
+								"user", "azure_keyvault", "https://sl.vault.azure.net/keys/session-ca", "ecdsa-p256"));
 
 		assertThat(problem).isNotNull();
 		assertThat(problem.type()).isEqualTo(ApiProblemType.VALIDATION);
@@ -506,8 +513,8 @@ class CaConfigServiceValidationTest {
 	void createRefusesAWrongVaultAzureKeyReferenceAtTheWritePath() {
 		ApiProblemException problem = catchThrowableOfType(ApiProblemException.class,
 				() -> new CaConfigService(null, null, null, null, null,
-						azureConfiguredFor("https://sl.vault.azure.net")).create(ACTOR, "ca-azkv-wrongvault", "user",
-								"azure_keyvault", "https://someone-elses-vault.vault.azure.net/keys/k/"
+						azureConfiguredFor("https://sl.vault.azure.net"), null).create(ACTOR, "ca-azkv-wrongvault",
+								"user", "azure_keyvault", "https://someone-elses-vault.vault.azure.net/keys/k/"
 										+ "0123456789abcdef0123456789abcdef",
 								"ecdsa-p256"));
 
@@ -525,9 +532,62 @@ class CaConfigServiceValidationTest {
 	@Test
 	void createRefusesAzureKeyvaultWhenNoVaultIsConfiguredOnThisControlPlane() {
 		ApiProblemException problem = catchThrowableOfType(ApiProblemException.class,
-				() -> new CaConfigService(null, null, null, null, null, azureNotConfigured()).create(ACTOR,
+				() -> new CaConfigService(null, null, null, null, null, azureNotConfigured(), null).create(ACTOR,
 						"ca-azkv-unconfigured", "user", "azure_keyvault",
 						"https://sl.vault.azure.net/keys/k/0123456789abcdef0123456789abcdef", "ecdsa-p256"));
+
+		assertThat(problem).isNotNull();
+		assertThat(problem.type()).isEqualTo(ApiProblemType.VALIDATION);
+		assertThat(problem.getMessage()).contains("not configured");
+	}
+
+	/**
+	 * The alias refusal is the pinning guarantee for KMS, and it has to hold at the
+	 * write path: {@code kms:UpdateAlias} would otherwise repoint a live CA's
+	 * signing key with nothing here ever seeing it change.
+	 */
+	@Test
+	void createRefusesAnAliasKeyReferenceAtTheWritePath() {
+		ApiProblemException problem = catchThrowableOfType(ApiProblemException.class,
+				() -> new CaConfigService(null, null, null, null, null, null, awsKmsConfigured()).create(ACTOR,
+						"ca-kms-alias", "user", "aws_kms", "arn:aws:kms:us-east-1:111122223333:alias/session-ca",
+						"ecdsa-p256"));
+
+		assertThat(problem).isNotNull();
+		assertThat(problem.type()).isEqualTo(ApiProblemType.VALIDATION);
+		assertThat(problem.type().status().value()).isEqualTo(422);
+		assertThat(problem.getMessage()).contains("alias");
+	}
+
+	/**
+	 * The allow-list anchor. A key ARN naming any account but the configured one is
+	 * refused, so a compromised write path cannot redirect CA signing to a KMS key
+	 * the operator does not own.
+	 */
+	@Test
+	void createRefusesAForeignAccountKeyArnAtTheWritePath() {
+		ApiProblemException problem = catchThrowableOfType(ApiProblemException.class,
+				() -> new CaConfigService(null, null, null, null, null, null, awsKmsConfigured()).create(ACTOR,
+						"ca-kms-wrongaccount", "user", "aws_kms",
+						"arn:aws:kms:us-east-1:999988887777:key/1234abcd-12ab-34cd-56ef-1234567890ab", "ecdsa-p256"));
+
+		assertThat(problem).isNotNull();
+		assertThat(problem.type()).isEqualTo(ApiProblemType.VALIDATION);
+		assertThat(problem.type().status().value()).isEqualTo(422);
+		assertThat(problem.getMessage()).contains("only the configured account, region and partition are permitted");
+	}
+
+	/**
+	 * A Control Plane with no KMS support configured has no
+	 * {@code AwsKmsSignerFactory} bean at all — refused rather than dereferencing
+	 * an anchor that does not exist.
+	 */
+	@Test
+	void createRefusesAwsKmsWhenNoKmsIsConfiguredOnThisControlPlane() {
+		ApiProblemException problem = catchThrowableOfType(ApiProblemException.class,
+				() -> new CaConfigService(null, null, null, null, null, null, awsKmsNotConfigured()).create(ACTOR,
+						"ca-kms-unconfigured", "user", "aws_kms",
+						"arn:aws:kms:us-east-1:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab", "ecdsa-p256"));
 
 		assertThat(problem).isNotNull();
 		assertThat(problem.type()).isEqualTo(ApiProblemType.VALIDATION);

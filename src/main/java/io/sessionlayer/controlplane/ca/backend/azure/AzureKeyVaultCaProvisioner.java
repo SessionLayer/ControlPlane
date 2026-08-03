@@ -6,7 +6,7 @@ import io.sessionlayer.controlplane.ca.CaKeyType;
 import io.sessionlayer.controlplane.data.config.CaConfig;
 import io.sessionlayer.controlplane.data.runtime.CaKeyMaterial;
 import java.security.interfaces.ECPublicKey;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
  * database key.
  */
 @Component
-@ConditionalOnProperty(prefix = "sessionlayer.ca.azure", name = "enabled", havingValue = "true")
+@ConditionalOnBooleanProperty(name = "sessionlayer.ca.azure.enabled")
 public class AzureKeyVaultCaProvisioner implements CaKeyProvisioner {
 
 	private final AzureKeyVaultSignerFactory factory;
