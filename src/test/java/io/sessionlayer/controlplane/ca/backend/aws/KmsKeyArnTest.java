@@ -149,8 +149,8 @@ class KmsKeyArnTest {
 	void rejectsAKeyIdThatIsNotAUuidOrMultiRegionId() {
 		for (String bad : new String[]{"", "session-ca", "1234ABCD-12ab-34cd-56ef-1234567890ab",
 				"1234abcd-12ab-34cd-56ef-1234567890a", "mrk-0123456789abcdef", KEY_ID + "/extra"}) {
-			assertThatThrownBy(() -> KmsKeyArn.parse("arn:aws:kms:us-east-1:111122223333:key/" + bad, ANCHOR))
-					.as(bad).isInstanceOf(InvalidKeyReference.class).hasMessageContaining("invalid key id");
+			assertThatThrownBy(() -> KmsKeyArn.parse("arn:aws:kms:us-east-1:111122223333:key/" + bad, ANCHOR)).as(bad)
+					.isInstanceOf(InvalidKeyReference.class).hasMessageContaining("invalid key id");
 		}
 	}
 
@@ -161,8 +161,9 @@ class KmsKeyArnTest {
 	 */
 	@Test
 	void rejectsAControlCharacterInTheKeyId() {
-		assertThatThrownBy(() -> KmsKeyArn.parse("arn:aws:kms:us-east-1:111122223333:key/" + KEY_ID + "\r\nX-Injected",
-				ANCHOR)).isInstanceOf(InvalidKeyReference.class).hasMessageContaining("invalid key id");
+		assertThatThrownBy(
+				() -> KmsKeyArn.parse("arn:aws:kms:us-east-1:111122223333:key/" + KEY_ID + "\r\nX-Injected", ANCHOR))
+				.isInstanceOf(InvalidKeyReference.class).hasMessageContaining("invalid key id");
 	}
 
 	@Test
@@ -207,8 +208,7 @@ class KmsKeyArnTest {
 	void aWrongAccountIsRefusedWithoutNamingTheConfiguredOne() {
 		String otherAccount = "arn:aws:kms:us-east-1:999988887777:key/" + KEY_ID;
 
-		assertThatThrownBy(() -> KmsKeyArn.parse(otherAccount, ANCHOR))
-				.isInstanceOf(InvalidKeyReference.class).hasMessageContaining("999988887777")
-				.hasMessageNotContaining("111122223333");
+		assertThatThrownBy(() -> KmsKeyArn.parse(otherAccount, ANCHOR)).isInstanceOf(InvalidKeyReference.class)
+				.hasMessageContaining("999988887777").hasMessageNotContaining("111122223333");
 	}
 }

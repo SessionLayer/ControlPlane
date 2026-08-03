@@ -61,8 +61,8 @@ class AwsKmsCredentialsSmokeTest {
 			properties.setRegion("us-east-1");
 			properties.setAccountId("111122223333");
 			properties.setAllowInsecureEndpoint(true);
-			properties.setEndpointOverride("http://" + urlHost(InetAddress.getLoopbackAddress()) + ":"
-					+ endpoint.getLocalPort());
+			properties.setEndpointOverride(
+					"http://" + urlHost(InetAddress.getLoopbackAddress()) + ":" + endpoint.getLocalPort());
 
 			new AwsKmsSignerFactory(properties).close();
 

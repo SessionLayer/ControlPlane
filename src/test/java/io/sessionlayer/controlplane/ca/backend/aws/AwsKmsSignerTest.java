@@ -41,8 +41,7 @@ class AwsKmsSignerTest {
 			+ "1234abcd-12ab-34cd-56ef-1234567890ab";
 
 	/** Parsed rather than stubbed, so the redaction under test is the real one. */
-	private static final KmsKeyArn KEY = KmsKeyArn.parse(KEY_ARN,
-			new KmsKeyArn.Anchor("aws", "us-east-1", ACCOUNT_ID));
+	private static final KmsKeyArn KEY = KmsKeyArn.parse(KEY_ARN, new KmsKeyArn.Anchor("aws", "us-east-1", ACCOUNT_ID));
 
 	private static KeyPair ecKeyPair() {
 		try {
@@ -101,7 +100,8 @@ class AwsKmsSignerTest {
 		byte[] digest = digest32();
 		byte[] expected = derSignatureBy(ca.getPrivate(), digest);
 
-		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(responseOf(expected)), (ECPublicKey) ca.getPublic(), KEY);
+		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(responseOf(expected)), (ECPublicKey) ca.getPublic(),
+				KEY);
 
 		assertThat(signer.signDigestDer(digest)).isEqualTo(expected);
 	}
@@ -181,7 +181,8 @@ class AwsKmsSignerTest {
 		byte[] der = derSignatureBy(ca.getPrivate(), digest);
 		byte[] truncated = Arrays.copyOf(der, der.length - 8);
 
-		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(responseOf(truncated)), (ECPublicKey) ca.getPublic(), KEY);
+		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(responseOf(truncated)), (ECPublicKey) ca.getPublic(),
+				KEY);
 
 		assertThatThrownBy(() -> signer.signDigestDer(digest)).isInstanceOf(KmsSigningException.class)
 				.hasMessageContaining("does not verify against the pinned public key");
@@ -191,7 +192,8 @@ class AwsKmsSignerTest {
 	void anEmptySignatureFails() {
 		KeyPair ca = ecKeyPair();
 
-		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(responseOf(new byte[0])), (ECPublicKey) ca.getPublic(), KEY);
+		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(responseOf(new byte[0])), (ECPublicKey) ca.getPublic(),
+				KEY);
 
 		assertThatThrownBy(() -> signer.signDigestDer(digest32())).isInstanceOf(KmsSigningException.class)
 				.hasMessageContaining("does not verify against the pinned public key");
@@ -204,8 +206,8 @@ class AwsKmsSignerTest {
 	 */
 	@Test
 	void aResponseWithNoSignatureAtAllFails() {
-		SignResponse empty = SignResponse.builder().keyId(KEY_ARN)
-				.signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256).build();
+		SignResponse empty = SignResponse.builder().keyId(KEY_ARN).signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+				.build();
 
 		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(empty), (ECPublicKey) ecKeyPair().getPublic(), KEY);
 

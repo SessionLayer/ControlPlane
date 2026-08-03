@@ -183,8 +183,10 @@ class CaSignerServiceTest {
 
 		CaSignerService service = service(configs, keys, localCaFactory, noFactory(), noFactory());
 
-		StepVerifier.create(service.signerFor(kmsConfig(KEY_ARN))).expectErrorSatisfies(
-				error -> assertThat(error).isInstanceOf(NoSignerAvailable.class).hasMessageContaining("KMS")).verify();
+		StepVerifier.create(service.signerFor(kmsConfig(KEY_ARN)))
+				.expectErrorSatisfies(
+						error -> assertThat(error).isInstanceOf(NoSignerAvailable.class).hasMessageContaining("KMS"))
+				.verify();
 
 		// Not just "no wrong signer" but no interaction at all: an aws_kms row with
 		// no KMS support never even queries local key material, let alone unwraps it.
@@ -227,8 +229,10 @@ class CaSignerServiceTest {
 
 		CaSignerService service = service(configs, keys, localCaFactory, noFactory(), providerReturning(kmsFactory));
 
-		StepVerifier.create(service.signerFor(config)).expectErrorSatisfies(
-				error -> assertThat(error).isInstanceOf(NoSignerAvailable.class).hasMessageContaining("KMS")).verify();
+		StepVerifier.create(service.signerFor(config))
+				.expectErrorSatisfies(
+						error -> assertThat(error).isInstanceOf(NoSignerAvailable.class).hasMessageContaining("KMS"))
+				.verify();
 		verifyNoInteractions(localCaFactory);
 	}
 

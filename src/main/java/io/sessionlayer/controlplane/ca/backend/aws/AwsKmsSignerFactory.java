@@ -33,9 +33,9 @@ import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
  * The credential chain, the HTTP client and the {@link KmsClient} are all built
  * once, at bean construction, and building them does no I/O — the SDK resolves
  * credentials and opens no connection until a request is made (proven by
- * {@code AwsKmsCredentialsSmokeTest}). Signer construction
- * ({@link #signerFor}) is likewise I/O-free: only {@link #fetchPublicKey}, used
- * solely at CA adoption, talks to KMS.
+ * {@code AwsKmsCredentialsSmokeTest}). Signer construction ({@link #signerFor})
+ * is likewise I/O-free: only {@link #fetchPublicKey}, used solely at CA
+ * adoption, talks to KMS.
  *
  * <p>
  * One client serves every key, because KMS takes the key id as a per-request
@@ -117,8 +117,8 @@ public class AwsKmsSignerFactory implements AutoCloseable {
 					"KMS key '" + redactedKeyArn + "' is " + response.keySpec() + ", not ECC_NIST_P256");
 		}
 		if (KeyUsageType.SIGN_VERIFY != response.keyUsage()) {
-			throw new IllegalStateException("KMS key '" + redactedKeyArn + "' has usage " + response.keyUsage()
-					+ ", not SIGN_VERIFY");
+			throw new IllegalStateException(
+					"KMS key '" + redactedKeyArn + "' has usage " + response.keyUsage() + ", not SIGN_VERIFY");
 		}
 		if (!response.signingAlgorithms().contains(SigningAlgorithmSpec.ECDSA_SHA_256)) {
 			throw new IllegalStateException("KMS key '" + redactedKeyArn + "' does not offer ECDSA_SHA_256");
@@ -137,7 +137,8 @@ public class AwsKmsSignerFactory implements AutoCloseable {
 		try {
 			publicKey = (ECPublicKey) KeyFactory.getInstance("EC").generatePublic(new X509EncodedKeySpec(spki));
 		} catch (GeneralSecurityException | ClassCastException e) {
-			throw new IllegalStateException("KMS key '" + redactedKeyArn + "' did not return a usable EC public key", e);
+			throw new IllegalStateException("KMS key '" + redactedKeyArn + "' did not return a usable EC public key",
+					e);
 		}
 		if (!isP256(publicKey.getParams())) {
 			throw new IllegalStateException("KMS key '" + redactedKeyArn + "' public key is not on the P-256 curve");

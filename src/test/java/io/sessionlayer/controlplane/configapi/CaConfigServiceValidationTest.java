@@ -495,8 +495,8 @@ class CaConfigServiceValidationTest {
 	void createRefusesAVersionLessAzureKeyReferenceAtTheWritePath() {
 		ApiProblemException problem = catchThrowableOfType(ApiProblemException.class,
 				() -> new CaConfigService(null, null, null, null, null,
-						azureConfiguredFor("https://sl.vault.azure.net"), null).create(ACTOR, "ca-azkv-unpinned", "user",
-								"azure_keyvault", "https://sl.vault.azure.net/keys/session-ca", "ecdsa-p256"));
+						azureConfiguredFor("https://sl.vault.azure.net"), null).create(ACTOR, "ca-azkv-unpinned",
+								"user", "azure_keyvault", "https://sl.vault.azure.net/keys/session-ca", "ecdsa-p256"));
 
 		assertThat(problem).isNotNull();
 		assertThat(problem.type()).isEqualTo(ApiProblemType.VALIDATION);
@@ -513,8 +513,8 @@ class CaConfigServiceValidationTest {
 	void createRefusesAWrongVaultAzureKeyReferenceAtTheWritePath() {
 		ApiProblemException problem = catchThrowableOfType(ApiProblemException.class,
 				() -> new CaConfigService(null, null, null, null, null,
-						azureConfiguredFor("https://sl.vault.azure.net"), null).create(ACTOR, "ca-azkv-wrongvault", "user",
-								"azure_keyvault", "https://someone-elses-vault.vault.azure.net/keys/k/"
+						azureConfiguredFor("https://sl.vault.azure.net"), null).create(ACTOR, "ca-azkv-wrongvault",
+								"user", "azure_keyvault", "https://someone-elses-vault.vault.azure.net/keys/k/"
 										+ "0123456789abcdef0123456789abcdef",
 								"ecdsa-p256"));
 

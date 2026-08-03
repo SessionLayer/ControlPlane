@@ -50,8 +50,8 @@ class CaBackendCapabilitiesTest {
 		// Quoting is what makes this checkable: azure_keyvault legitimately contains
 		// "vault" as a substring, so a bare-substring search cannot tell the refused
 		// backend from an alternative that happens to spell it.
-		Set<String> named = Pattern.compile("'([a-z_]+)'").matcher(message).results()
-				.map(match -> match.group(1)).collect(Collectors.toCollection(LinkedHashSet::new));
+		Set<String> named = Pattern.compile("'([a-z_]+)'").matcher(message).results().map(match -> match.group(1))
+				.collect(Collectors.toCollection(LinkedHashSet::new));
 
 		assertThat(named).as("the refusal must name the backend it refused").contains("vault");
 		named.remove("vault");

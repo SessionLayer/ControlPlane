@@ -121,8 +121,8 @@ class AwsKmsSignerFactoryTest {
 	@Test
 	void rejectsAKeyThatDoesNotOfferEcdsaSha256() {
 		GetPublicKeyResponse noAlgorithms = wellFormed().signingAlgorithms(List.of()).build();
-		GetPublicKeyResponse wrongAlgorithm = wellFormed().signingAlgorithms(List.of(SigningAlgorithmSpec.ECDSA_SHA_512))
-				.build();
+		GetPublicKeyResponse wrongAlgorithm = wellFormed()
+				.signingAlgorithms(List.of(SigningAlgorithmSpec.ECDSA_SHA_512)).build();
 
 		for (GetPublicKeyResponse response : List.of(noAlgorithms, wrongAlgorithm)) {
 			assertThatThrownBy(() -> AwsKmsSignerFactory.validateSigningKey(response, KEY_ARN, REDACTED_ARN))

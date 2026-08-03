@@ -116,8 +116,8 @@ class AwsKmsCaProvisionerTest {
 		AwsKmsSignerFactory factory = factoryReturning(ecPublicKey());
 		AwsKmsCaProvisioner provisioner = new AwsKmsCaProvisioner(factory);
 
-		assertThatThrownBy(() -> provisioner
-				.provision(new Request("session", "session-ca", "incoming", KEY_ARN, "ed25519")))
+		assertThatThrownBy(
+				() -> provisioner.provision(new Request("session", "session-ca", "incoming", KEY_ARN, "ed25519")))
 				.isInstanceOf(CaBackendCapabilities.AlgorithmNotSupported.class);
 
 		verifyNoInteractions(factory);

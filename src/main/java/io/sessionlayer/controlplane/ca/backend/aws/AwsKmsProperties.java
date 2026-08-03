@@ -129,8 +129,8 @@ public class AwsKmsProperties {
 	/**
 	 * An endpoint override redirects every KMS call this Control Plane makes, so a
 	 * plaintext one is a downgrade of the whole CA seam, not a local convenience.
-	 * It takes the same explicit opt-in as a dev KEK, and for the same reason:
-	 * a test deployment's shortcut must not be reachable by forgetting a scheme.
+	 * It takes the same explicit opt-in as a dev KEK, and for the same reason: a
+	 * test deployment's shortcut must not be reachable by forgetting a scheme.
 	 */
 	private void validateEndpointOverride() {
 		if (endpointOverride == null || endpointOverride.isBlank()) {

@@ -154,11 +154,10 @@ class AwsKmsPropertiesTest {
 
 	@Test
 	void theApplicationContextItselfFailsToStartWithNoRegion() {
-		contextRunner.withPropertyValues("sessionlayer.ca.aws.enabled=true",
-				"sessionlayer.ca.aws.account-id=111122223333")
+		contextRunner
+				.withPropertyValues("sessionlayer.ca.aws.enabled=true", "sessionlayer.ca.aws.account-id=111122223333")
 				.run(context -> assertThat(context).hasFailed().getFailure().rootCause()
-						.isInstanceOf(IllegalStateException.class)
-						.hasMessageContaining("sessionlayer.ca.aws.region"));
+						.isInstanceOf(IllegalStateException.class).hasMessageContaining("sessionlayer.ca.aws.region"));
 	}
 
 	@Test
@@ -168,8 +167,7 @@ class AwsKmsPropertiesTest {
 						"sessionlayer.ca.aws.account-id=111122223333",
 						"sessionlayer.ca.aws.endpoint-override=http://localhost:4566")
 				.run(context -> assertThat(context).hasFailed().getFailure().rootCause()
-						.isInstanceOf(IllegalStateException.class)
-						.hasMessageContaining("allow-insecure-endpoint"));
+						.isInstanceOf(IllegalStateException.class).hasMessageContaining("allow-insecure-endpoint"));
 	}
 
 	@Test

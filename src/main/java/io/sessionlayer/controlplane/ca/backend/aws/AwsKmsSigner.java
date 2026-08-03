@@ -50,8 +50,9 @@ public final class AwsKmsSigner implements KmsSigner {
 		}
 		SignResponse response;
 		try {
-			response = kms.sign(SignRequest.builder().keyId(key.keyArn()).signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
-					.messageType(MessageType.DIGEST).message(SdkBytes.fromByteArray(sha256Digest)).build());
+			response = kms
+					.sign(SignRequest.builder().keyId(key.keyArn()).signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+							.messageType(MessageType.DIGEST).message(SdkBytes.fromByteArray(sha256Digest)).build());
 		} catch (RuntimeException e) {
 			// getMessage() is built from the redacted key reference and the exception's
 			// class name only, so it is safe to propagate into an API error or a span;
@@ -63,7 +64,8 @@ public final class AwsKmsSigner implements KmsSigner {
 		if (!key.keyArn().equals(response.keyId())) {
 			// The returned id is deliberately not echoed: it is whatever answered,
 			// and the only fact worth reporting is that it was not the pinned key.
-			throw new KmsSigningException(key.redacted(), "the signature is attributed to a different key than the pinned one");
+			throw new KmsSigningException(key.redacted(),
+					"the signature is attributed to a different key than the pinned one");
 		}
 		if (SigningAlgorithmSpec.ECDSA_SHA_256 != response.signingAlgorithm()) {
 			throw new KmsSigningException(key.redacted(),
@@ -77,7 +79,8 @@ public final class AwsKmsSigner implements KmsSigner {
 		}
 		byte[] signature = response.signature().asByteArray();
 		if (!verifiesAgainstPinnedKey(signature, sha256Digest)) {
-			throw new KmsSigningException(key.redacted(), "returned signature does not verify against the pinned public key");
+			throw new KmsSigningException(key.redacted(),
+					"returned signature does not verify against the pinned public key");
 		}
 		return signature;
 	}
