@@ -40,7 +40,7 @@ public class CaRotationService {
 
 	public CaRotationService(CaConfigRepository caConfigs, CaKeyMaterialRepository caKeyMaterials,
 			LocalCaFactory localCaFactory, List<CaKeyProvisioner> provisioners, TransactionalOperator tx,
-			@Value("${sessionlayer.ca.azure.timeout:PT10S}") Duration provisionTimeout) {
+			@Value("${sessionlayer.ca.provision-timeout:PT10S}") Duration provisionTimeout) {
 		this.caConfigs = caConfigs;
 		this.caKeyMaterials = caKeyMaterials;
 		this.localCaFactory = localCaFactory;
@@ -66,11 +66,13 @@ public class CaRotationService {
 	}
 
 	/**
-	 * A {@link CaKeyProvisioner} did not complete within {@link #provisionTimeout}.
-	 * The HTTP client's own connect/response timeouts are not sufficient alone — a
-	 * stalled connection between response headers and body can outlive them — so
-	 * this is an independent wall-clock bound. Fails closed, naming the key
-	 * reference rather than surfacing a bare {@link TimeoutException}.
+	 * A {@link CaKeyProvisioner} did not complete within {@link #provisionTimeout}
+	 * ({@code sessionlayer.ca.provision-timeout}). The HTTP client's own
+	 * connect/response timeouts are not sufficient alone — a stalled connection
+	 * between response headers and body can outlive them, and a provisioner need
+	 * not be an HTTP client at all — so this is an independent wall-clock bound
+	 * across every backend. Fails closed, naming the key reference rather than
+	 * surfacing a bare {@link TimeoutException}.
 	 */
 	public static final class ProvisionTimedOut extends RuntimeException {
 		public ProvisionTimedOut(String backend, String keyReference) {

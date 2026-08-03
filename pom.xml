@@ -84,12 +84,12 @@
 
 		<!--
 		  AWS SDK for Java v2 (Apache-2.0, GPL-3.0-compatible; not managed by the
-		  Spring Boot BOM). Backs the recording WORM object store: an S3-compatible client
-		  (MinIO/S3) + the S3Presigner that issues the short-lived, single-object
-		  presigned PUT the Gateway uploads the encrypted recording with — bytes never
-		  proxy through the CP (Design §12.2). The `s3` module carries both the client
-		  and the presigner. Version pinned via the awssdk BOM (imported below); CVE
-		  management is Dependabot's (the OWASP plugin was retired in #2).
+		  Spring Boot BOM). Backs two unrelated things: the recording WORM object store
+		  (`s3` — an S3-compatible client plus the S3Presigner that issues the
+		  short-lived, single-object presigned PUT the Gateway uploads the encrypted
+		  recording with, so bytes never proxy through the CP, Design §12.2) and the
+		  AWS KMS CA backend (`kms`). Both use the SYNC clients only. Version pinned
+		  via the awssdk BOM (imported below); CVE management is Dependabot's.
 		-->
 		<awssdk.version>2.49.2</awssdk.version>
 
@@ -307,10 +307,24 @@
 		  into the signature so the uploader cannot strip the WORM lock). The Gateway
 		  uploads the encrypted bytes directly — never through the CP (Design §12.2). The
 		  `s3` artifact bundles the client and the presigner; version from the BOM above.
+
+		  The `netty-nio-client` exclusion is the same hazard the Azure block below
+		  describes: it is Netty-4.1-compiled and this service runs the Boot-managed
+		  Netty 4.2, whose `netty-codec` split would break it on first use. Nothing
+		  here builds an async AWS client, so it is never loaded — but "never loaded"
+		  is a property of today's code, and the artifact is one `AsyncClient` away
+		  from being the default transport. Excluding it from `kms` alone would be
+		  theatre while this dependency still supplied it.
 		-->
 		<dependency>
 			<groupId>software.amazon.awssdk</groupId>
 			<artifactId>s3</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>software.amazon.awssdk</groupId>
+					<artifactId>netty-nio-client</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 		<!-- ============ Azure Key Vault CA backend ============================ -->
@@ -374,6 +388,38 @@
 		<dependency>
 			<groupId>com.azure</groupId>
 			<artifactId>azure-core-http-jdk-httpclient</artifactId>
+		</dependency>
+
+		<!-- ============ AWS KMS CA backend ==================================== -->
+		<!--
+		  The CA private key stays in KMS: the CP sends a SHA-256 digest and gets
+		  back a DER signature, so no CA private key exists in the database or in
+		  this process. The SDK's own DefaultCredentialsProvider covers every
+		  deployment shape (IRSA, instance profile, environment, profile) with no
+		  code change and no credential in configuration.
+
+		  `apache5-client` arrives transitively already, but at runtime scope and by
+		  accident of another module's dependencies. AwsKmsSignerFactory names the
+		  class directly to pin the transport, so it is declared here: a compile-scope
+		  dependency of a class that imports it, rather than a transitive that a
+		  future exclusion elsewhere could remove without failing this build.
+
+		  `netty-nio-client` is excluded for the reason given on `s3` above; both
+		  paths have to be closed for either to mean anything.
+		-->
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>kms</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>software.amazon.awssdk</groupId>
+					<artifactId>netty-nio-client</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>apache5-client</artifactId>
 		</dependency>
 
 		<!-- ================= Observability: SLO metrics + hand-wired SDK ======== -->
