@@ -1,0 +1,150 @@
+package io.sessionlayer.controlplane.ca.backend.aws;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.spec.ECGenParameterSpec;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
+import software.amazon.awssdk.services.kms.model.KeySpec;
+import software.amazon.awssdk.services.kms.model.KeyUsageType;
+import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+
+/**
+ * The adoption-time checks on a {@code GetPublicKey} response are pure, so they
+ * are proven without KMS, independent of the network call in
+ * {@code fetchPublicKey} itself. Client construction is exercised for real
+ * here; that it does no I/O is {@code AwsKmsCredentialsSmokeTest}'s claim.
+ */
+class AwsKmsSignerFactoryTest {
+
+	private static final String KEY_ARN = "arn:aws:kms:us-east-1:111122223333:key/"
+			+ "1234abcd-12ab-34cd-56ef-1234567890ab";
+
+	private static AwsKmsProperties properties() {
+		AwsKmsProperties properties = new AwsKmsProperties();
+		properties.setEnabled(true);
+		properties.setRegion("us-east-1");
+		properties.setAccountId("111122223333");
+		return properties;
+	}
+
+	private static byte[] spki(String curve) {
+		try {
+			KeyPairGenerator g = KeyPairGenerator.getInstance("EC");
+			g.initialize(new ECGenParameterSpec(curve));
+			KeyPair pair = g.generateKeyPair();
+			return pair.getPublic().getEncoded();
+		} catch (Exception e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
+	private static GetPublicKeyResponse.Builder wellFormed() {
+		return GetPublicKeyResponse.builder().keyId(KEY_ARN).keySpec(KeySpec.ECC_NIST_P256)
+				.keyUsage(KeyUsageType.SIGN_VERIFY).signingAlgorithms(List.of(SigningAlgorithmSpec.ECDSA_SHA_256))
+				.publicKey(SdkBytes.fromByteArray(spki("secp256r1")));
+	}
+
+	@Test
+	void exposesTheConfiguredAccountRegionAndPartitionAsTheAllowListAnchor() {
+		try (AwsKmsSignerFactory factory = new AwsKmsSignerFactory(properties())) {
+			assertThat(factory.anchor()).isEqualTo(new KmsKeyArn.Anchor("aws", "us-east-1", "111122223333"));
+		}
+	}
+
+	@Test
+	void buildsAndReleasesAClientForAnEndpointOverride() {
+		AwsKmsProperties properties = properties();
+		properties.setEndpointOverride("https://kms.example.internal");
+
+		assertThatCode(() -> new AwsKmsSignerFactory(properties).close()).doesNotThrowAnyException();
+	}
+
+	@Test
+	void acceptsAnEcdsaP256SignVerifyKey() {
+		assertThatCode(() -> AwsKmsSignerFactory.validateSigningKey(wellFormed().build(), KEY_ARN))
+				.doesNotThrowAnyException();
+	}
+
+	/**
+	 * The response's key id is the one hop nothing else verifies: what comes back
+	 * here becomes the pinned public key, so an endpoint, proxy or redirect
+	 * answering for a different key would pin the CA to a key the operator never
+	 * chose — and every later signature would verify against it perfectly.
+	 */
+	@Test
+	void rejectsAResponseForADifferentKeyThanTheOneRequested() {
+		GetPublicKeyResponse response = wellFormed()
+				.keyId("arn:aws:kms:us-east-1:111122223333:key/99998888-7777-6666-5555-444433332222").build();
+
+		assertThatThrownBy(() -> AwsKmsSignerFactory.validateSigningKey(response, KEY_ARN))
+				.isInstanceOf(IllegalStateException.class).hasMessageContaining("does not match the requested");
+	}
+
+	@Test
+	void rejectsAKeyOnAnotherCurve() {
+		GetPublicKeyResponse response = wellFormed().keySpec(KeySpec.ECC_NIST_P384).build();
+
+		assertThatThrownBy(() -> AwsKmsSignerFactory.validateSigningKey(response, KEY_ARN))
+				.isInstanceOf(IllegalStateException.class).hasMessageContaining("not ECC_NIST_P256");
+	}
+
+	/**
+	 * An encryption key cannot sign at all. Refused at adoption rather than left to
+	 * the first certificate, because {@code kms:DescribeKey} is deliberately not in
+	 * this seam's required IAM surface — this response is the only look it gets.
+	 */
+	@Test
+	void rejectsAKeyThatIsNotForSigning() {
+		GetPublicKeyResponse response = wellFormed().keyUsage(KeyUsageType.ENCRYPT_DECRYPT).build();
+
+		assertThatThrownBy(() -> AwsKmsSignerFactory.validateSigningKey(response, KEY_ARN))
+				.isInstanceOf(IllegalStateException.class).hasMessageContaining("not SIGN_VERIFY");
+	}
+
+	@Test
+	void rejectsAKeyThatDoesNotOfferEcdsaSha256() {
+		GetPublicKeyResponse noAlgorithms = wellFormed().signingAlgorithms(List.of()).build();
+		GetPublicKeyResponse wrongAlgorithm = wellFormed().signingAlgorithms(List.of(SigningAlgorithmSpec.ECDSA_SHA_512))
+				.build();
+
+		for (GetPublicKeyResponse response : List.of(noAlgorithms, wrongAlgorithm)) {
+			assertThatThrownBy(() -> AwsKmsSignerFactory.validateSigningKey(response, KEY_ARN))
+					.isInstanceOf(IllegalStateException.class).hasMessageContaining("does not offer ECDSA_SHA_256");
+		}
+	}
+
+	@Test
+	void decodesAP256Spki() {
+		assertThat(AwsKmsSignerFactory.decodeP256PublicKey(spki("secp256r1"), KEY_ARN).getParams().getCurve()
+				.getField().getFieldSize()).isEqualTo(256);
+	}
+
+	/**
+	 * The curve is checked against the JCA's own P-256 parameters rather than
+	 * trusted from {@code keySpec}: the SPKI is what gets persisted and what every
+	 * certificate this CA issues carries, so a response whose declared spec and
+	 * actual key disagree must not be the one that wins.
+	 */
+	@Test
+	void rejectsAnSpkiOnAnotherCurveEvenWhenTheDeclaredSpecSaysP256() {
+		byte[] p384 = spki("secp384r1");
+
+		assertThatCode(() -> AwsKmsSignerFactory.validateSigningKey(
+				wellFormed().publicKey(SdkBytes.fromByteArray(p384)).build(), KEY_ARN)).doesNotThrowAnyException();
+		assertThatThrownBy(() -> AwsKmsSignerFactory.decodeP256PublicKey(p384, KEY_ARN))
+				.isInstanceOf(IllegalStateException.class).hasMessageContaining("not on the P-256 curve");
+	}
+
+	@Test
+	void rejectsPublicKeyBytesThatAreNotAnEcSpki() {
+		assertThatThrownBy(() -> AwsKmsSignerFactory.decodeP256PublicKey(new byte[]{1, 2, 3}, KEY_ARN))
+				.isInstanceOf(IllegalStateException.class).hasMessageContaining("usable EC public key");
+	}
+}

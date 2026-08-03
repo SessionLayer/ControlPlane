@@ -69,6 +69,12 @@ public final class AwsKmsSigner implements KmsSigner {
 			throw new KmsSigningException(keyArn,
 					"signature was produced with " + response.signingAlgorithm() + ", not ECDSA_SHA_256");
 		}
+		// The SDK models the signature as optional, so an absent one is a null here
+		// rather than an exception — checked so it fails as a signing refusal and not
+		// as a NullPointerException with no key in its message.
+		if (response.signature() == null) {
+			throw new KmsSigningException(keyArn, "the response carried no signature");
+		}
 		byte[] signature = response.signature().asByteArray();
 		if (!verifiesAgainstPinnedKey(signature, sha256Digest)) {
 			throw new KmsSigningException(keyArn, "returned signature does not verify against the pinned public key");
