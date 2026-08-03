@@ -54,6 +54,7 @@ class AwsKmsRotationIT extends AbstractAuthIT {
 		registry.add("sessionlayer.ca.aws.region", LocalStackKms::region);
 		registry.add("sessionlayer.ca.aws.account-id", () -> LocalStackKms.ACCOUNT_ID);
 		registry.add("sessionlayer.ca.aws.endpoint-override", () -> LocalStackKms.endpoint().toString());
+		registry.add("sessionlayer.ca.aws.allow-endpoint-override", () -> "true");
 		registry.add("sessionlayer.ca.aws.allow-insecure-endpoint", () -> "true");
 	}
 

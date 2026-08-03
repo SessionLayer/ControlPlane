@@ -26,10 +26,9 @@ import software.amazon.awssdk.services.kms.model.KeyUsageType;
  * where AWS raises {@code DisabledException}. And it signs a P-384 key under
  * {@code ECDSA_SHA_256} and reports the result as {@code ECDSA_SHA_256}, where
  * AWS accepts only an algorithm the key's own {@code SigningAlgorithms} lists.
- * Everything the tests do rely
- * on matches AWS: a DER {@code SEQUENCE} from {@code Sign}, the full key ARN
- * echoed as {@code KeyId} by both {@code Sign} and {@code GetPublicKey},
- * {@code DisabledException} for a disabled key,
+ * Everything the tests do rely on matches AWS: a DER {@code SEQUENCE} from
+ * {@code Sign}, the full key ARN echoed as {@code KeyId} by both {@code Sign}
+ * and {@code GetPublicKey}, {@code DisabledException} for a disabled key,
  * {@code KMSInvalidStateException} for one pending deletion, and alias
  * resolution.
  */
@@ -124,6 +123,7 @@ public final class LocalStackKms {
 		properties.setRegion(region());
 		properties.setAccountId(ACCOUNT_ID);
 		properties.setEndpointOverride(endpointOverride);
+		properties.setAllowEndpointOverride(true);
 		properties.setAllowInsecureEndpoint(true);
 		properties.validate();
 		return properties;
