@@ -23,8 +23,18 @@ import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
  */
 class AwsKmsSignerFactoryTest {
 
-	private static final String KEY_ARN = "arn:aws:kms:us-east-1:111122223333:key/"
+	private static final String ACCOUNT_ID = "111122223333";
+
+	private static final String KEY_ARN = "arn:aws:kms:us-east-1:" + ACCOUNT_ID + ":key/"
 			+ "1234abcd-12ab-34cd-56ef-1234567890ab";
+
+	/**
+	 * Taken from the real parse rather than written out, so a change to the
+	 * redaction shape reaches these assertions instead of leaving them agreeing
+	 * with a literal nobody maintains.
+	 */
+	private static final String REDACTED_ARN = KmsKeyArn
+			.parse(KEY_ARN, new KmsKeyArn.Anchor("aws", "us-east-1", ACCOUNT_ID)).redacted();
 
 	private static AwsKmsProperties properties() {
 		AwsKmsProperties properties = new AwsKmsProperties();
@@ -68,7 +78,7 @@ class AwsKmsSignerFactoryTest {
 
 	@Test
 	void acceptsAnEcdsaP256SignVerifyKey() {
-		assertThatCode(() -> AwsKmsSignerFactory.validateSigningKey(wellFormed().build(), KEY_ARN))
+		assertThatCode(() -> AwsKmsSignerFactory.validateSigningKey(wellFormed().build(), KEY_ARN, REDACTED_ARN))
 				.doesNotThrowAnyException();
 	}
 
@@ -83,7 +93,7 @@ class AwsKmsSignerFactoryTest {
 		GetPublicKeyResponse response = wellFormed()
 				.keyId("arn:aws:kms:us-east-1:111122223333:key/99998888-7777-6666-5555-444433332222").build();
 
-		assertThatThrownBy(() -> AwsKmsSignerFactory.validateSigningKey(response, KEY_ARN))
+		assertThatThrownBy(() -> AwsKmsSignerFactory.validateSigningKey(response, KEY_ARN, REDACTED_ARN))
 				.isInstanceOf(IllegalStateException.class).hasMessageContaining("does not match the requested");
 	}
 
@@ -91,7 +101,7 @@ class AwsKmsSignerFactoryTest {
 	void rejectsAKeyOnAnotherCurve() {
 		GetPublicKeyResponse response = wellFormed().keySpec(KeySpec.ECC_NIST_P384).build();
 
-		assertThatThrownBy(() -> AwsKmsSignerFactory.validateSigningKey(response, KEY_ARN))
+		assertThatThrownBy(() -> AwsKmsSignerFactory.validateSigningKey(response, KEY_ARN, REDACTED_ARN))
 				.isInstanceOf(IllegalStateException.class).hasMessageContaining("not ECC_NIST_P256");
 	}
 
@@ -104,7 +114,7 @@ class AwsKmsSignerFactoryTest {
 	void rejectsAKeyThatIsNotForSigning() {
 		GetPublicKeyResponse response = wellFormed().keyUsage(KeyUsageType.ENCRYPT_DECRYPT).build();
 
-		assertThatThrownBy(() -> AwsKmsSignerFactory.validateSigningKey(response, KEY_ARN))
+		assertThatThrownBy(() -> AwsKmsSignerFactory.validateSigningKey(response, KEY_ARN, REDACTED_ARN))
 				.isInstanceOf(IllegalStateException.class).hasMessageContaining("not SIGN_VERIFY");
 	}
 
@@ -115,14 +125,14 @@ class AwsKmsSignerFactoryTest {
 				.build();
 
 		for (GetPublicKeyResponse response : List.of(noAlgorithms, wrongAlgorithm)) {
-			assertThatThrownBy(() -> AwsKmsSignerFactory.validateSigningKey(response, KEY_ARN))
+			assertThatThrownBy(() -> AwsKmsSignerFactory.validateSigningKey(response, KEY_ARN, REDACTED_ARN))
 					.isInstanceOf(IllegalStateException.class).hasMessageContaining("does not offer ECDSA_SHA_256");
 		}
 	}
 
 	@Test
 	void decodesAP256Spki() {
-		assertThat(AwsKmsSignerFactory.decodeP256PublicKey(spki("secp256r1"), KEY_ARN).getParams().getCurve()
+		assertThat(AwsKmsSignerFactory.decodeP256PublicKey(spki("secp256r1"), REDACTED_ARN).getParams().getCurve()
 				.getField().getFieldSize()).isEqualTo(256);
 	}
 
@@ -137,14 +147,15 @@ class AwsKmsSignerFactoryTest {
 		byte[] p384 = spki("secp384r1");
 
 		assertThatCode(() -> AwsKmsSignerFactory.validateSigningKey(
-				wellFormed().publicKey(SdkBytes.fromByteArray(p384)).build(), KEY_ARN)).doesNotThrowAnyException();
-		assertThatThrownBy(() -> AwsKmsSignerFactory.decodeP256PublicKey(p384, KEY_ARN))
+				wellFormed().publicKey(SdkBytes.fromByteArray(p384)).build(), KEY_ARN, REDACTED_ARN))
+				.doesNotThrowAnyException();
+		assertThatThrownBy(() -> AwsKmsSignerFactory.decodeP256PublicKey(p384, REDACTED_ARN))
 				.isInstanceOf(IllegalStateException.class).hasMessageContaining("not on the P-256 curve");
 	}
 
 	@Test
 	void rejectsPublicKeyBytesThatAreNotAnEcSpki() {
-		assertThatThrownBy(() -> AwsKmsSignerFactory.decodeP256PublicKey(new byte[]{1, 2, 3}, KEY_ARN))
+		assertThatThrownBy(() -> AwsKmsSignerFactory.decodeP256PublicKey(new byte[]{1, 2, 3}, REDACTED_ARN))
 				.isInstanceOf(IllegalStateException.class).hasMessageContaining("usable EC public key");
 	}
 }

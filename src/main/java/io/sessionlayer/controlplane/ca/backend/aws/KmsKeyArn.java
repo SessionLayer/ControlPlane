@@ -74,8 +74,10 @@ public final class KmsKeyArn {
 
 		private static void require(String value, Pattern shape, String property) {
 			if (value == null || !shape.matcher(value).matches()) {
-				throw new IllegalStateException(
-						"sessionlayer.ca.aws." + property + " '" + value + "' is not a usable value");
+				// The offending value is deliberately not echoed: this record carries the
+				// account id, and AwsKmsProperties has already reported the real
+				// configuration error by name at startup.
+				throw new IllegalStateException("sessionlayer.ca.aws." + property + " is not a usable value");
 			}
 		}
 	}
@@ -125,11 +127,16 @@ public final class KmsKeyArn {
 		return new KmsKeyArn(anchor, keyId);
 	}
 
+	// The referenced value is echoed because it is the caller's own submitted
+	// string; the configured one never is. Naming both would make a 422 the way to
+	// read this deployment's AWS account id out of a Control Plane that only
+	// answers "not that one".
 	private static void requireAnchored(String keyReference, String configured, String referenced, String property) {
 		if (!configured.equals(referenced)) {
 			throw new InvalidKeyReference("CA key_reference '" + keyReference + "' names " + property + " '"
-					+ referenced + "', not the configured sessionlayer.ca.aws." + property + " '" + configured
-					+ "' — only the configured account, region and partition are permitted");
+					+ referenced + "', which is not the " + property
+					+ " this Control Plane is configured to sign in — only the configured account, region and"
+					+ " partition are permitted");
 		}
 	}
 
@@ -152,5 +159,18 @@ public final class KmsKeyArn {
 
 	public String keyId() {
 		return keyId;
+	}
+
+	/**
+	 * The ARN with the account id masked — the only form that may appear in a log
+	 * line, a span attribute, a metric tag or an exception message. A KMS ARN
+	 * carries the AWS account id, and a CA signing failure is exactly the moment a
+	 * Control Plane writes its key reference somewhere an operator will read it, so
+	 * the redaction has to live on the value rather than at each site that renders
+	 * it. What is left still identifies the key uniquely for anyone who already
+	 * holds the account.
+	 */
+	public String redacted() {
+		return "arn:" + anchor.partition() + ":kms:" + anchor.region() + ":***:" + KEY_RESOURCE_PREFIX + keyId;
 	}
 }

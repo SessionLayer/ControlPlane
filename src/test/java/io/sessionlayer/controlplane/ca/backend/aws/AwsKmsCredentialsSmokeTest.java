@@ -1,5 +1,6 @@
 package io.sessionlayer.controlplane.ca.backend.aws;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -23,7 +24,11 @@ class AwsKmsCredentialsSmokeTest {
 	@Test
 	void theDefaultCredentialChainAndTheApache5TransportBothBuild() {
 		assertThatCode(() -> {
-			try (DefaultCredentialsProvider credentials = DefaultCredentialsProvider.create()) {
+			// Built and closed without resolving a credential: the chain does no I/O
+			// until a request needs one, which is what keeps bean construction off the
+			// network. Resolving here would make this test require an AWS environment.
+			try (DefaultCredentialsProvider credentials = DefaultCredentialsProvider.builder().build()) {
+				assertThat(credentials).isNotNull();
 				Apache5HttpClient.builder().build().close();
 			}
 		}).doesNotThrowAnyException();

@@ -185,4 +185,30 @@ class KmsKeyArnTest {
 		assertThatThrownBy(() -> new Anchor("azure", "us-east-1", "111122223333"))
 				.isInstanceOf(IllegalStateException.class).hasMessageContaining("sessionlayer.ca.aws.partition");
 	}
+
+	/**
+	 * Everything human- or telemetry-facing renders this form, so the account id
+	 * must not survive it while the key stays identifiable.
+	 */
+	@Test
+	void redactsTheAccountIdButStillNamesTheKey() {
+		String redacted = KmsKeyArn.parse(ARN, ANCHOR).redacted();
+
+		assertThat(redacted).doesNotContain("111122223333").contains(KEY_ID).contains("us-east-1")
+				.isEqualTo("arn:aws:kms:us-east-1:***:key/" + KEY_ID);
+	}
+
+	/**
+	 * The anchor mismatch is the one refusal that could turn a {@code 422} into a
+	 * read of this deployment's account id: the caller learns their own ARN was
+	 * rejected, never which account would have been accepted.
+	 */
+	@Test
+	void aWrongAccountIsRefusedWithoutNamingTheConfiguredOne() {
+		String otherAccount = "arn:aws:kms:us-east-1:999988887777:key/" + KEY_ID;
+
+		assertThatThrownBy(() -> KmsKeyArn.parse(otherAccount, ANCHOR))
+				.isInstanceOf(InvalidKeyReference.class).hasMessageContaining("999988887777")
+				.hasMessageNotContaining("111122223333");
+	}
 }

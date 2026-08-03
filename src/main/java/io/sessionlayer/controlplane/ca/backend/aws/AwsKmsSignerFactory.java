@@ -56,7 +56,7 @@ public class AwsKmsSignerFactory implements AutoCloseable {
 	public AwsKmsSignerFactory(AwsKmsProperties properties) {
 		this.anchor = new KmsKeyArn.Anchor(properties.getPartition(), properties.getRegion(),
 				properties.getAccountId());
-		this.credentialsProvider = DefaultCredentialsProvider.create();
+		this.credentialsProvider = DefaultCredentialsProvider.builder().build();
 		this.httpClient = Apache5HttpClient.builder().connectionTimeout(properties.getTimeout())
 				.socketTimeout(properties.getTimeout()).build();
 		this.kms = buildClient(properties, credentialsProvider, httpClient);
@@ -76,7 +76,7 @@ public class AwsKmsSignerFactory implements AutoCloseable {
 	 * here).
 	 */
 	public KmsSigner signerFor(KmsKeyArn ref, ECPublicKey pinnedPublicKey) {
-		return new AwsKmsSigner(kms, pinnedPublicKey, ref.keyArn());
+		return new AwsKmsSigner(kms, pinnedPublicKey, ref);
 	}
 
 	/**
@@ -88,8 +88,8 @@ public class AwsKmsSignerFactory implements AutoCloseable {
 	 */
 	public ECPublicKey fetchPublicKey(KmsKeyArn ref) {
 		GetPublicKeyResponse response = kms.getPublicKey(GetPublicKeyRequest.builder().keyId(ref.keyArn()).build());
-		validateSigningKey(response, ref.keyArn());
-		return decodeP256PublicKey(response.publicKey().asByteArray(), ref.keyArn());
+		validateSigningKey(response, ref.keyArn(), ref.redacted());
+		return decodeP256PublicKey(response.publicKey().asByteArray(), ref.redacted());
 	}
 
 	/**
@@ -107,21 +107,21 @@ public class AwsKmsSignerFactory implements AutoCloseable {
 	 * certificate, because {@code DescribeKey} is deliberately not in this seam's
 	 * required IAM surface.
 	 */
-	static void validateSigningKey(GetPublicKeyResponse response, String keyArn) {
+	static void validateSigningKey(GetPublicKeyResponse response, String keyArn, String redactedKeyArn) {
 		if (!keyArn.equals(response.keyId())) {
 			throw new IllegalStateException(
-					"KMS returned a key id that does not match the requested '" + keyArn + "'");
+					"KMS returned a key id that does not match the requested '" + redactedKeyArn + "'");
 		}
 		if (KeySpec.ECC_NIST_P256 != response.keySpec()) {
 			throw new IllegalStateException(
-					"KMS key '" + keyArn + "' is " + response.keySpec() + ", not ECC_NIST_P256");
+					"KMS key '" + redactedKeyArn + "' is " + response.keySpec() + ", not ECC_NIST_P256");
 		}
 		if (KeyUsageType.SIGN_VERIFY != response.keyUsage()) {
-			throw new IllegalStateException("KMS key '" + keyArn + "' has usage " + response.keyUsage()
+			throw new IllegalStateException("KMS key '" + redactedKeyArn + "' has usage " + response.keyUsage()
 					+ ", not SIGN_VERIFY");
 		}
 		if (!response.signingAlgorithms().contains(SigningAlgorithmSpec.ECDSA_SHA_256)) {
-			throw new IllegalStateException("KMS key '" + keyArn + "' does not offer ECDSA_SHA_256");
+			throw new IllegalStateException("KMS key '" + redactedKeyArn + "' does not offer ECDSA_SHA_256");
 		}
 	}
 
@@ -132,15 +132,15 @@ public class AwsKmsSignerFactory implements AutoCloseable {
 	 * this CA issues carries, so a response whose declared spec and actual key
 	 * disagree must not be the one that wins.
 	 */
-	static ECPublicKey decodeP256PublicKey(byte[] spki, String keyArn) {
+	static ECPublicKey decodeP256PublicKey(byte[] spki, String redactedKeyArn) {
 		ECPublicKey publicKey;
 		try {
 			publicKey = (ECPublicKey) KeyFactory.getInstance("EC").generatePublic(new X509EncodedKeySpec(spki));
 		} catch (GeneralSecurityException | ClassCastException e) {
-			throw new IllegalStateException("KMS key '" + keyArn + "' did not return a usable EC public key", e);
+			throw new IllegalStateException("KMS key '" + redactedKeyArn + "' did not return a usable EC public key", e);
 		}
 		if (!isP256(publicKey.getParams())) {
-			throw new IllegalStateException("KMS key '" + keyArn + "' public key is not on the P-256 curve");
+			throw new IllegalStateException("KMS key '" + redactedKeyArn + "' public key is not on the P-256 curve");
 		}
 		return publicKey;
 	}

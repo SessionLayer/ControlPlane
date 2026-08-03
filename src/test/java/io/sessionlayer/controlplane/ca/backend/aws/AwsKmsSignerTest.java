@@ -35,8 +35,14 @@ import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
  */
 class AwsKmsSignerTest {
 
-	private static final String KEY_ARN = "arn:aws:kms:us-east-1:111122223333:key/"
+	private static final String ACCOUNT_ID = "111122223333";
+
+	private static final String KEY_ARN = "arn:aws:kms:us-east-1:" + ACCOUNT_ID + ":key/"
 			+ "1234abcd-12ab-34cd-56ef-1234567890ab";
+
+	/** Parsed rather than stubbed, so the redaction under test is the real one. */
+	private static final KmsKeyArn KEY = KmsKeyArn.parse(KEY_ARN,
+			new KmsKeyArn.Anchor("aws", "us-east-1", ACCOUNT_ID));
 
 	private static KeyPair ecKeyPair() {
 		try {
@@ -95,8 +101,7 @@ class AwsKmsSignerTest {
 		byte[] digest = digest32();
 		byte[] expected = derSignatureBy(ca.getPrivate(), digest);
 
-		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(responseOf(expected)), (ECPublicKey) ca.getPublic(),
-				KEY_ARN);
+		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(responseOf(expected)), (ECPublicKey) ca.getPublic(), KEY);
 
 		assertThat(signer.signDigestDer(digest)).isEqualTo(expected);
 	}
@@ -113,7 +118,7 @@ class AwsKmsSignerTest {
 		byte[] digest = digest32();
 		KmsClient kms = clientReturning(responseOf(derSignatureBy(ca.getPrivate(), digest)));
 
-		new AwsKmsSigner(kms, (ECPublicKey) ca.getPublic(), KEY_ARN).signDigestDer(digest);
+		new AwsKmsSigner(kms, (ECPublicKey) ca.getPublic(), KEY).signDigestDer(digest);
 
 		ArgumentCaptor<SignRequest> sent = ArgumentCaptor.forClass(SignRequest.class);
 		Mockito.verify(kms).sign(sent.capture());
@@ -125,7 +130,7 @@ class AwsKmsSignerTest {
 
 	@Test
 	void rejectsADigestThatIsNotExactly32Bytes() {
-		AwsKmsSigner signer = new AwsKmsSigner(mock(KmsClient.class), (ECPublicKey) ecKeyPair().getPublic(), KEY_ARN);
+		AwsKmsSigner signer = new AwsKmsSigner(mock(KmsClient.class), (ECPublicKey) ecKeyPair().getPublic(), KEY);
 
 		assertThatThrownBy(() -> signer.signDigestDer(new byte[10])).isInstanceOf(KmsSigningException.class)
 				.hasMessageContaining("32 bytes");
@@ -142,7 +147,7 @@ class AwsKmsSignerTest {
 		byte[] wrongKeySignature = derSignatureBy(impostor.getPrivate(), digest);
 
 		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(responseOf(wrongKeySignature)),
-				(ECPublicKey) pinned.getPublic(), KEY_ARN);
+				(ECPublicKey) pinned.getPublic(), KEY);
 
 		assertThatThrownBy(() -> signer.signDigestDer(digest)).isInstanceOf(KmsSigningException.class)
 				.hasMessageContaining("does not verify against the pinned public key");
@@ -159,8 +164,7 @@ class AwsKmsSignerTest {
 		byte[] digest = digest32();
 		byte[] p1363 = p1363SignatureBy(ca.getPrivate(), digest);
 
-		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(responseOf(p1363)), (ECPublicKey) ca.getPublic(),
-				KEY_ARN);
+		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(responseOf(p1363)), (ECPublicKey) ca.getPublic(), KEY);
 
 		assertThatThrownBy(() -> signer.signDigestDer(digest)).isInstanceOf(KmsSigningException.class)
 				.hasMessageContaining("does not verify against the pinned public key");
@@ -177,8 +181,7 @@ class AwsKmsSignerTest {
 		byte[] der = derSignatureBy(ca.getPrivate(), digest);
 		byte[] truncated = Arrays.copyOf(der, der.length - 8);
 
-		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(responseOf(truncated)), (ECPublicKey) ca.getPublic(),
-				KEY_ARN);
+		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(responseOf(truncated)), (ECPublicKey) ca.getPublic(), KEY);
 
 		assertThatThrownBy(() -> signer.signDigestDer(digest)).isInstanceOf(KmsSigningException.class)
 				.hasMessageContaining("does not verify against the pinned public key");
@@ -188,8 +191,7 @@ class AwsKmsSignerTest {
 	void anEmptySignatureFails() {
 		KeyPair ca = ecKeyPair();
 
-		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(responseOf(new byte[0])), (ECPublicKey) ca.getPublic(),
-				KEY_ARN);
+		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(responseOf(new byte[0])), (ECPublicKey) ca.getPublic(), KEY);
 
 		assertThatThrownBy(() -> signer.signDigestDer(digest32())).isInstanceOf(KmsSigningException.class)
 				.hasMessageContaining("does not verify against the pinned public key");
@@ -205,10 +207,10 @@ class AwsKmsSignerTest {
 		SignResponse empty = SignResponse.builder().keyId(KEY_ARN)
 				.signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256).build();
 
-		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(empty), (ECPublicKey) ecKeyPair().getPublic(), KEY_ARN);
+		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(empty), (ECPublicKey) ecKeyPair().getPublic(), KEY);
 
 		assertThatThrownBy(() -> signer.signDigestDer(digest32())).isInstanceOf(KmsSigningException.class)
-				.hasMessageContaining("no signature").hasMessageContaining(KEY_ARN);
+				.hasMessageContaining("no signature").hasMessageContaining(KEY.redacted());
 	}
 
 	/**
@@ -227,7 +229,7 @@ class AwsKmsSignerTest {
 				.signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
 				.signature(SdkBytes.fromByteArray(derSignatureBy(ca.getPrivate(), digest))).build();
 
-		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(response), (ECPublicKey) ca.getPublic(), KEY_ARN);
+		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(response), (ECPublicKey) ca.getPublic(), KEY);
 
 		assertThatThrownBy(() -> signer.signDigestDer(digest)).isInstanceOf(KmsSigningException.class)
 				.hasMessageContaining("attributed to a different key")
@@ -243,7 +245,7 @@ class AwsKmsSignerTest {
 				.signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_512)
 				.signature(SdkBytes.fromByteArray(derSignatureBy(ca.getPrivate(), digest))).build();
 
-		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(response), (ECPublicKey) ca.getPublic(), KEY_ARN);
+		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(response), (ECPublicKey) ca.getPublic(), KEY);
 
 		assertThatThrownBy(() -> signer.signDigestDer(digest)).isInstanceOf(KmsSigningException.class)
 				.hasMessageContaining("ECDSA_SHA_512").hasMessageContaining("not ECDSA_SHA_256");
@@ -260,10 +262,10 @@ class AwsKmsSignerTest {
 		when(kms.sign(any(SignRequest.class)))
 				.thenThrow(KmsInvalidStateException.builder().message("arn:aws:kms:secret-detail is disabled").build());
 
-		AwsKmsSigner signer = new AwsKmsSigner(kms, (ECPublicKey) ecKeyPair().getPublic(), KEY_ARN);
+		AwsKmsSigner signer = new AwsKmsSigner(kms, (ECPublicKey) ecKeyPair().getPublic(), KEY);
 
 		assertThatThrownBy(() -> signer.signDigestDer(digest32())).isInstanceOf(KmsSigningException.class)
-				.hasMessageContaining(KEY_ARN).hasMessageContaining("KmsInvalidStateException")
+				.hasMessageContaining(KEY.redacted()).hasMessageContaining("KmsInvalidStateException")
 				.hasMessageNotContaining("secret-detail").hasCauseInstanceOf(KmsInvalidStateException.class);
 	}
 }
