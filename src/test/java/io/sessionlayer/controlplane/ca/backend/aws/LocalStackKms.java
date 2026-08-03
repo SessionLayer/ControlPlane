@@ -19,11 +19,14 @@ import software.amazon.awssdk.services.kms.model.KeyUsageType;
  * handling — rather than a double of the {@link KmsSigner} seam.
  *
  * <p>
- * Two fidelity gaps matter when reading a test that works around one. The
+ * Three fidelity gaps matter when reading a test that works around one. The
  * community edition evaluates no IAM policy, so a request carrying invalid
  * credentials is served exactly as a valid one is and a rejected credential
- * cannot originate here. And its {@code GetPublicKey} answers for a disabled
- * key, where AWS raises {@code DisabledException}. Everything the tests do rely
+ * cannot originate here. Its {@code GetPublicKey} answers for a disabled key,
+ * where AWS raises {@code DisabledException}. And it signs a P-384 key under
+ * {@code ECDSA_SHA_256} and reports the result as {@code ECDSA_SHA_256}, where
+ * AWS accepts only an algorithm the key's own {@code SigningAlgorithms} lists.
+ * Everything the tests do rely
  * on matches AWS: a DER {@code SEQUENCE} from {@code Sign}, the full key ARN
  * echoed as {@code KeyId} by both {@code Sign} and {@code GetPublicKey},
  * {@code DisabledException} for a disabled key,

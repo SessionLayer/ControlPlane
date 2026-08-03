@@ -73,10 +73,8 @@ class AwsKmsRotationIT extends AbstractAuthIT {
 	}
 
 	private UUID seedActiveLocalCa() {
-		return caConfigService
-				.create(ACTOR, "ca-" + UUID.randomUUID(), "session", "local", "local:seed-" + UUID.randomUUID(),
-						"ecdsa-p256")
-				.block().id();
+		return caConfigService.create(ACTOR, "ca-" + UUID.randomUUID(), "session", "local",
+				"local:seed-" + UUID.randomUUID(), "ecdsa-p256").block().id();
 	}
 
 	private static ECPublicKey kmsPublicKey(String keyArn) throws Exception {
@@ -121,9 +119,9 @@ class AwsKmsRotationIT extends AbstractAuthIT {
 		caConfigService.rotate(seedActiveLocalCa(), ACTOR, "aws_kms", keyArn, "ecdsa-p256").block();
 
 		SshCertSigner signer = signerService.activeSigner("session").block(Duration.ofSeconds(10));
-		OpenSshCertificate certificate = signer.signCertificate(new CertificateRequest(subjectKey(),
-				CertificateProfiles.innerLegSessionCert("sess-kms", "alice@corp", "deploy", "10.0.0.0/8",
-						Set.of("shell"), 7L, Instant.now())));
+		OpenSshCertificate certificate = signer.signCertificate(
+				new CertificateRequest(subjectKey(), CertificateProfiles.innerLegSessionCert("sess-kms", "alice@corp",
+						"deploy", "10.0.0.0/8", Set.of("shell"), 7L, Instant.now())));
 
 		ECPublicKey caPublicKey = SshEcdsaPublicKeys.parse(signer.caPublicKeyBlob());
 		assertThat(caPublicKey.getEncoded()).isEqualTo(kmsPublicKey(keyArn).getEncoded());
@@ -146,16 +144,16 @@ class AwsKmsRotationIT extends AbstractAuthIT {
 
 		assertThat(SshEcdsaPublicKeys.parse(signer.caPublicKeyBlob()).getEncoded())
 				.isEqualTo(kmsPublicKey(keyArn).getEncoded());
-		Throwable thrown = catchThrowable(() -> signer.signCertificate(new CertificateRequest(subjectKey(),
-				CertificateProfiles.innerLegSessionCert("sess-kms-down", "alice@corp", "deploy", "10.0.0.0/8",
-						Set.of("shell"), 8L, Instant.now()))));
+		Throwable thrown = catchThrowable(() -> signer.signCertificate(
+				new CertificateRequest(subjectKey(), CertificateProfiles.innerLegSessionCert("sess-kms-down",
+						"alice@corp", "deploy", "10.0.0.0/8", Set.of("shell"), 8L, Instant.now()))));
 		assertThat(thrown).isInstanceOf(KmsSigningException.class);
 		assertThat(caConfigs.findByCaKindAndRotationState("session", "active").block().backend()).isEqualTo("aws_kms");
 	}
 
 	/**
-	 * An alias is refused at the write path, before any KMS call — the same
-	 * refusal {@code KmsSdkContractIT} shows KMS itself would have honoured.
+	 * An alias is refused at the write path, before any KMS call — the same refusal
+	 * {@code KmsSdkContractIT} shows KMS itself would have honoured.
 	 */
 	@Test
 	void anAliasReferenceIsRefusedAtRotationAndWritesNothing() {

@@ -68,11 +68,10 @@ class KmsSdkContractIT {
 	}
 
 	/**
-	 * Adoption's one KMS read, against a real response.
-	 * {@code validateSigningKey} compares the echoed {@code KeyId} to the requested
-	 * ARN, so a service that answered with a bare key id would fail every adoption
-	 * — a check worth making against bytes KMS produced rather than against a
-	 * builder someone filled in.
+	 * Adoption's one KMS read, against a real response. {@code validateSigningKey}
+	 * compares the echoed {@code KeyId} to the requested ARN, so a service that
+	 * answered with a bare key id would fail every adoption — a check worth making
+	 * against bytes KMS produced rather than against a builder someone filled in.
 	 */
 	@Test
 	void getPublicKeyEchoesTheFullArnAndResolvesTheKeyThatSigns() throws Exception {
@@ -219,8 +218,10 @@ class KmsSdkContractIT {
 	 * The signer always asks for {@code ECDSA_SHA_256} and this key offers only
 	 * {@code ECDSA_SHA_384}. Reaching this at all means the key behind an adopted
 	 * ARN changed shape after adoption refused that shape, so what is under test is
-	 * that no signature comes back either way — whether KMS refuses the algorithm
-	 * or answers with a signature the pinned key cannot verify.
+	 * that no signature comes back — which holds whether the service refuses the
+	 * algorithm or answers with one the pinned key cannot verify. Against
+	 * LocalStack it is the second: it signs and reports {@code ECDSA_SHA_256}
+	 * regardless, so here the pinned-key verification is the guard that fires.
 	 */
 	@Test
 	void signingWithAnAlgorithmTheKeyDoesNotOfferFailsClosed() {
