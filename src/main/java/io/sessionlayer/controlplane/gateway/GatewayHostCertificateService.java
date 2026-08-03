@@ -5,6 +5,7 @@ import io.sessionlayer.controlplane.ca.CaSignerService;
 import io.sessionlayer.controlplane.ca.CertificateRequest;
 import io.sessionlayer.controlplane.ca.OpenSshCertificate;
 import io.sessionlayer.controlplane.ca.SshCertSigner;
+import io.sessionlayer.controlplane.ca.backend.CaSigningFailedException;
 import io.sessionlayer.controlplane.ca.cert.CertificateParameters;
 import io.sessionlayer.controlplane.ca.cert.CertificateProfiles;
 import io.sessionlayer.controlplane.ca.key.SshEcdsaPublicKeys;
@@ -84,8 +85,15 @@ public class GatewayHostCertificateService {
 				// audit it distinctly so a CA-availability incident is forensically visible.
 				.onErrorResume(CaSignerService.NoSignerAvailable.class,
 						unavailable -> audit.record(identity.name(), identity.name(), "gateway.host_cert.sign",
-								"denied", null, null, Map.of("reason", "ca_unavailable"))
-								.then(Mono.error(unavailable)));
+								"denied", null, null, Map.of("reason", "ca_unavailable")).then(Mono.error(unavailable)))
+				// A key service that was reached and then refused is neither an absent CA nor
+				// a client fault, so without its own branch it escaped both and this path
+				// produced no audit record at all — while the identical failure on the session
+				// path produced one. The reason is a fixed constant: a key service's response
+				// text must not reach the audit trail.
+				.onErrorResume(CaSigningFailedException.class,
+						failed -> audit.record(identity.name(), identity.name(), "gateway.host_cert.sign", "denied",
+								null, null, Map.of("reason", "ca_signing_failed")).then(Mono.error(failed)));
 	}
 
 	private static IssuedHostCertificate mint(SshCertSigner signer, String gatewayName, ECPublicKey hostKey,

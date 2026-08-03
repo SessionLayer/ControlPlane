@@ -94,29 +94,57 @@ class AwsKmsPropertiesTest {
 		assertThat(new AwsKmsProperties().getPartition()).isEqualTo("aws");
 	}
 
+	/**
+	 * The gated decision is whether an override is set at all, not which scheme it
+	 * uses. Whoever answers the endpoint supplies the public key the CA is pinned
+	 * to — so the pinning verification cannot bound a redirect, having been
+	 * bootstrapped through it — and receives the credentials SigV4 signs each
+	 * request with. An `https` URL to an arbitrary host is exactly the case a
+	 * scheme check waves through, so it is the one asserted here.
+	 */
 	@Test
-	void anHttpsEndpointOverrideIsAccepted() {
-		AwsKmsProperties properties = enabled();
-		properties.setEndpointOverride("https://kms.example.internal");
+	void anEndpointOverrideRefusesToStartUnlessExplicitlyAllowed() {
+		for (String endpoint : new String[]{"https://kms.attacker.example", "https://good.example@evil.example",
+				"https://kms.example.internal"}) {
+			AwsKmsProperties properties = enabled();
+			properties.setEndpointOverride(endpoint);
 
-		assertThatCode(properties::validate).doesNotThrowAnyException();
+			assertThatThrownBy(properties::validate).as(endpoint).isInstanceOf(IllegalStateException.class)
+					.hasMessageContaining("allow-endpoint-override");
+		}
+
+		AwsKmsProperties allowed = enabled();
+		allowed.setEndpointOverride("https://kms.example.internal");
+		allowed.setAllowEndpointOverride(true);
+		assertThatCode(allowed::validate).doesNotThrowAnyException();
 	}
 
 	/**
-	 * An endpoint override redirects every KMS call this Control Plane makes, so a
-	 * plaintext one exposes the digests being signed and lets anything on the path
-	 * answer for KMS. It is refused unless the operator says so explicitly.
+	 * The two flags are not interchangeable: allowing an override does not allow a
+	 * plaintext one, and a local KMS therefore needs both said out loud.
 	 */
 	@Test
-	void aPlaintextEndpointOverrideRefusesToStartUnlessExplicitlyAllowed() {
+	void aPlaintextEndpointOverrideNeedsBothOptIns() {
 		AwsKmsProperties properties = enabled();
 		properties.setEndpointOverride("http://localhost:4566");
+		properties.setAllowEndpointOverride(true);
 
 		assertThatThrownBy(properties::validate).isInstanceOf(IllegalStateException.class)
 				.hasMessageContaining("allow-insecure-endpoint");
 
 		properties.setAllowInsecureEndpoint(true);
 		assertThatCode(properties::validate).doesNotThrowAnyException();
+	}
+
+	/** Neither flag alone is enough for plaintext. */
+	@Test
+	void allowInsecureEndpointAloneDoesNotAdmitAnOverride() {
+		AwsKmsProperties properties = enabled();
+		properties.setEndpointOverride("http://localhost:4566");
+		properties.setAllowInsecureEndpoint(true);
+
+		assertThatThrownBy(properties::validate).isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("allow-endpoint-override");
 	}
 
 	/**
@@ -127,6 +155,7 @@ class AwsKmsPropertiesTest {
 	@Test
 	void allowInsecureEndpointDoesNotAdmitAnArbitraryScheme() {
 		AwsKmsProperties properties = enabled();
+		properties.setAllowEndpointOverride(true);
 		properties.setAllowInsecureEndpoint(true);
 		properties.setEndpointOverride("ftp://kms.example.internal");
 
@@ -137,6 +166,7 @@ class AwsKmsPropertiesTest {
 	@Test
 	void anEndpointOverrideWithNoHostRefusesToStart() {
 		AwsKmsProperties properties = enabled();
+		properties.setAllowEndpointOverride(true);
 		properties.setEndpointOverride("kms.example.internal:443");
 
 		assertThatThrownBy(properties::validate).isInstanceOf(IllegalStateException.class)
@@ -146,6 +176,7 @@ class AwsKmsPropertiesTest {
 	@Test
 	void anUnparseableEndpointOverrideRefusesToStart() {
 		AwsKmsProperties properties = enabled();
+		properties.setAllowEndpointOverride(true);
 		properties.setEndpointOverride("not a valid uri");
 
 		assertThatThrownBy(properties::validate).isInstanceOf(IllegalStateException.class)
@@ -161,11 +192,20 @@ class AwsKmsPropertiesTest {
 	}
 
 	@Test
-	void theApplicationContextItselfFailsToStartWithAPlaintextEndpointOverride() {
+	void theApplicationContextItselfFailsToStartWithAnUnapprovedEndpointOverride() {
 		contextRunner
 				.withPropertyValues("sessionlayer.ca.aws.enabled=true", "sessionlayer.ca.aws.region=us-east-1",
 						"sessionlayer.ca.aws.account-id=111122223333",
-						"sessionlayer.ca.aws.endpoint-override=http://localhost:4566")
+						"sessionlayer.ca.aws.endpoint-override=https://kms.attacker.example")
+				.run(context -> assertThat(context).hasFailed().getFailure().rootCause()
+						.isInstanceOf(IllegalStateException.class).hasMessageContaining("allow-endpoint-override"));
+	}
+
+	@Test
+	void theApplicationContextItselfFailsToStartWithAPlaintextEndpointOverride() {
+		contextRunner.withPropertyValues("sessionlayer.ca.aws.enabled=true", "sessionlayer.ca.aws.region=us-east-1",
+				"sessionlayer.ca.aws.account-id=111122223333", "sessionlayer.ca.aws.allow-endpoint-override=true",
+				"sessionlayer.ca.aws.endpoint-override=http://localhost:4566")
 				.run(context -> assertThat(context).hasFailed().getFailure().rootCause()
 						.isInstanceOf(IllegalStateException.class).hasMessageContaining("allow-insecure-endpoint"));
 	}

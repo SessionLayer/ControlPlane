@@ -75,9 +75,10 @@ public class CaRotationService {
 	 * surfacing a bare {@link TimeoutException}.
 	 */
 	public static final class ProvisionTimedOut extends RuntimeException {
-		public ProvisionTimedOut(String backend, String keyReference) {
-			super("provisioning a '" + backend + "' CA key for '" + keyReference + "' did not complete within the "
-					+ "configured timeout; the rotation was refused rather than left waiting on an external service");
+		public ProvisionTimedOut(String backend, String caKind) {
+			super("provisioning a '" + backend + "' CA key for the '" + caKind + "' kind did not complete within "
+					+ "sessionlayer.ca.provision-timeout; the rotation was refused rather than left waiting on an "
+					+ "external service");
 		}
 	}
 
@@ -108,7 +109,11 @@ public class CaRotationService {
 				.fromCallable(() -> provisionerFor(backend)
 						.provision(new CaKeyProvisioner.Request(kind, newName, "incoming", keyReference, algorithm)))
 				.subscribeOn(Schedulers.boundedElastic()).timeout(provisionTimeout)
-				.onErrorMap(TimeoutException.class, e -> new ProvisionTimedOut(backend, keyReference));
+				// The kind, not the key reference: nothing maps this exception, so it reaches
+				// the framework's default handler and is logged there — and for a key service
+				// the reference carries an account identifier. The kind is what an operator
+				// needs to know which rotation stalled.
+				.onErrorMap(TimeoutException.class, e -> new ProvisionTimedOut(backend, kind));
 	}
 
 	/**

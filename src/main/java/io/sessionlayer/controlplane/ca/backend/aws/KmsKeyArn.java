@@ -72,6 +72,18 @@ public final class KmsKeyArn {
 			require(accountId, ACCOUNT_ID, "account-id");
 		}
 
+		/**
+		 * A record's generated {@code toString()} prints every component, and this one
+		 * holds the account id — so an anchor reaching a log line, a span or a debugger
+		 * would undo the redaction the rest of this class enforces. The masking lives
+		 * on the value rather than at each site that renders it, for the same reason
+		 * {@link KmsKeyArn#redacted()} does.
+		 */
+		@Override
+		public String toString() {
+			return "Anchor[partition=" + partition + ", region=" + region + ", accountId=***]";
+		}
+
 		private static void require(String value, Pattern shape, String property) {
 			if (value == null || !shape.matcher(value).matches()) {
 				// The offending value is deliberately not echoed: this record carries the
@@ -82,16 +94,36 @@ public final class KmsKeyArn {
 		}
 	}
 
-	/** Refused for every way a {@code key_reference} can fail validation. */
+	/**
+	 * Refused for every way a {@code key_reference} can fail validation.
+	 *
+	 * <p>
+	 * It carries two renderings because it is thrown from two places with opposite
+	 * safety properties. At the write path the reference is the caller's own
+	 * submitted string and echoing it is what makes a {@code 422} useful. At sign
+	 * time and at rotation the same string comes out of {@code ca_config}, and
+	 * those messages reach the Control Plane's log — so a caller there must have
+	 * something to say that names the rule without the value. Both exist so that
+	 * neither caller has to remember which case it is in.
+	 */
 	public static final class InvalidKeyReference extends RuntimeException {
-		public InvalidKeyReference(String message) {
+
+		private final String rule;
+
+		public InvalidKeyReference(String message, String rule) {
 			super(message);
+			this.rule = rule;
+		}
+
+		/** The rule that was broken, naming no part of the reference. */
+		public String rule() {
+			return rule;
 		}
 	}
 
 	public static KmsKeyArn parse(String keyReference, Anchor anchor) {
 		if (keyReference == null || keyReference.isBlank()) {
-			throw new InvalidKeyReference("CA key_reference is empty");
+			throw new InvalidKeyReference("CA key_reference is empty", "it is empty");
 		}
 		if (keyReference.startsWith(ALIAS_RESOURCE_PREFIX)) {
 			throw aliasRefused(keyReference);
@@ -101,11 +133,12 @@ public final class KmsKeyArn {
 			throw new InvalidKeyReference("CA key_reference '" + keyReference
 					+ "' is not a KMS key ARN — a bare key id or a partial reference carries no account, region or"
 					+ " partition to check, so the full arn:<partition>:kms:<region>:<account-id>:key/<key-id> is"
-					+ " required");
+					+ " required", "it is not a full KMS key ARN");
 		}
 		if (!"kms".equals(fields[2])) {
 			throw new InvalidKeyReference(
-					"CA key_reference '" + keyReference + "' names the '" + fields[2] + "' service, not 'kms'");
+					"CA key_reference '" + keyReference + "' names the '" + fields[2] + "' service, not 'kms'",
+					"it names a service other than kms");
 		}
 		String resource = fields[5];
 		if (resource.startsWith(ALIAS_RESOURCE_PREFIX)) {
@@ -113,13 +146,15 @@ public final class KmsKeyArn {
 		}
 		if (!resource.startsWith(KEY_RESOURCE_PREFIX)) {
 			throw new InvalidKeyReference(
-					"CA key_reference '" + keyReference + "' resource is not of the form key/{key-id}");
+					"CA key_reference '" + keyReference + "' resource is not of the form key/{key-id}",
+					"its resource is not key/{key-id}");
 		}
 		String keyId = resource.substring(KEY_RESOURCE_PREFIX.length());
 		if (!KEY_ID.matcher(keyId).matches()) {
 			throw new InvalidKeyReference("CA key_reference '" + keyReference
 					+ "' has an invalid key id — a KMS key id is a UUID or a multi-Region 'mrk-' id, and a value that"
-					+ " merely occupies the key-id position is refused the same as one that is absent");
+					+ " merely occupies the key-id position is refused the same as one that is absent",
+					"its key id is not a KMS key id");
 		}
 		requireAnchored(keyReference, anchor.partition(), fields[1], "partition");
 		requireAnchored(keyReference, anchor.region(), fields[3], "region");
@@ -133,10 +168,12 @@ public final class KmsKeyArn {
 	// answers "not that one".
 	private static void requireAnchored(String keyReference, String configured, String referenced, String property) {
 		if (!configured.equals(referenced)) {
-			throw new InvalidKeyReference("CA key_reference '" + keyReference + "' names " + property + " '"
-					+ referenced + "', which is not the " + property
-					+ " this Control Plane is configured to sign in — only the configured account, region and"
-					+ " partition are permitted");
+			throw new InvalidKeyReference(
+					"CA key_reference '" + keyReference + "' names " + property + " '" + referenced
+							+ "', which is not the " + property
+							+ " this Control Plane is configured to sign in — only the configured account, region and"
+							+ " partition are permitted",
+					"it names a " + property + " this Control Plane is not configured for");
 		}
 	}
 
@@ -144,7 +181,7 @@ public final class KmsKeyArn {
 		return new InvalidKeyReference("CA key_reference '" + keyReference
 				+ "' is a KMS alias — an alias can be repointed at a different key with no change visible here, which"
 				+ " would silently swap the CA's signing key while every node still trusts the old public half. Use"
-				+ " the key ARN.");
+				+ " the key ARN.", "it is a KMS alias rather than a key ARN");
 	}
 
 	/**

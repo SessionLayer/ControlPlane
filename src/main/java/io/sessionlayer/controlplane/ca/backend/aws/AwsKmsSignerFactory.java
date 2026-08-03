@@ -9,7 +9,9 @@ import java.security.interfaces.ECPublicKey;
 import java.security.spec.ECGenParameterSpec;
 import java.security.spec.ECParameterSpec;
 import java.security.spec.X509EncodedKeySpec;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.http.SdkHttpClient;
@@ -45,8 +47,10 @@ import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
  * close an HTTP client or a credentials provider it did not itself create.
  */
 @Component
-@ConditionalOnProperty(prefix = "sessionlayer.ca.aws", name = "enabled", havingValue = "true")
+@ConditionalOnBooleanProperty(name = "sessionlayer.ca.aws.enabled")
 public class AwsKmsSignerFactory implements AutoCloseable {
+
+	private static final Logger LOG = LoggerFactory.getLogger(AwsKmsSignerFactory.class);
 
 	private final KmsKeyArn.Anchor anchor;
 	private final DefaultCredentialsProvider credentialsProvider;
@@ -60,6 +64,28 @@ public class AwsKmsSignerFactory implements AutoCloseable {
 		this.httpClient = Apache5HttpClient.builder().connectionTimeout(properties.getTimeout())
 				.socketTimeout(properties.getTimeout()).build();
 		this.kms = buildClient(properties, credentialsProvider, httpClient);
+		warnIfEndpointRedirected(properties);
+	}
+
+	/**
+	 * An endpoint override leaves no other trace at runtime — no field on the CA,
+	 * nothing in a health detail, nothing in the certificates it signs — so an
+	 * operator inspecting a Control Plane cannot otherwise tell that its KMS calls
+	 * and its AWS credentials are going somewhere the region did not choose. The
+	 * dev KEK stamps its own presence into the persisted key material for the same
+	 * reason; this seam has nowhere to stamp, so it says so at startup instead. The
+	 * host is named because that is the fact worth reading; the ARN is not, because
+	 * this line lands in the same log as everything else.
+	 */
+	private static void warnIfEndpointRedirected(AwsKmsProperties properties) {
+		String endpoint = properties.getEndpointOverride();
+		if (endpoint == null || endpoint.isBlank()) {
+			return;
+		}
+		LOG.warn("AWS KMS calls are redirected to {} by sessionlayer.ca.aws.endpoint-override — this endpoint"
+				+ " establishes the CA's pinned public key and receives the credentials SigV4 signs each request"
+				+ " with. Intended for a local KMS in development and test; do not run production this way.{}",
+				endpoint, properties.isAllowInsecureEndpoint() ? " Plaintext HTTP is permitted on it." : "");
 	}
 
 	/**
@@ -122,6 +148,13 @@ public class AwsKmsSignerFactory implements AutoCloseable {
 		}
 		if (!response.signingAlgorithms().contains(SigningAlgorithmSpec.ECDSA_SHA_256)) {
 			throw new IllegalStateException("KMS key '" + redactedKeyArn + "' does not offer ECDSA_SHA_256");
+		}
+		// The SDK models the public key as optional, so an absent one arrives as null
+		// rather than as an exception. Checked here so adoption fails naming the key,
+		// the same way a signature-less Sign response does, instead of throwing a
+		// NullPointerException that says nothing about which key was being adopted.
+		if (response.publicKey() == null) {
+			throw new IllegalStateException("KMS key '" + redactedKeyArn + "' returned no public key");
 		}
 	}
 

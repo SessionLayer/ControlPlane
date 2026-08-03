@@ -19,7 +19,7 @@ import java.security.KeyPair;
 import java.security.interfaces.ECPublicKey;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -41,7 +41,7 @@ import org.springframework.stereotype.Component;
  * {@link #fetchPublicKey}, used solely at CA adoption, talks to the vault.
  */
 @Component
-@ConditionalOnProperty(prefix = "sessionlayer.ca.azure", name = "enabled", havingValue = "true")
+@ConditionalOnBooleanProperty(name = "sessionlayer.ca.azure.enabled")
 public class AzureKeyVaultSignerFactory {
 
 	private final AzureKeyVaultProperties properties;

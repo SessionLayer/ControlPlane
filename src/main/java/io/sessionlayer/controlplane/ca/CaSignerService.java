@@ -150,9 +150,18 @@ public class CaSignerService {
 				.flatMap(material -> {
 					try {
 						return Mono.just(buildAwsKmsSigner(config, material, factory));
+					} catch (KmsKeyArn.InvalidKeyReference malformed) {
+						// The rule, never the reference. Here the string is the STORED
+						// key_reference, not the caller's own submission, and this message is
+						// logged on every certificate request the CA takes — so echoing it
+						// would write the AWS account id into the log at request volume. The
+						// 422 on the write path is where an operator sees their own value.
+						return Mono.error(new NoSignerAvailable(
+								"CA '" + config.name() + "' has an unusable KMS key_reference: " + malformed.rule()));
 					} catch (RuntimeException malformed) {
-						return Mono.error(new NoSignerAvailable("CA '" + config.name()
-								+ "' has an unusable KMS configuration: " + malformed.getMessage()));
+						return Mono.error(
+								new NoSignerAvailable("CA '" + config.name() + "' has an unusable KMS configuration ("
+										+ malformed.getClass().getSimpleName() + ")"));
 					}
 				});
 	}

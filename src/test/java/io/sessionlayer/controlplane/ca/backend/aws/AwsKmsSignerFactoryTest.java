@@ -4,12 +4,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.spec.ECGenParameterSpec;
+import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import software.amazon.awssdk.services.kms.model.KeySpec;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
@@ -68,12 +72,32 @@ class AwsKmsSignerFactoryTest {
 		}
 	}
 
+	/**
+	 * Constructing with an override used to be asserted only to "not throw", which
+	 * passes just as well if the override branch is deleted. What has to hold is
+	 * that the client is actually pointed at it — checked by attempting a call and
+	 * reading back where it went, since the SDK exposes no accessor for the
+	 * configured endpoint.
+	 */
 	@Test
-	void buildsAndReleasesAClientForAnEndpointOverride() {
-		AwsKmsProperties properties = properties();
-		properties.setEndpointOverride("https://kms.example.internal");
+	void pointsTheClientAtAnApprovedEndpointOverride() throws Exception {
+		try (ServerSocket unreachable = new ServerSocket(0, 1, InetAddress.getLoopbackAddress())) {
+			AwsKmsProperties properties = properties();
+			properties.setAllowEndpointOverride(true);
+			properties.setAllowInsecureEndpoint(true);
+			properties.setEndpointOverride("http://127.0.0.1:" + unreachable.getLocalPort() + "/kms");
+			properties.setTimeout(Duration.ofMillis(750));
 
-		assertThatCode(() -> new AwsKmsSignerFactory(properties).close()).doesNotThrowAnyException();
+			try (AwsKmsSignerFactory factory = new AwsKmsSignerFactory(properties)) {
+				// The socket accepts and never answers, so the call can only end in this
+				// client's own timeout — and only if the request went to the override
+				// rather than to the region's real KMS endpoint, which would have
+				// resolved and failed differently.
+				assertThatThrownBy(() -> factory
+						.fetchPublicKey(KmsKeyArn.parse(KEY_ARN, new KmsKeyArn.Anchor("aws", "us-east-1", ACCOUNT_ID))))
+						.isInstanceOf(SdkClientException.class);
+			}
+		}
 	}
 
 	@Test

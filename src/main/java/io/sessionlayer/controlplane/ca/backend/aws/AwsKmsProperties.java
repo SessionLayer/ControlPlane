@@ -38,6 +38,8 @@ public class AwsKmsProperties {
 
 	private String endpointOverride;
 
+	private boolean allowEndpointOverride = false;
+
 	private boolean allowInsecureEndpoint = false;
 
 	private Duration timeout = Duration.ofSeconds(10);
@@ -80,6 +82,14 @@ public class AwsKmsProperties {
 
 	public void setEndpointOverride(String endpointOverride) {
 		this.endpointOverride = endpointOverride;
+	}
+
+	public boolean isAllowEndpointOverride() {
+		return allowEndpointOverride;
+	}
+
+	public void setAllowEndpointOverride(boolean allowEndpointOverride) {
+		this.allowEndpointOverride = allowEndpointOverride;
 	}
 
 	public boolean isAllowInsecureEndpoint() {
@@ -127,14 +137,40 @@ public class AwsKmsProperties {
 	}
 
 	/**
-	 * An endpoint override redirects every KMS call this Control Plane makes, so a
-	 * plaintext one is a downgrade of the whole CA seam, not a local convenience.
-	 * It takes the same explicit opt-in as a dev KEK, and for the same reason: a
-	 * test deployment's shortcut must not be reachable by forgetting a scheme.
+	 * An endpoint override sends every KMS call this Control Plane makes to a host
+	 * of the operator's choosing, so the gated decision is whether one is set at
+	 * all — not which scheme it uses. Both halves of that matter, and only the
+	 * second is obvious:
+	 *
+	 * <ul>
+	 * <li>The <b>host</b> becomes the CA's trust root. The public key pinned at
+	 * adoption is read through the override, and every later signature is verified
+	 * against that pin, so an endpoint that answers {@code GetPublicKey} and
+	 * {@code Sign} consistently satisfies every check in {@link AwsKmsSigner} — the
+	 * pinning bounds a compromised KMS <i>response</i>, never a redirected
+	 * <i>endpoint</i>.</li>
+	 * <li>The <b>credentials</b> go with it. SigV4 sends the signed
+	 * {@code Authorization} header and, under IRSA or an instance profile, a live
+	 * {@code X-Amz-Security-Token}, to whoever answers. A redirect therefore turns
+	 * a Control Plane configuration write into AWS credentials, which is not
+	 * something the ability to write that configuration otherwise implies.</li>
+	 * </ul>
+	 *
+	 * So an override requires {@code allow-endpoint-override=true}, and a plaintext
+	 * one additionally requires {@code allow-insecure-endpoint=true} — the same
+	 * shape as the dev KEK, where the shortcut has to be asked for rather than
+	 * arrived at by omission.
 	 */
 	private void validateEndpointOverride() {
 		if (endpointOverride == null || endpointOverride.isBlank()) {
 			return;
+		}
+		if (!allowEndpointOverride) {
+			throw new IllegalStateException("sessionlayer.ca.aws.endpoint-override '" + endpointOverride
+					+ "' redirects every KMS call, including the read that establishes the CA's pinned public key and"
+					+ " the credentials SigV4 sends with it, so it requires"
+					+ " sessionlayer.ca.aws.allow-endpoint-override=true (dev/test only). In production, leave it"
+					+ " unset and let the region resolve the endpoint.");
 		}
 		URI uri;
 		try {

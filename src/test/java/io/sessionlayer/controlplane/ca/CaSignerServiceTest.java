@@ -258,6 +258,34 @@ class CaSignerServiceTest {
 		verifyNoInteractions(localCaFactory);
 	}
 
+	/**
+	 * This message is logged at WARN on every certificate request the CA takes, and
+	 * the reference it describes comes out of {@code ca_config} rather than from a
+	 * caller — so unlike the write path's {@code 422}, echoing it would write the
+	 * AWS account id into the Control Plane's log at request volume. The failure
+	 * still has to say which rule broke, or an operator cannot act on it.
+	 */
+	@Test
+	void anUnusableKmsReferenceIsReportedWithoutTheAccountId() {
+		CaConfigRepository configs = mock(CaConfigRepository.class);
+		CaKeyMaterialRepository keys = mock(CaKeyMaterialRepository.class);
+		LocalCaFactory localCaFactory = mock(LocalCaFactory.class);
+		AwsKmsSignerFactory kmsFactory = mock(AwsKmsSignerFactory.class);
+		when(kmsFactory.anchor()).thenReturn(ANCHOR);
+
+		CaConfig config = kmsConfig("arn:aws:kms:us-east-1:999988887777:key/1234abcd-12ab-34cd-56ef-1234567890ab");
+		when(keys.findByCaConfigId(config.id()))
+				.thenReturn(Mono.just(materialWithPublicKey(config, (ECPublicKey) ecKeyPair().getPublic())));
+
+		CaSignerService service = service(configs, keys, localCaFactory, noFactory(), providerReturning(kmsFactory));
+
+		StepVerifier.create(service.signerFor(config))
+				.expectErrorSatisfies(error -> assertThat(error.getMessage()).doesNotContain("999988887777")
+						.doesNotContain("111122223333").doesNotContain("arn:aws:kms").contains("session-ca")
+						.contains("account-id"))
+				.verify();
+	}
+
 	@Test
 	void kmsConfiguredCaBuildsASignerWhenTheFactoryAndKeyMaterialAreBothPresent() {
 		CaConfigRepository configs = mock(CaConfigRepository.class);

@@ -315,6 +315,12 @@
 		  is a property of today's code, and the artifact is one `AsyncClient` away
 		  from being the default transport. Excluding it from `kms` alone would be
 		  theatre while this dependency still supplied it.
+
+		  It takes `io.netty:netty-codec` and its `-protobuf`/`-marshalling` siblings
+		  out of the runtime tree with it, since nothing else pulls them. That is
+		  safe rather than incidental: on Netty 4.2 `netty-codec` is an empty
+		  aggregator, the real classes having moved to `netty-codec-base` and
+		  `netty-codec-compression`, which reactor-netty brings in on its own.
 		-->
 		<dependency>
 			<groupId>software.amazon.awssdk</groupId>
