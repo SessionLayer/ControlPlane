@@ -115,10 +115,16 @@ jobs:
 
           user=$(docker image inspect -f '{{.Config.User}}' "$IMG")
           case "$user" in
-            '') echo "::error::image declares no USER"; exit 1 ;;
-            root|0|0:0|root:root) echo "::error::image runs as root ($user)"; exit 1 ;;
+            ''|root|0|root:*|0:*) echo "::error::image runs as ${user:-<empty>}; runAsNonRoot cannot enforce this"; exit 1 ;;
           esac
           echo "USER=$user"
+
+          # The positive control: the runtime must actually run. Without it, a
+          # container runtime broken for any unrelated reason would make the
+          # no-shell assertion below pass for the wrong reason — and this is the
+          # component whose runtime layer was rebuilt, so nothing else proves the
+          # copied JRE and the jar landed in a working combination.
+          docker run --rm --entrypoint /opt/java/bin/java "$IMG" -version
 
           # Distroless: an exec that succeeds means a shell reached the final layer.
           if docker run --rm --entrypoint /bin/sh "$IMG" -c true 2>/dev/null; then
