@@ -27,3 +27,15 @@ updates:
       - ci
     commit-message:
       prefix: ci
+
+  # Base images in deploy/Dockerfile (pinned by digest; Dependabot bumps the
+  # digest and the tag comment together).
+  - package-ecosystem: docker
+    directory: "/deploy"
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - docker
+    commit-message:
+      prefix: deps
