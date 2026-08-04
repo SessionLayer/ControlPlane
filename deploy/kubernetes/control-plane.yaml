@@ -50,6 +50,12 @@ data:
   # Documentation/docs/reference/ports.md. Hostnames land in the SANs of the
   # server certificate this process mints at runtime from the internal mTLS
   # CA; they must match what Gateway/Agent actually dial.
+  #
+  # These names assume the `sessionlayer` namespace. A manifest cannot template
+  # its own namespace, so applied anywhere else this mints a certificate whose
+  # SANs nothing dials — and the failure surfaces as a TLS error at connect
+  # time, far from the line that caused it. Edit them to match, or use the Helm
+  # chart, which derives them from the release namespace.
   SESSIONLAYER_MTLS_SERVER_PORT: "9443"
   SESSIONLAYER_MTLS_SERVER_HOSTNAMES: "controlplane.sessionlayer.svc,controlplane.sessionlayer.svc.cluster.local,controlplane,localhost"
 
@@ -99,14 +105,14 @@ spec:
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
-        runAsUser: 10000
-        runAsGroup: 10000
-        fsGroup: 10000
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: controlplane
-          image: ghcr.io/sessionlayer/controlplane:latest # pin by digest in production
+          image: ghcr.io/sessionlayer/controlplane:v0.0.2 # pin by digest in production
           envFrom:
             - configMapRef: { name: sessionlayer-controlplane-config }
             - secretRef: { name: sessionlayer-controlplane-secrets }

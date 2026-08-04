@@ -50,6 +50,13 @@ class ControlPlaneSmokeIT {
 	@Value("${local.server.port}")
 	private int port;
 
+	// Filtered from the Maven project version at package time. Asserting the
+	// endpoint against it, rather than against a literal, means a release bumps
+	// one number instead of two — and the release job is what checks that number
+	// against the tag being published.
+	@Value("${application.version}")
+	private String applicationVersion;
+
 	@BeforeEach
 	void bindClient() {
 		webTestClient = WebTestClient.bindToServer().baseUrl("http://localhost:" + port).build();
@@ -70,7 +77,7 @@ class ControlPlaneSmokeIT {
 	@Test
 	void versionAdvertisesProtocolRange() {
 		webTestClient.get().uri("/v1/version").exchange().expectStatus().isOk().expectBody().jsonPath("$.component")
-				.isEqualTo("SessionLayer Control Plane").jsonPath("$.version").isEqualTo("0.0.1")
+				.isEqualTo("SessionLayer Control Plane").jsonPath("$.version").isEqualTo(applicationVersion)
 				.jsonPath("$.protocols.controlPlaneGatewayGrpc.min").isEqualTo("1.0")
 				.jsonPath("$.protocols.controlPlaneGatewayGrpc.max").isEqualTo("1.1");
 	}

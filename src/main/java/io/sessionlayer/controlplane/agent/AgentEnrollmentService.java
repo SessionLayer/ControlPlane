@@ -89,11 +89,23 @@ public class AgentEnrollmentService {
 	}
 
 	private Mono<Node> resolveNode(String nodeName) {
-		return nodes.findByName(nodeName)
-				.switchIfEmpty(Mono.defer(() -> nodes
-						.save(Node.create(nodeName, null, objectMapper.createObjectNode(), "agent", "active", "unknown",
-								null, null))
-						.onErrorResume(DataIntegrityViolationException.class, race -> nodes.findByName(nodeName))));
+		return nodes.findByName(nodeName).flatMap(this::requireAgentConnector)
+				.switchIfEmpty(
+						Mono.defer(() -> nodes
+								.save(Node.create(nodeName, null, objectMapper.createObjectNode(), "agent", "active",
+										"unknown", null, null))
+								.onErrorResume(DataIntegrityViolationException.class,
+										race -> nodes.findByName(nodeName).flatMap(this::requireAgentConnector))));
+	}
+
+	// An Agent attached to an agentless-registered node leaves the authorizer
+	// telling the Gateway to dial that node's address directly, so the control
+	// channel the Agent just opened is never used (§9.2). Refuse the join and make
+	// the operator fix the registration.
+	private Mono<Node> requireAgentConnector(Node node) {
+		return "agent".equals(node.connectorKind())
+				? Mono.just(node)
+				: denied(node.name(), "node_not_agent_connector", AgentJoinException.Reason.PERMISSION_DENIED);
 	}
 
 	private Mono<Void> refuseIfLocked(Node node) {

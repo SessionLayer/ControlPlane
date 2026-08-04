@@ -213,6 +213,39 @@ class AgentJoinLifecycleIT extends AbstractMtlsIT {
 		assertThat(refused.getStatus().getCode()).isEqualTo(Status.Code.PERMISSION_DENIED);
 	}
 
+	// An agentless-registered node is one the authorizer tells the Gateway to DIAL,
+	// so attaching an Agent to it points the session at an address while leaving
+	// the Agent's control channel unused (§9.2).
+	@Test
+	void enrollRefusesANodeRegisteredForTheAgentlessConnector() {
+		Node node = nodes.save(Node.create("node-agentless-join", null, JsonNodeFactory.instance.objectNode(),
+				"agentless", "active", "unknown", null, "10.0.0.5:22")).block();
+
+		StatusRuntimeException refused = catchThrowableOfType(StatusRuntimeException.class,
+				() -> submit(tokenRequest("node-agentless-join", mintToken("node-agentless-join"))));
+
+		assertThat(refused.getStatus().getCode()).isEqualTo(Status.Code.PERMISSION_DENIED);
+		assertThat(nodes.findById(node.id()).block().connectorKind()).isEqualTo("agentless");
+		assertThat(agentIdentities.findByNodeIdAndStatus(node.id(), "active").block()).isNull();
+		Long denials = db
+				.sql("SELECT count(*) FROM runtime.audit_event WHERE action = 'agent.enroll' AND outcome = 'denied' "
+						+ "AND subject = :node AND detail->>'reason' = 'node_not_agent_connector'")
+				.bind("node", "node-agentless-join").map(row -> row.get(0, Long.class)).one().block();
+		assertThat(denials).isEqualTo(1L);
+	}
+
+	// The point of pre-registering: the Agent joins the node the operator already
+	// anchored, rather than creating a second, anchorless one.
+	@Test
+	void enrollAttachesToAPreRegisteredAgentNode() {
+		Node node = nodes.save(Node.create("node-preregistered", null, JsonNodeFactory.instance.objectNode(), "agent",
+				"active", "unknown", null, null)).block();
+
+		EnrolledAgent agent = enrollToken("node-preregistered");
+
+		assertThat(agent.nodeId()).isEqualTo(node.id());
+	}
+
 	@Test
 	void perNodeCredentialsAreDistinct() {
 		EnrolledAgent a = enrollToken("node-dist-a");

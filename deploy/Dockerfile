@@ -1,69 +1,90 @@
 # syntax=docker/dockerfile:1
-# SessionLayer Control Plane — production image, built from source (Session
-# Thirty-Seven).
+# SessionLayer Control Plane — production image, built from source.
 #
 # This is the from-source counterpart to
 # Documentation/examples/quickstart/cp.Dockerfile, which installs the signed
 # GitHub Release jar instead (cosign-verified against the release workflow's
-# Sigstore identity). There is no release artifact to verify in a from-source
-# build, so that verification step has no equivalent here; ship the quickstart
-# path, not this one, when a signed release exists and source trust is not
-# already established some other way (e.g. a reviewed, pinned commit).
+# Sigstore identity). A from-source build has no release artifact to verify, so
+# that step has no equivalent here; ship the quickstart path, not this one, when
+# a signed release exists and source trust is not already established some other
+# way (e.g. a reviewed, pinned commit).
 #
-# Two-stage build: a JDK stage compiles the jar with the repo's pinned
-# toolchain (Java 25, the Maven Wrapper); the runtime stage carries only a JRE
-# + the jar. Runs as non-root with a read-only root filesystem (see
-# deploy/kubernetes/control-plane.yaml and deploy/systemd/ for the outer
-# security context — this image does not itself drop privileges or apply
-# seccomp/Landlock, unlike the Gateway: the JVM has no equivalent in-process
-# hardening layer, so the container/OS boundary in those manifests is the
-# whole defense here, not a second layer on top of one).
+# Three stages: Maven compiles the jar on the build platform, since the jar is
+# architecture-neutral and cross-building it needs no emulation; jlink assembles
+# a Java 25 runtime on the *target* platform, because it emits native launchers
+# and shared libraries; the final image is distroless — no shell, no package
+# manager, no compiler, and no JDK tooling.
 #
-# Pin the base images by digest in your registry mirror for production (the
-# tags below are for readability); the project pins GitHub Actions by SHA for
-# the same supply-chain reason.
+# Bases are pinned by digest; the tag alongside is for readability, the same
+# convention this project uses for GitHub Actions.
+#
+# The image does not itself drop privileges or apply seccomp/Landlock, unlike
+# the Gateway: the JVM has no equivalent in-process hardening layer, so the
+# container boundary that deploy/kubernetes/control-plane.yaml and
+# deploy/systemd/ establish is the whole defence here, not a second layer on
+# top of one.
 
-# ---- build stage ----
-FROM eclipse-temurin:25-jdk-noble@sha256:3eb81ed94d8c1a34422f19f8188548bdf02cae69c91d0328afdbb7abed90f617 AS build
+# ---- jar ----
+FROM --platform=$BUILDPLATFORM eclipse-temurin:25-jdk-noble@sha256:735baf2edc6cd6485240144a84fa4db142b9a6f47b4eb4080f31058d200f9813 AS jar
 WORKDIR /src
 
 # contracts/ is vendored (committed, pinned by contracts.lock) — codegen never
 # reaches the network for the spec itself, only Maven Central for deps.
 COPY . .
 
-# The BuildKit cache mount persists ~/.m2 across builds without baking it into
-# a layer (build once, reuse). Tests are skipped: this stage has no Docker-in-
-# Docker for the Testcontainers ITs, and `verify` runs separately in CI/gate.sh.
+# The BuildKit cache mount persists ~/.m2 across builds without baking it into a
+# layer. Tests are skipped: this stage has no Docker-in-Docker for the
+# Testcontainers ITs, and `verify` runs separately in CI.
 RUN --mount=type=cache,target=/root/.m2,sharing=locked \
     ./mvnw -B -ntp -DskipTests package \
  && cp target/controlplane-*.jar /controlplane.jar
 
-# ---- runtime stage ----
-# Same base + digest as the quickstart's install-from-release path, so both
-# on-ramps run the jar under an identically patched JRE. No distroless Java 25
-# image exists yet to shrink this further (Gateway's distroless/cc has no Java
-# counterpart); the trade-off is a full Ubuntu userland instead of "no shell at
-# all" — mitigated by non-root + read-only-rootfs + dropped capabilities in the
-# manifests, not by anything in this image.
-FROM eclipse-temurin:25-jre@sha256:681c543d6f36c50f45e9b5226930a46203dcfa351d3670e9d0bdf0dabae53539 AS runtime
+# ---- image ----
+# Adoptium's own JRE, copied onto a distroless base rather than linked with
+# jlink. Temurin's images ship no jmods/ directory and are not linkable run-time
+# images, so jlink cannot run in them at all; linking from another vendor's JDK
+# would put a JVM in production that nothing was tested on, which is the drift
+# the release's pinned build JDK exists to prevent. Measured, both 25.0.3+9:
+# this JRE, the Maven stage above, and the JDK the released jar is compiled
+# with are the same vendor and the same build.
+#
+# The module set is Adoptium's general-purpose one — not derived from static
+# analysis of this application's bytecode, which is what matters, because Spring
+# resolves modules reflectively and a jdeps-derived set can omit one an uncommon
+# runtime path needs.
+#
+# `COPY --from` resolves per target platform, so arm64 needs no emulation.
+FROM gcr.io/distroless/java-base-debian12:nonroot@sha256:a9930cad62d02853d7f3dede7281c4b916cbf74493c2d8d38564121aad92bf6c
 
-RUN groupadd --gid 10000 controlplane \
- && useradd --uid 10000 --gid controlplane --no-create-home --shell /usr/sbin/nologin controlplane
+ARG VERSION=0.0.0-dev
+ARG REVISION=unknown
+LABEL org.opencontainers.image.title="SessionLayer Control Plane" \
+      org.opencontainers.image.description="API-first control and management plane for SessionLayer." \
+      org.opencontainers.image.source="https://github.com/SessionLayer/ControlPlane" \
+      org.opencontainers.image.licenses="GPL-3.0-only" \
+      org.opencontainers.image.version="$VERSION" \
+      org.opencontainers.image.revision="$REVISION"
 
-COPY --from=build /controlplane.jar /app/controlplane.jar
+COPY --from=eclipse-temurin:25-jre-noble@sha256:fbcf915c585659b30eb766ada4d6d7cfc9ec1040bf521e95bf61b10a25af73db /opt/java/openjdk /opt/java
+COPY --from=jar /controlplane.jar /app/controlplane.jar
 
-# The JVM needs a writable java.io.tmpdir regardless of rootfs (HotSpot's
-# hsperfdata mapped files, among other things) — mount a tmpfs there (see
-# deploy/kubernetes/control-plane.yaml's `tmp` volume / deploy/systemd's
-# PrivateTmp=yes). Nothing else is written locally: CA keys and all other
-# state live in Postgres (config.ca_config, KEK-wrapped), and no
-# logging.file.* is configured (stdout only).
+# The JVM needs a writable java.io.tmpdir whatever the root filesystem is
+# (HotSpot's hsperfdata mappings, Netty unpacking its epoll .so) — mount a tmpfs
+# here. Nothing else is written locally: CA keys and all other state live in
+# Postgres, KEK-wrapped, and logging is stdout only.
 VOLUME ["/tmp"]
 
-# REST + actuator (:8080) and the mTLS gRPC plane (:9443, matching the
-# convention every deployment manifest in this project uses — see
-# Documentation/docs/reference/ports.md's note on the 9090-vs-9443 default).
+# REST + actuator, and the mTLS gRPC plane — the port convention every
+# deployment manifest in this project uses.
 EXPOSE 8080 9443
 
-USER controlplane:controlplane
-ENTRYPOINT ["java", "-jar", "/app/controlplane.jar"]
+# Numeric, so Kubernetes runAsNonRoot can enforce it without an /etc/passwd
+# lookup. 65532 is what the distroless base declares and what the Gateway and
+# Agent images already run as; a second convention for one component is one more
+# number to keep in step across an image, a manifest and a chart. It owns
+# nothing in the image, which is fine because every writable path is mounted in.
+USER 65532:65532
+
+# JAVA_TOOL_OPTIONS is deliberately not baked in: heap and GC belong to the
+# deployment, which is what knows the memory limit.
+ENTRYPOINT ["/opt/java/bin/java", "-jar", "/app/controlplane.jar"]

@@ -53,12 +53,12 @@ public class NodeController implements NodesApi {
 	@Override
 	public Mono<ResponseEntity<NodeResource>> registerNode(Mono<RegisterNodeRequest> registerNodeRequest,
 			ServerWebExchange exchange) {
-		return registerNodeRequest.flatMap(req -> withPermission(PlatformPermissions.NODE_ENROLL,
-				subject -> nodeLifecycle
-						.registerAgentless(req.getName(), req.getAddress(), toLabels(req.getLabels()),
-								req.getHostCertificate(), req.getPinnedHostKey(), req.getNodePolicyName(),
-								properties.isEnrollmentApprovalRequired(), subject.identity())
-						.map(node -> ResponseEntity.status(HttpStatus.CREATED).body(toResource(node)))));
+		return registerNodeRequest
+				.flatMap(req -> withPermission(PlatformPermissions.NODE_ENROLL,
+						subject -> nodeLifecycle.register(req.getName(), connectorKind(req), req.getAddress(),
+								toLabels(req.getLabels()), req.getHostCertificate(), req.getPinnedHostKey(),
+								req.getNodePolicyName(), properties.isEnrollmentApprovalRequired(), subject.identity())
+								.map(node -> ResponseEntity.status(HttpStatus.CREATED).body(toResource(node)))));
 	}
 
 	@Override
@@ -103,6 +103,10 @@ public class NodeController implements NodesApi {
 								? action.apply(subject)
 								: Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).<T>build())))
 				.switchIfEmpty(Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).build()));
+	}
+
+	private static String connectorKind(RegisterNodeRequest req) {
+		return req.getConnectorKind() == null ? null : req.getConnectorKind().getValue();
 	}
 
 	private static String existingSessions(QuarantineNodeRequest req) {

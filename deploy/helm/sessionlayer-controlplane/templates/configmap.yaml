@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sessionlayer-controlplane.fullname" . }}
+  labels:
+    {{- include "sessionlayer-controlplane.labels" . | nindent 4 }}
+data:
+  SPRING_R2DBC_URL: {{ .Values.database.r2dbcUrl | quote }}
+  SPRING_R2DBC_USERNAME: {{ .Values.database.r2dbcUsername | quote }}
+  SPRING_FLYWAY_URL: {{ .Values.database.flywayUrl | quote }}
+  SPRING_FLYWAY_USER: {{ .Values.database.flywayUsername | quote }}
+
+  SESSIONLAYER_MTLS_SERVER_PORT: {{ .Values.mtls.port | quote }}
+  SESSIONLAYER_MTLS_SERVER_HOSTNAMES: {{ include "sessionlayer-controlplane.mtlsHostnames" . | quote }}
+
+  {{- /*
+  The application ships a working development object-store credential and
+  endpoint. Left unset here, recordings would silently target it, so the
+  endpoint is demanded rather than defaulted.
+  */}}
+  SESSIONLAYER_RECORDING_WORM_ENDPOINT: {{ required "sessionlayer-controlplane: set recording.worm.endpoint to your WORM object store's URL. The application's built-in default points at a development MinIO with a well-known credential." .Values.recording.worm.endpoint | quote }}
+  SESSIONLAYER_RECORDING_WORM_REGION: {{ .Values.recording.worm.region | quote }}
+  SESSIONLAYER_RECORDING_WORM_BUCKET: {{ .Values.recording.worm.bucket | quote }}
+  SESSIONLAYER_RECORDING_WORM_PATH_STYLE_ACCESS: {{ .Values.recording.worm.pathStyleAccess | quote }}
+
+  SESSIONLAYER_OIDC_ENABLED: {{ .Values.oidc.enabled | quote }}
+  {{- if .Values.oidc.enabled }}
+  SESSIONLAYER_OIDC_ISSUER: {{ required "sessionlayer-controlplane: set oidc.issuer to your identity provider's issuer URL, or set oidc.enabled=false." .Values.oidc.issuer | quote }}
+  SESSIONLAYER_OIDC_CLIENT_ID: {{ required "sessionlayer-controlplane: set oidc.clientId to the client this Control Plane is registered as, or set oidc.enabled=false." .Values.oidc.clientId | quote }}
+  SESSIONLAYER_OIDC_REDIRECT_URI: {{ required "sessionlayer-controlplane: set oidc.redirectUri to the callback URL registered with your identity provider, or set oidc.enabled=false." .Values.oidc.redirectUri | quote }}
+  {{- end }}
+
+  JAVA_TOOL_OPTIONS: {{ .Values.java.toolOptions | quote }}
+
+  {{- with .Values.sessionLimits.defaultMaxConcurrent }}
+  SESSIONLAYER_SESSION_LIMITS_DEFAULT_MAX_CONCURRENT: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.bootstrap.adminSubject }}
+  SESSIONLAYER_BOOTSTRAP_ADMIN_SUBJECT: {{ . | quote }}
+  {{- end }}

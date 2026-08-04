@@ -396,6 +396,18 @@ and lands at `FinalizeRecording` time like `sftp_audit`, not live. An N-1 CP
 without the field simply never sees tunnel audit rows (an older Gateway
 correspondingly never populates it) — the window holds.
 
+**`RegisterNodeRequest.connectorKind`** (gRPC stays `1.1`, wire stays `1.0`,
+URI major stays `v1`, `info.version` stays `0.1.0`) lets an operator register an
+**agent**-connected node, with its host anchor, before the Agent joins.
+`hostCertificate`/`pinnedHostKey` govern both kinds: the Gateway runs the same
+no-TOFU verification on the inner leg however it reached the node (§9.3), so an
+anchorless agent node aborts every session — the anchor was previously
+unreachable except by writing `runtime.node_host_key` directly. `address` moves
+out of `required` because an agent node is reached through the Agent's outbound
+channel and must not carry a dial address; a request that supplies one is
+rejected. Optional, defaulting to `agentless`, so every existing caller is
+unaffected.
+
 ---
 
 ## 7. CP ↔ Gateway mTLS trust model

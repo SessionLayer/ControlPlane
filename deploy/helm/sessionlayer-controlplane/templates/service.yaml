@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.service.name }}
+  labels:
+    {{- include "sessionlayer-controlplane.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "sessionlayer-controlplane.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: rest
+      port: {{ .Values.service.ports.rest }}
+      targetPort: rest
+      protocol: TCP
+    - name: mtls-grpc
+      port: {{ .Values.service.ports.mtlsGrpc }}
+      targetPort: mtls-grpc
+      protocol: TCP
