@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
 import org.springframework.http.MediaType;
+import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
@@ -66,6 +67,8 @@ class AgentNodeHostAnchorIT extends AbstractAuthIT {
 	ConnectAuthorizationService connectAuthorization;
 	@Autowired
 	InternalMtlsCaService mtlsCa;
+	@Autowired
+	DatabaseClient db;
 
 	@Test
 	void anApiRegisteredAgentNodesPinnedKeyReachesTheGatewayAsHostVerificationMaterial() {
@@ -84,11 +87,18 @@ class AgentNodeHostAnchorIT extends AbstractAuthIT {
 		seedAllow(identity, List.of("deploy"), List.of("shell"));
 		GatewayIdentity gateway = seedGateway();
 
+		// Access locks are global by design, and an empty or unrecognised target
+		// selector matches everything (LockMatching: uninterpretable → fail closed).
+		// The lock-lifecycle ITs share this Spring context and leave unexpired
+		// fleet-wide locks behind, so a test that authorizes anything has to own
+		// that state rather than inherit whichever ran first.
+		clearUnexpiredLocks();
+
 		ConnectDecision decision = connectAuthorization.authorize(gateway.id(), gateway.fingerprint(), identity,
 				List.of(), UUID.fromString(created.get("id").toString()), null, "deploy", "10.0.0.5", UUID.randomUUID(),
 				null).block();
 
-		assertThat(decision.allowed()).isTrue();
+		assertThat(decision.allowed()).withFailMessage(() -> "authorize denied: " + denyDetail(identity)).isTrue();
 		NodeConnectionInfo connection = decision.nodeConnection();
 		assertThat(connection.connectorKind()).isEqualTo(NodeConnectionInfo.ConnectorModel.OUTBOUND_AGENT);
 		// The Agent dials out; a dial address on an agent node would be a lie the
@@ -98,6 +108,22 @@ class AgentNodeHostAnchorIT extends AbstractAuthIT {
 		// an empty trust set and aborts the inner leg (no TOFU), agent node or not.
 		assertThat(connection.hasHostVerification()).isTrue();
 		assertThat(connection.pinnedHostKeys()).singleElement().isEqualTo(wireBlobOf(pinnedLine));
+	}
+
+	private void clearUnexpiredLocks() {
+		db.sql("DELETE FROM runtime.access_lock WHERE expires_at IS NULL OR expires_at > now()").fetch().rowsUpdated()
+				.block();
+	}
+
+	// A deny discloses nothing on ConnectDecision (§7.1), so a failure here would
+	// otherwise read only "expected true". The reason is server-side, in the audit
+	// row the deny wrote: a lock that matched, a limit, or no matching allow.
+	private String denyDetail(String identity) {
+		return db
+				.sql("SELECT detail::text FROM runtime.audit_event WHERE action = 'authz.decision'"
+						+ " AND outcome = 'denied' AND subject = :identity ORDER BY seq DESC LIMIT 1")
+				.bind("identity", identity).map(row -> row.get(0, String.class)).one()
+				.defaultIfEmpty("no denied authz.decision row for " + identity).block();
 	}
 
 	private void seedAllow(String identity, List<String> principals, List<String> capabilities) {
