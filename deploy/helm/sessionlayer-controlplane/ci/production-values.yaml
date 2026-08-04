@@ -1,0 +1,83 @@
+# A complete, realistic production configuration, used to lint and schema-check
+# the chart with every optional path switched on. The Secret named here is
+# created out of band; nothing in this file is a credential.
+replicaCount: 3
+
+image:
+  repository: ghcr.io/sessionlayer/controlplane
+  tag: "v0.0.2"
+  digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: ghcr-pull
+
+secrets:
+  existingSecret: sessionlayer-controlplane-secrets
+
+database:
+  r2dbcUrl: "r2dbc:postgresql://db.internal.example.com:5432/sessionlayer"
+  r2dbcUsername: "cp_runtime"
+  flywayUrl: "jdbc:postgresql://db.internal.example.com:5432/sessionlayer"
+  flywayUsername: "sessionlayer"
+
+mtls:
+  port: 9443
+  extraHostnames:
+    - cp.example.com
+
+recording:
+  worm:
+    endpoint: "https://worm.internal.example.com"
+    region: "eu-west-1"
+    bucket: "sessionlayer-recordings"
+    pathStyleAccess: true
+
+oidc:
+  enabled: true
+  issuer: "https://idp.example.com"
+  clientId: "sessionlayer-controlplane"
+  redirectUri: "https://cp.example.com/v1/auth/callback"
+
+sessionLimits:
+  defaultMaxConcurrent: "3"
+
+bootstrap:
+  adminSubject: "alice@example.com"
+
+resources:
+  requests:
+    cpu: "1"
+    memory: 2Gi
+  limits:
+    cpu: "2"
+    memory: 2Gi
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+networkPolicy:
+  enabled: true
+  wormCidrs:
+    - 10.30.0.0/16
+  oidcCidrs:
+    - 10.40.0.0/16
+  extraGrpcIngressCidrs:
+    - 10.20.0.0/16
+  otelPodSelector:
+    app.kubernetes.io/name: otel-collector
+
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: sessionlayer-controlplane
+
+priorityClassName: system-cluster-critical
+
+extraEnv:
+  - name: OTEL_EXPORTER_OTLP_ENDPOINT
+    value: https://otel-collector.observability:4317

@@ -1,0 +1,218 @@
+# Default values for sessionlayer-controlplane.
+#
+# Nothing here is a credential. Every secret is referenced by the name of a
+# Secret you create out of band, and rendering fails with a named message when
+# a reference is missing, so the failure lands in your terminal rather than in
+# a CrashLoopBackOff hours later.
+
+replicaCount: 2
+
+image:
+  repository: ghcr.io/sessionlayer/controlplane
+  # Empty resolves to the chart's appVersion.
+  tag: ""
+  # A tag is mutable and a digest is not. Set this in production; it wins over
+  # tag when both are present.
+  digest: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  # Empty uses the release's generated name.
+  name: ""
+  annotations: {}
+  # The Control Plane never calls the Kubernetes API, so a projected token in
+  # the pod is credential surface with no purpose.
+  automountServiceAccountToken: false
+
+# The name of an existing Secret carrying every credential the process needs.
+# See secret.example.yaml in deploy/kubernetes/ for the key list and how to
+# generate the values. This chart never creates it and never defaults one.
+secrets:
+  existingSecret: ""
+
+database:
+  # Two Postgres roles on purpose: Flyway migrates as the owner, the request
+  # path runs as the restricted cp_runtime role.
+  r2dbcUrl: "r2dbc:postgresql://postgres.sessionlayer.svc:5432/sessionlayer"
+  r2dbcUsername: "cp_runtime"
+  flywayUrl: "jdbc:postgresql://postgres.sessionlayer.svc:5432/sessionlayer"
+  flywayUsername: "sessionlayer"
+
+mtls:
+  # The gRPC plane Gateways and Agents dial. The built-in default is 9090; 9443
+  # is what every SessionLayer deployment example exposes, and the Gateway's
+  # cp_mtls_endpoint and the Agent's --cp-endpoint both default to it.
+  port: 9443
+  # Extra SANs for the server certificate the process mints at runtime from the
+  # internal mTLS CA. The in-cluster service names are added automatically; add
+  # any external address Gateways or Agents dial.
+  extraHostnames: []
+
+recording:
+  worm:
+    # Where recordings land. The Control Plane only issues presigned URLs to
+    # this endpoint; recording bytes never pass through it.
+    endpoint: ""
+    region: "us-east-1"
+    bucket: "sessionlayer-recordings"
+    pathStyleAccess: false
+
+oidc:
+  # Set to false for an OTP, pins or machine-identity-only deployment.
+  enabled: true
+  issuer: ""
+  clientId: ""
+  redirectUri: ""
+
+java:
+  # Without this the JVM's default MaxRAMPercentage of 25% undersizes the heap
+  # against the memory limit below for a WebFlux, gRPC and R2DBC workload.
+  toolOptions: "-XX:MaxRAMPercentage=75.0"
+
+sessionLimits:
+  # Empty leaves the stored operator_settings default untouched, and the
+  # Control Plane warns at boot that identities are unlimited.
+  defaultMaxConcurrent: ""
+
+bootstrap:
+  # An OIDC subject named here becomes the first platform admin. Empty means
+  # you claim the printed-once bootstrap credential from the pod logs instead.
+  adminSubject: ""
+
+service:
+  type: ClusterIP
+  # Fixed rather than release-derived: the Gateway's cp_mtls_endpoint and the
+  # Agent's --cp-endpoint both default to controlplane.<namespace>.svc, and a
+  # release-prefixed name would silently break both. One Control Plane per
+  # namespace follows from this.
+  name: "controlplane"
+  annotations: {}
+  ports:
+    rest: 8080
+    mtlsGrpc: 9443
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10000
+  runAsGroup: 10000
+  fsGroup: 10000
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+probes:
+  # /actuator/health/readiness reflects Spring Boot's own ReadinessState, which
+  # does not flip to ACCEPTING_TRAFFIC until Flyway and both bounded
+  # ApplicationRunners have finished. This probe is what gates traffic on the
+  # migration; there is deliberately no migration initContainer or Job.
+  readiness:
+    enabled: true
+    periodSeconds: 5
+    timeoutSeconds: 1
+    failureThreshold: 3
+  # /actuator/health/liveness reflects LivenessState only, never a downstream
+  # dependency. A slow Postgres must surface as a failed request, not as a
+  # restart storm.
+  liveness:
+    enabled: true
+    periodSeconds: 15
+    timeoutSeconds: 1
+    failureThreshold: 3
+  # 60 x 5s = 5 minutes. That slack covers a peer pod holding the Flyway
+  # migration lock during a rolling update, plus the two bounded
+  # ApplicationRunners (60s and 30s) and JVM start. Shortening it is how a slow
+  # migration turns into a restart loop mid-lock-wait.
+  startup:
+    enabled: true
+    periodSeconds: 5
+    timeoutSeconds: 1
+    failureThreshold: 60
+
+# No long-lived byte stream terminates here, so the Kubernetes default covers
+# in-flight requests.
+terminationGracePeriodSeconds: 30
+
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    # Two replicas can run Flyway at once during a rollout, which is safe:
+    # Flyway takes a database-level lock, so the second pod waits, then finds
+    # nothing pending. Keeping a replica available throughout is therefore the
+    # cheap half of the trade. Schema forward-compatibility across the two
+    # image versions coexisting during a rollout stays an application concern.
+    maxUnavailable: 0
+
+# Netty unpacks its native epoll transport here at startup. If it cannot, it
+# falls back to NIO with a log warning rather than failing.
+tmpVolume:
+  medium: Memory
+  sizeLimit: 256Mi
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+networkPolicy:
+  # Default-deny both directions, then permit only what the process needs.
+  # Requires a CNI that enforces NetworkPolicy.
+  enabled: true
+  # Peers selected by label. These match the labels the Gateway and Agent
+  # charts apply, so leave them alone unless you set nameOverride there.
+  gatewayPodSelector:
+    app.kubernetes.io/name: sessionlayer-gateway
+  agentPodSelector:
+    app.kubernetes.io/name: sessionlayer-agent
+  dnsPodSelector:
+    k8s-app: kube-dns
+  postgresPodSelector:
+    app.kubernetes.io/name: postgresql
+  otelPodSelector: {}
+  # CIDRs for peers outside the cluster. Left empty on purpose: a placeholder
+  # range would permit egress to hosts that are not your object store or your
+  # IdP. Empty denies the traffic, which fails closed and is visible at once.
+  # NetworkPolicy has no DNS-based match in the core API, so for a public S3 or
+  # SaaS IdP prefer your CNI's FQDN policy support or a VPC-level control.
+  wormCidrs: []
+  oidcCidrs: []
+  # Agents on fleet nodes outside the cluster reach the gRPC plane from an
+  # address no podSelector can express. Add their subnets here.
+  extraGrpcIngressCidrs: []
+  extraIngress: []
+  extraEgress: []
+
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+priorityClassName: ""
+
+# Additional environment for the container. The Control Plane refuses to start
+# on a development key-encryption key unless
+# SESSIONLAYER_CA_LOCAL_ALLOW_DEV_KEK is set to true; this chart deliberately
+# exposes no value for that flag, so setting it is an explicit act.
+extraEnv: []
+extraEnvFrom: []
+extraVolumes: []
+extraVolumeMounts: []
