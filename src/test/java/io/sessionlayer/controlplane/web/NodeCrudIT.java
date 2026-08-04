@@ -15,6 +15,7 @@ import io.sessionlayer.controlplane.data.runtime.AgentIdentityRepository;
 import io.sessionlayer.controlplane.data.runtime.AuditEvent;
 import io.sessionlayer.controlplane.data.runtime.AuditEventRepository;
 import io.sessionlayer.controlplane.data.runtime.Node;
+import io.sessionlayer.controlplane.data.runtime.NodeHostKeyRepository;
 import io.sessionlayer.controlplane.data.runtime.NodeRepository;
 import io.sessionlayer.controlplane.machine.MachineIdentityService;
 import io.sessionlayer.controlplane.platform.PlatformPermissions;
@@ -55,6 +56,8 @@ class NodeCrudIT extends AbstractAuthIT {
 	@Autowired
 	NodeRepository nodes;
 	@Autowired
+	NodeHostKeyRepository hostKeys;
+	@Autowired
 	AgentIdentityRepository agentIdentities;
 	@Autowired
 	AccessLockRepository accessLocks;
@@ -82,7 +85,41 @@ class NodeCrudIT extends AbstractAuthIT {
 	}
 
 	@Test
-	void registerWithoutAHostAnchorIsRejectedNoTofu() {
+	void registerAgentConnectedPersistsTheHostAnchorWithNoAddress() {
+		String admin = "svc-node-agent-" + unique();
+		String token = tokenWith(admin, PlatformPermissions.NODE_ENROLL);
+		String name = "agent-" + unique();
+
+		client.post().uri("/v1/nodes").header("Authorization", "Bearer " + token)
+				.contentType(MediaType.APPLICATION_JSON)
+				.bodyValue(Map.of("name", name, "connectorKind", "agent", "pinnedHostKey", pinnedHostKeyLine()))
+				.exchange().expectStatus().isCreated().expectBody().jsonPath("$.id").isNotEmpty()
+				.jsonPath("$.connectorKind").isEqualTo("agent").jsonPath("$.status").isEqualTo("active")
+				.jsonPath("$.address").doesNotExist();
+
+		Node node = nodes.findByName(name).block();
+		assertThat(node.address()).isNull();
+		assertThat(hostKeys.findByNodeId(node.id()).collectList().block()).singleElement()
+				.satisfies(row -> assertThat(row.source()).isEqualTo("pinned_key"));
+		assertThat(auditEvents.findByActor(admin).collectList().block())
+				.anySatisfy(e -> assertThat(e.detail().path("connector").asString()).isEqualTo("agent"));
+	}
+
+	@Test
+	void registerAgentConnectedWithADialAddressIsRejected() {
+		String token = tokenWith("svc-node-agentaddr-" + unique(), PlatformPermissions.NODE_ENROLL);
+
+		client.post().uri("/v1/nodes").header("Authorization", "Bearer " + token)
+				.contentType(MediaType.APPLICATION_JSON)
+				.bodyValue(Map.of("name", "agent-" + unique(), "connectorKind", "agent", "address", "10.0.0.9:22",
+						"pinnedHostKey", pinnedHostKeyLine()))
+				.exchange().expectStatus().isBadRequest().expectHeader()
+				.contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON).expectBody().jsonPath("$.detail")
+				.isEqualTo("an agent-connected node is reached through its Agent and must not carry an address");
+	}
+
+	@Test
+	void registerWithoutAHostAnchorIsRejectedNoTofuForEitherConnector() {
 		String admin = "svc-node-tofu-" + unique();
 		String token = tokenWith(admin, PlatformPermissions.NODE_ENROLL);
 
@@ -91,6 +128,12 @@ class NodeCrudIT extends AbstractAuthIT {
 				.bodyValue(Map.of("name", "web-" + unique(), "address", "10.0.0.9:22")).exchange().expectStatus()
 				.isBadRequest().expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
 				.expectBody().jsonPath("$.title").isEqualTo("Node request rejected");
+		// The anchor is not an agentless-only rule: the Gateway runs the same no-TOFU
+		// verification on the inner leg whichever connector reached the node.
+		client.post().uri("/v1/nodes").header("Authorization", "Bearer " + token)
+				.contentType(MediaType.APPLICATION_JSON)
+				.bodyValue(Map.of("name", "agent-" + unique(), "connectorKind", "agent")).exchange().expectStatus()
+				.isBadRequest().expectBody().jsonPath("$.title").isEqualTo("Node request rejected");
 	}
 
 	@Test

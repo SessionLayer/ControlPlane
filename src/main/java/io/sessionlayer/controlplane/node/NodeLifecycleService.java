@@ -29,24 +29,26 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * Node lifecycle (Design §9/§12A; FR-NODE-1/2/3). Agentless enrollment,
- * quarantine (expressed as a top-tier Lock on the node, deny wins), release,
- * soft-remove, and listing. Every mutation is one transaction (state + lock +
- * audit) and any lock delta is pushed to Gateways via {@link LockFeedHub}
- * <b>after</b> commit (mirrors
- * {@code io.sessionlayer.controlplane.web.LockController}), so a Gateway can
- * never be pushed a lock a rolled-back transaction never stored.
+ * Node lifecycle (Design §9/§12A; FR-NODE-1/2/3). Enrollment, quarantine
+ * (expressed as a top-tier Lock on the node, deny wins), release, soft-remove,
+ * and listing. Every mutation is one transaction (state + lock + audit) and any
+ * lock delta is pushed to Gateways via {@link LockFeedHub} <b>after</b> commit
+ * (mirrors {@code io.sessionlayer.controlplane.web.LockController}), so a
+ * Gateway can never be pushed a lock a rolled-back transaction never stored.
  *
  * <p>
- * Agentless enrollment is never TOFU (§9.3): the node must present at least one
+ * Enrollment is never TOFU (§9.3): the node must present at least one
  * enrollment-anchored host identity — a host-CA-signed host certificate or an
- * explicitly pinned host key. Removing an <b>agent</b> node also revokes its
- * mTLS credential (flip off {@code active} + a covering Lock) so a stale clone
- * cannot ride the removed node's name.
+ * explicitly pinned host key — whichever connector reaches it, because the
+ * Gateway verifies the node's host identity on the inner leg either way.
+ * Removing an <b>agent</b> node also revokes its mTLS credential (flip off
+ * {@code active} + a covering Lock) so a stale clone cannot ride the removed
+ * node's name.
  */
 @Service
 public class NodeLifecycleService {
 
+	private static final String CONNECTOR_AGENT = "agent";
 	private static final String CONNECTOR_AGENTLESS = "agentless";
 	private static final String STATUS_ACTIVE = "active";
 	private static final String STATUS_PENDING = "pending";
@@ -77,21 +79,25 @@ public class NodeLifecycleService {
 		this.tx = tx;
 	}
 
-	public Mono<Node> registerAgentless(String name, String address, JsonNode labels, String hostCertificateLine,
-			String pinnedHostKeyLine, String nodePolicyName, boolean approvalRequired, String actor) {
-		NodeRequestException rejection = validateRegistration(name, address, hostCertificateLine, pinnedHostKeyLine);
+	public Mono<Node> register(String name, String connectorKind, String address, JsonNode labels,
+			String hostCertificateLine, String pinnedHostKeyLine, String nodePolicyName, boolean approvalRequired,
+			String actor) {
+		String connector = isBlank(connectorKind) ? CONNECTOR_AGENTLESS : connectorKind.trim();
+		NodeRequestException rejection = validateRegistration(name, connector, address, hostCertificateLine,
+				pinnedHostKeyLine);
 		if (rejection != null) {
 			return Mono.error(rejection);
 		}
 		JsonNode resolvedLabels = (labels == null) ? objectMapper.createObjectNode() : labels;
 		String status = approvalRequired ? STATUS_PENDING : STATUS_ACTIVE;
-		Node node = Node.create(name, blankToNull(nodePolicyName), resolvedLabels, CONNECTOR_AGENTLESS, status,
-				HEALTH_UNKNOWN, null, address.trim());
+		Node node = Node.create(name, blankToNull(nodePolicyName), resolvedLabels, connector, status, HEALTH_UNKNOWN,
+				null, blankToNull(address));
 		Mono<Node> persisted = nodes.save(node)
-				.flatMap(saved -> saveHostAnchors(saved.id(), hostCertificateLine, pinnedHostKeyLine)
-						.then(audit.record(actor, saved.id().toString(), "node.register", "success", null, saved.id(),
-								Map.of("name", name, "connector", CONNECTOR_AGENTLESS, "status", status)))
-						.thenReturn(saved));
+				.flatMap(
+						saved -> saveHostAnchors(saved.id(), hostCertificateLine, pinnedHostKeyLine)
+								.then(audit.record(actor, saved.id().toString(), "node.register", "success", null,
+										saved.id(), Map.of("name", name, "connector", connector, "status", status)))
+								.thenReturn(saved));
 		// The unique(name) constraint is the race-safe dedup — a concurrent duplicate
 		// insert surfaces as a CONFLICT rather than a pre-check TOCTOU.
 		return tx.transactional(persisted).onErrorMap(DuplicateKeyException.class,
@@ -311,17 +317,29 @@ public class NodeLifecycleService {
 		return !selector.path("all").asBoolean(false);
 	}
 
-	private NodeRequestException validateRegistration(String name, String address, String certLine, String pinLine) {
+	private NodeRequestException validateRegistration(String name, String connector, String address, String certLine,
+			String pinLine) {
 		if (!AgentNodeNames.isValid(name)) {
 			return invalid("invalid node name");
 		}
-		if (isBlank(address)) {
+		if (!CONNECTOR_AGENTLESS.equals(connector) && !CONNECTOR_AGENT.equals(connector)) {
+			return invalid("connectorKind must be 'agentless' or 'agent'");
+		}
+		boolean agent = CONNECTOR_AGENT.equals(connector);
+		if (agent && !isBlank(address)) {
+			// §9.2: an agent node is reached through the Agent's own outbound channel, so a
+			// dial address on one is a claim the authorizer would hand the data plane —
+			// refuse it rather than store an address nothing will ever dial.
+			return invalid("an agent-connected node is reached through its Agent and must not carry an address");
+		}
+		if (!agent && isBlank(address)) {
 			return invalid("a dial address is required");
 		}
 		boolean hasCert = !isBlank(certLine);
 		boolean hasPin = !isBlank(pinLine);
 		if (!hasCert && !hasPin) {
-			// §9.3: never TOFU — an agentless node needs an enrollment-anchored host
+			// §9.3: never TOFU — the Gateway verifies the node's host identity on the inner
+			// leg whichever connector reached it, so BOTH kinds need an enrollment-anchored
 			// identity (a host-CA cert or an explicitly pinned host key).
 			return invalid("a host certificate or a pinned host key is required (no TOFU)");
 		}

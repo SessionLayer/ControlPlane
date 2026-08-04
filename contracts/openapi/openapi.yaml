@@ -4813,19 +4813,35 @@ components:
       type: object
       title: Register Node Request
       description: |
-        Enrol an agentless node. `address` (host:port) is required; at least one of
-        `hostCertificate` / `pinnedHostKey` is required (host-identity anchor — no
-        TOFU, §9.3).
+        Enrol a node. At least one of `hostCertificate` / `pinnedHostKey` is
+        required for BOTH connector kinds (host-identity anchor — no TOFU, §9.3):
+        the Gateway verifies the node's host identity on the inner leg however it
+        reached the node, so an anchorless node aborts every session. `address`
+        (host:port) is required for `agentless` and rejected for `agent`.
       required:
         - name
-        - address
       properties:
         name:
           type: string
           description: The node's stable, unique human name (the enrollment key + the SSH addressing name).
+        connectorKind:
+          type: string
+          enum:
+            - agentless
+            - agent
+          default: agentless
+          description: >-
+            How the Gateway reaches the node: `agentless` is dialled directly,
+            `agent` is reached through the Agent's own outbound channel. An `agent`
+            node registered here is the one the Agent attaches to when it enrolls
+            under the same name, so its host anchor is in place before it carries a
+            session.
         address:
           type: string
-          description: The node sshd dial address, `host:port` (port defaults to 22 if omitted).
+          description: >-
+            The node sshd dial address, `host:port` (port defaults to 22 if
+            omitted). Required for `agentless`; rejected for `agent`, which the
+            Gateway never dials.
         labels:
           type: object
           additionalProperties:
