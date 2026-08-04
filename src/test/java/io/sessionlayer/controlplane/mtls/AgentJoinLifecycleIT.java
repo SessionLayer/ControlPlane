@@ -213,10 +213,9 @@ class AgentJoinLifecycleIT extends AbstractMtlsIT {
 		assertThat(refused.getStatus().getCode()).isEqualTo(Status.Code.PERMISSION_DENIED);
 	}
 
-	// A node registered for the agentless connector is one the authorizer tells the
-	// Gateway to DIAL. Letting an Agent attach to it would leave the control
-	// channel
-	// the Agent opened unused and the session pointed at an address instead (§9.2).
+	// An agentless-registered node is one the authorizer tells the Gateway to DIAL,
+	// so attaching an Agent to it points the session at an address while leaving
+	// the Agent's control channel unused (§9.2).
 	@Test
 	void enrollRefusesANodeRegisteredForTheAgentlessConnector() {
 		Node node = nodes.save(Node.create("node-agentless-join", null, JsonNodeFactory.instance.objectNode(),
