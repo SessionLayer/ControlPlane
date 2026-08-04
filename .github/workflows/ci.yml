@@ -211,6 +211,17 @@ jobs:
             echo "::endgroup::"
           done
 
+          # image.digest must win over image.tag, or pinning by digest is
+          # decoration. Both are set here, and only one may survive.
+          ref=$(helm template chart-ci "$CHART" -f "$CHART"/ci/production-values.yaml \
+                  --set image.tag=v9.9.9 --set image.digest=sha256:0000000000000000000000000000000000000000000000000000000000000000 \
+                | grep -m1 -oE 'image: ghcr\.io/sessionlayer/controlplane[@:][^ ]+')
+          echo "$ref"
+          case "$ref" in
+            *"@sha256:0000000000000000000000000000000000000000000000000000000000000000") ;;
+            *) echo "::error::image.digest did not win over image.tag: $ref"; exit 1 ;;
+          esac
+
       # The half with teeth. Everything above would still pass if every
       # `required` in the chart were deleted.
       - name: Assert the chart refuses an install it must refuse
@@ -236,6 +247,27 @@ jobs:
             esac
           }
 
+          renders() { # renders <why> <command...>
+            local why="$1"; shift
+            local out rc
+            set +e
+            out=$("$@" 2>&1); rc=$?
+            set -e
+            if [ "$rc" -ne 0 ]; then
+              echo "::error::$why should render, but was refused. A guard that says no to everything passes every refusal assertion above:"
+              printf '%s\n' "$out"
+              exit 1
+            fi
+            printf 'renders as required: %s\n' "$why"
+          }
+
+          # An install with nothing configured must not render at all. Which
+          # guard fires first depends on template ordering, so this asserts only
+          # that the refusal is one of this chart's own, named ones.
+          refuse "sessionlayer-controlplane:" \
+            helm template chart-ci "$CHART"
+
+
           refuse "set secrets.existingSecret" \
             helm template chart-ci "$CHART" -f "$prod" --set secrets.existingSecret=null
           refuse "set recording.worm.endpoint" \
@@ -243,12 +275,30 @@ jobs:
           refuse "set oidc.issuer" \
             helm template chart-ci "$CHART" -f "$prod" --set oidc.issuer=null
 
-          # A budget that refuses every voluntary eviction hangs a node drain.
-          # Asserted through --set, which yields an int64 where a values file
-          # yields a float64; a guard that tests only one of those is blind to
-          # the other.
-          refuse "not below replicaCount" \
+          # The budget guard, over every input path. --set yields an int64 where a
+          # values file yields a float64 and a percentage yields a string, and a
+          # guard written against one of those is blind to the others.
+          refuse "is not below replicaCount" \
             helm template chart-ci "$CHART" -f "$prod" --set podDisruptionBudget.minAvailable=99
+          # Kubernetes rounds a minAvailable percentage UP, so with 3 replicas
+          # the budget is already unsatisfiable at 67%, long before 100%.
+          refuse "leaves no room" \
+            helm template chart-ci "$CHART" -f "$prod" --set 'podDisruptionBudget.minAvailable=100%'
+          refuse "leaves no room" \
+            helm template chart-ci "$CHART" -f "$prod" --set 'podDisruptionBudget.minAvailable=67%'
+          refuse "neither a pod count nor a percentage" \
+            helm template chart-ci "$CHART" -f "$prod" --set 'podDisruptionBudget.minAvailable=abc'
+          refuse "cannot be negative" \
+            helm template chart-ci "$CHART" -f "$prod" --set podDisruptionBudget.minAvailable=-1
+
+          # The other direction. Without these, a guard that refused every value
+          # would satisfy every refusal assertion above it.
+          renders "a percentage that leaves room (50% of 3)" \
+            helm template chart-ci "$CHART" -f "$prod" --set 'podDisruptionBudget.minAvailable=50%'
+          renders "the largest percentage that still leaves room (66% of 3)" \
+            helm template chart-ci "$CHART" -f "$prod" --set 'podDisruptionBudget.minAvailable=66%'
+          renders "a count below replicaCount" \
+            helm template chart-ci "$CHART" -f "$prod" --set podDisruptionBudget.minAvailable=1
 
           # values.schema.json must reject a malformed values file rather than
           # rendering something surprising.
