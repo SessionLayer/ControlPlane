@@ -152,7 +152,7 @@ the restricted `cp_runtime` role.
 
 | Key | Default |
 |---|---|
-| `podSecurityContext` | `runAsNonRoot: true`, uid/gid/fsGroup `10000`, `seccompProfile: RuntimeDefault` |
+| `podSecurityContext` | `runAsNonRoot: true`, uid/gid/fsGroup `65532`, `seccompProfile: RuntimeDefault` |
 | `containerSecurityContext` | `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`, `capabilities.drop: [ALL]` |
 | `serviceAccount.automountServiceAccountToken` | `false` |
 

@@ -106,10 +106,14 @@ resources:
     memory: 1Gi
 
 podSecurityContext:
+  # 65532 is the uid the distroless nonroot base ships, and the uid every
+  # SessionLayer component runs as. runAsUser here wins over the image's own
+  # USER, so a chart that named a different number would work while leaving a
+  # reader no way to tell which one is authoritative.
   runAsNonRoot: true
-  runAsUser: 10000
-  runAsGroup: 10000
-  fsGroup: 10000
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
   seccompProfile:
     type: RuntimeDefault
 
