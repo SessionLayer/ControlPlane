@@ -91,7 +91,7 @@
 		  AWS KMS CA backend (`kms`). Both use the SYNC clients only. Version pinned
 		  via the awssdk BOM (imported below); CVE management is Dependabot's.
 		-->
-		<awssdk.version>2.49.2</awssdk.version>
+		<awssdk.version>2.50.3</awssdk.version>
 
 		<!--
 		  Azure SDK (MIT, GPL-3.0-compatible; not managed by the Spring Boot BOM).
