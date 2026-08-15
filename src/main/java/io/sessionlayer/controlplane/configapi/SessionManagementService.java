@@ -85,7 +85,7 @@ public class SessionManagementService {
 			// Bounded so a terminate is a decisive teardown, not a standing ban: long
 			// enough that a briefly-disconnected Gateway still tears the session down on
 			// its next resync, short enough that the identity may reconnect afterwards
-			// (§8.4; configurable via sessionlayer.session.terminate-lock-ttl).
+			// (configurable via sessionlayer.session.terminate-lock-ttl).
 			int ttlSeconds = (int) properties.getTerminateLockTtl().toSeconds();
 			Instant expiresAt = now.plusSeconds(ttlSeconds);
 			// The wire Lock selector has no per-session facet, so teardown is

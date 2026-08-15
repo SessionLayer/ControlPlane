@@ -225,9 +225,10 @@ public class ConnectAuthorizationService {
 					AuthorizationRequest request = new AuthorizationRequest(identity, groups, node.id(),
 							labelsOf(node.resolvedLabels()), sourceIp, requestedPrincipal);
 
-					// The break-glass path is a distinct, always-available authentication path
-					// (I3): a present token means the user authenticated via FIDO2/offline-code,
-					// so honour break-glass semantics regardless of standing rules.
+					// The break-glass path is a distinct, always-available authentication
+					// path: a present token means the user authenticated via
+					// FIDO2/offline-code, so honour break-glass semantics regardless of
+					// standing rules.
 					if (!isBlank(breakglassToken)) {
 						return breakglass(callerGatewayId, node, gatewayName, request, sessionId, breakglassToken,
 								locks, epoch, now);

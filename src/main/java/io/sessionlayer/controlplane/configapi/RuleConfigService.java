@@ -66,7 +66,7 @@ public class RuleConfigService {
 
 	public Mono<Void> delete(UUID id, String actor) {
 		// Idempotent + auditable: capture the before-state, then delete + record the
-		// change (before/after, FR-PADM-3); a delete of a missing row is still audited.
+		// change (before/after); a delete of a missing row is still audited.
 		return rules.findById(id).flatMap(before -> deleteWithAudit(id, actor, before))
 				.switchIfEmpty(Mono.defer(() -> deleteWithAudit(id, actor, null)));
 	}

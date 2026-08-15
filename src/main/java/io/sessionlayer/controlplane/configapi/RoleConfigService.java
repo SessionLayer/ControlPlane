@@ -63,7 +63,7 @@ public class RoleConfigService {
 
 	public Mono<Void> delete(UUID id, String actor) {
 		// Idempotent + auditable: a role delete CASCADEs its bindings (V2), so capture
-		// the role before-state AND the cascaded binding ids in the audit (FR-PADM-3).
+		// the role before-state AND the cascaded binding ids in the audit.
 		return roles.findById(id)
 				.flatMap(role -> bindings.findByRoleId(id).map(b -> b.id().toString()).collectList()
 						.flatMap(cascaded -> deleteWithAudit(id, actor, role, cascaded)))

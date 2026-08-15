@@ -18,8 +18,8 @@ public record SshSession(@Id UUID id, String identity, UUID nodeId, String nodeN
 		@LastModifiedDate Instant updatedAt) {
 
 	/**
-	 * The FR-AUD-9 correlation key that ties the session's audit events to the
-	 * causal chain that authorized it: the originating JIT request or break-glass
+	 * The correlation key that ties the session's audit events to the causal
+	 * chain that authorized it: the originating JIT request or break-glass
 	 * activation when present, else the session id itself (a standing chain begins
 	 * at the session). Every in-session producer (connect, recording, terminate,
 	 * replay) stamps this so one {@code correlation_id} search reconstructs the
@@ -48,7 +48,7 @@ public record SshSession(@Id UUID id, String identity, UUID nodeId, String nodeN
 	}
 
 	/**
-	 * §6.3: a mid-session re-Authorize re-decides the SAME session_id — this
+	 * A mid-session re-Authorize re-decides the SAME session_id — this
 	 * refreshes the decision snapshot in place (an UPDATE, since {@code version}
 	 * and {@code id} are preserved) rather than colliding with the original INSERT.
 	 * {@code startedAt}/{@code endedAt}/{@code endReason} are the connection's own

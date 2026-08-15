@@ -10,8 +10,8 @@ import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Table;
 
 /**
- * RUNTIME · {@code runtime.service_account_credential} (FR-AUTH-12). Issued
- * machine-consumer credential (rotatable, revocable). Stores hash only, never
+ * RUNTIME · {@code runtime.service_account_credential}. Issued machine-consumer
+ * credential (rotatable, revocable). Stores hash only, never
  * raw secret. {@code serviceAccountId}/{@code serviceAccountName} are a
  * snapshot (no FK across runtime→config).
  */

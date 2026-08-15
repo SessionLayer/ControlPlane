@@ -43,8 +43,7 @@ public record RecordingRef(@Id UUID id, UUID sessionId, String objectKey, String
 	}
 
 	/**
-	 * Place or release the legal hold (FR-AUD-6): blocks retention prune +
-	 * governance delete.
+	 * Place or release the legal hold: blocks retention prune + governance delete.
 	 */
 	public RecordingRef withLegalHold(boolean held, String reason) {
 		return new RecordingRef(id, sessionId, objectKey, encryptionKeyRef, hashChainHead, wormMode, sizeBytes,
