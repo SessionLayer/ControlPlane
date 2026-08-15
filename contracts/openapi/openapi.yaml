@@ -395,6 +395,12 @@ paths:
     get:
       operationId: listPins
       summary: List pins for an identity (admin).
+      description: |
+        Lists one identity's ACTIVE pins — `identity` is required, so the surface is
+        never enumerable fleet-wide. This is what tells an operator which authN
+        shortcuts an identity still holds: a pin outlives the session it was created
+        for, so offboarding is incomplete until they are accounted for.
+        Platform-RBAC gated (`user:manage`).
       tags:
         - auth
       parameters:
@@ -420,7 +426,8 @@ paths:
       description: |
         Pins a public-key fingerprint to `{identity, source-cidr, principals}`
         with a TTL capped at the authorization TTL.
-        Source IP is a deny-only reducer. Platform-RBAC gated + audited.
+        Source IP is a deny-only reducer. Platform-RBAC gated (`user:manage`) +
+        audited.
       tags:
         - auth
       requestBody:
@@ -446,6 +453,12 @@ paths:
     delete:
       operationId: revokePin
       summary: Revoke a pin (admin / offboarding / lock).
+      description: |
+        Revokes one pin, so the shortcut it granted stops authenticating from the
+        next connect. The withdrawal half of the pin surface: because a pin
+        authenticates on its own, withdrawing an identity's access means withdrawing
+        its pins, not only its sessions. Platform-RBAC gated (`user:manage`) +
+        audited.
       tags:
         - auth
       parameters:
@@ -472,8 +485,8 @@ paths:
         Issues a rotatable, revocable credential for a service account:
         a `private_key_jwt` public-key/JWKS reference, an mTLS
         certificate fingerprint, or (discouraged) a generated `client_secret`
-        returned once. Stored hashed / by reference. Platform-RBAC gated +
-        audited.
+        returned once. Stored hashed / by reference. Platform-RBAC gated
+        (`user:manage`) + audited.
       tags:
         - auth
       parameters:
@@ -506,7 +519,11 @@ paths:
     delete:
       operationId: revokeServiceAccountCredential
       summary: Revoke a machine-consumer credential (admin).
-      description: Revocation takes effect immediately (new sessions denied).
+      description: |
+        Revocation takes effect immediately (new sessions denied). The service
+        account itself survives — this withdraws one credential, so a compromised
+        key is retired without deleting the consumer that holds the rest.
+        Platform-RBAC gated (`user:manage`) + audited.
       tags:
         - auth
       parameters:
@@ -1077,6 +1094,11 @@ paths:
     get:
       operationId: getJitRequest
       summary: Get a JIT request (admin).
+      description: |
+        Returns one JIT request with its current state and the approval chain
+        snapshotted at submission — what an approver reads before deciding, and what
+        an auditor reads afterwards to see the chain as it stood, not as the policy
+        has since been edited. Platform-RBAC gated (`request:approve`).
       tags:
         - jit-requests
       parameters:
