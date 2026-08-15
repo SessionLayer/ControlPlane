@@ -21,7 +21,7 @@ class MigrationIntegrityIT extends AbstractDataIT {
 	void allMigrationsAppliedThroughLatest() {
 		Integer maxVersion = db.sql("SELECT max(version::int) AS v FROM flyway_schema_history WHERE success = true")
 				.map(row -> row.get("v", Integer.class)).one().block();
-		assertThat(maxVersion).isEqualTo(30);
+		assertThat(maxVersion).isEqualTo(31);
 
 		Long failed = db.sql("SELECT count(*) AS c FROM flyway_schema_history WHERE success = false")
 				.map(row -> row.get("c", Long.class)).one().block();
