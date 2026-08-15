@@ -14,10 +14,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * Creates and loads local (KEK-encrypted) CA keys — shared by
- * cold-start provisioning and CA rotation. Generation KEK-wraps a fresh ECDSA
- * key with a loud production warning; loading unwraps it transiently into a
- * signer.
+ * Creates and loads local (KEK-encrypted) CA keys — shared by cold-start
+ * provisioning and CA rotation. Generation KEK-wraps a fresh ECDSA key with a
+ * loud production warning; loading unwraps it transiently into a signer.
  */
 @Component
 public class LocalCaFactory implements CaKeyProvisioner {

@@ -20,13 +20,13 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 /**
- * First-admin bootstrap. On an unconfigured system it
- * provisions the initial platform admin — a config-named OIDC subject, or a
- * printed-once credential surrendered via {@code POST /v1/bootstrap/claim} —
- * seeding a {@code platform-admin} role + a {@code role_binding}. It
- * <b>self-disables</b> once a platform admin with {@code user:manage} +
- * {@code rbac:write} exists (a race-safe conditional flip of
- * {@code operator_settings.bootstrap_completed}), and every use is audited.
+ * First-admin bootstrap. On an unconfigured system it provisions the initial
+ * platform admin — a config-named OIDC subject, or a printed-once credential
+ * surrendered via {@code POST /v1/bootstrap/claim} — seeding a
+ * {@code platform-admin} role + a {@code role_binding}. It <b>self-disables</b>
+ * once a platform admin with {@code user:manage} + {@code rbac:write} exists (a
+ * race-safe conditional flip of {@code operator_settings.bootstrap_completed}),
+ * and every use is audited.
  */
 @Service
 public class BootstrapService {

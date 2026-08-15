@@ -42,12 +42,11 @@ import reactor.core.publisher.Mono;
  * {@code UNAUTHENTICATED} before it reaches here.
  *
  * <p>
- * AUTHENTICATION ONLY: every RPC answers "who is this?" and never grants
- * access — the Gateway still calls {@code Authorization.Authorize} for the
- * target node. Resolution failure is the single generic
- * {@code resolved = false} for ANY reason; reasons go only to the decision log.
- * The CP maps identity → principals; a client-claimed principal is never
- * echoed.
+ * AUTHENTICATION ONLY: every RPC answers "who is this?" and never grants access
+ * — the Gateway still calls {@code Authorization.Authorize} for the target
+ * node. Resolution failure is the single generic {@code resolved = false} for
+ * ANY reason; reasons go only to the decision log. The CP maps identity →
+ * principals; a client-claimed principal is never echoed.
  */
 @Service
 public class OuterLegAuthService extends OuterLegAuthGrpc.OuterLegAuthImplBase {

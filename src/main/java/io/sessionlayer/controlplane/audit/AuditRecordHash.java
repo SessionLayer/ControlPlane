@@ -12,9 +12,9 @@ import tools.jackson.databind.JsonNode;
 /**
  * Hash chain for audit_event: record_hash = SHA-256(prev_hash ||
  * canonical(event)). Proves no row was altered, removed, or reordered on top of
- * the WORM store's own immutability. Canonical encoding is length-framed, stable
- * across jsonb key reordering, and excludes DB-assigned fields (seq, hash,
- * version, created_at).
+ * the WORM store's own immutability. Canonical encoding is length-framed,
+ * stable across jsonb key reordering, and excludes DB-assigned fields (seq,
+ * hash, version, created_at).
  */
 public final class AuditRecordHash {
 

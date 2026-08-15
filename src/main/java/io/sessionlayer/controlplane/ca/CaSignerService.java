@@ -22,10 +22,9 @@ import reactor.core.publisher.Mono;
 
 /**
  * Builds a {@link SshCertSigner} for a CA (per-CA, independent backends) and
- * enforces the HA <b>fail-closed</b> semantics: if
- * there is no active CA of the requested kind, or the key material is missing,
- * it errors — it never returns a signer that would sign with the wrong key or
- * skip signing.
+ * enforces the HA <b>fail-closed</b> semantics: if there is no active CA of the
+ * requested kind, or the key material is missing, it errors — it never returns
+ * a signer that would sign with the wrong key or skip signing.
  */
 @Service
 public class CaSignerService {

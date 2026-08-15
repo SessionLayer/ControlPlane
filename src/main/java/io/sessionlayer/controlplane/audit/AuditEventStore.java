@@ -153,8 +153,8 @@ public interface AuditEventStore {
 	}
 
 	/**
-	 * A resolved audit-search query: the caller-supplied filter dimensions plus
-	 * the RBAC {@code scopeGrants} the search must be confined to and the keyset
+	 * A resolved audit-search query: the caller-supplied filter dimensions plus the
+	 * RBAC {@code scopeGrants} the search must be confined to and the keyset
 	 * {@code cursor}/{@code limit}. A null/blank filter is unrestricted for that
 	 * dimension.
 	 *

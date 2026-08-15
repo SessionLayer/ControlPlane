@@ -55,9 +55,9 @@ import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * The connect-time {@code Authorize} RPC over mTLS. An allow
- * returns a verifiable signed context + a minted session token that then signs
- * an inner-leg cert via the SessionSigning signer; a deny or a Lock returns a
+ * The connect-time {@code Authorize} RPC over mTLS. An allow returns a
+ * verifiable signed context + a minted session token that then signs an
+ * inner-leg cert via the SessionSigning signer; a deny or a Lock returns a
  * generic deny with no token (fail closed), and the {@code ssh_session}
  * decision snapshot is written on allow.
  */

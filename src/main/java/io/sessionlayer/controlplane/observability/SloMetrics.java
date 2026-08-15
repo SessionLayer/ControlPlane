@@ -53,8 +53,7 @@ public class SloMetrics {
 	public SloMetrics(MeterRegistry registry) {
 		this.registry = registry;
 		Gauge.builder(LEASE_LIVE, liveLeases, AtomicLong::doubleValue)
-				.description("Live (unreleased, unexpired) concurrency leases, fleet-wide")
-				.register(registry);
+				.description("Live (unreleased, unexpired) concurrency leases, fleet-wide").register(registry);
 	}
 
 	public void recordSessionLimitDenied(String accessModel) {

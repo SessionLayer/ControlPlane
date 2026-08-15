@@ -70,10 +70,10 @@ import tools.jackson.databind.node.ObjectNode;
  * {@code Authorize} ALLOW mints a recording token; {@code BeginRecording}
  * registers the 1:1 {@code recording_ref} + returns the customer key (no upload
  * cred); {@code RequestUpload} issues a fresh short-lived presigned PUT at
- * upload time that lands the object; replayed / cross-gateway / expired tokens +
- * invalid customer keys fail closed; {@code FinalizeRecording} commits integrity
- * + the (validated) SFTP audit correlated into the one stream; and a WORM
- * object-lock cannot be stripped or deleted.
+ * upload time that lands the object; replayed / cross-gateway / expired tokens
+ * + invalid customer keys fail closed; {@code FinalizeRecording} commits
+ * integrity + the (validated) SFTP audit correlated into the one stream; and a
+ * WORM object-lock cannot be stripped or deleted.
  */
 class RecordingIT extends AbstractMtlsIT {
 

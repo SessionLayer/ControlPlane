@@ -19,12 +19,12 @@ import reactor.core.publisher.Mono;
  * the Gateway root: {@code cp.authorize} and {@code cp.cert_sign}.
  *
  * <p>
- * Spans carry <b>correlation, never content</b>: only IDs,
- * enums, outcomes, and — on failure — the error <i>type</i>. No SSH plaintext,
- * key, OTP, token, or recording byte ever enters a span. The parent is passed
- * <b>explicitly</b> to each span builder (never via a thread-local), so the
- * parent→child link is correct across the reactive/Reactor thread hops without
- * any context-propagation hooks.
+ * Spans carry <b>correlation, never content</b>: only IDs, enums, outcomes, and
+ * — on failure — the error <i>type</i>. No SSH plaintext, key, OTP, token, or
+ * recording byte ever enters a span. The parent is passed <b>explicitly</b> to
+ * each span builder (never via a thread-local), so the parent→child link is
+ * correct across the reactive/Reactor thread hops without any
+ * context-propagation hooks.
  */
 public final class CpTracing {
 

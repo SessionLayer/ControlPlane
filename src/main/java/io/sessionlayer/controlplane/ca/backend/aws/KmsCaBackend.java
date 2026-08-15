@@ -12,8 +12,7 @@ import java.security.interfaces.ECPublicKey;
  * to-be-signed certificate bytes to a SHA-256 digest, has KMS sign the digest,
  * and normalizes the returned <b>DER</b> signature to OpenSSH {@code (r, s)}
  * via the same {@link EcdsaSignatures#fromDer} path the local backend uses. The
- * signing itself is delegated to the injectable
- * {@link KmsSigner} seam.
+ * signing itself is delegated to the injectable {@link KmsSigner} seam.
  */
 public final class KmsCaBackend implements SignerBackend {
 

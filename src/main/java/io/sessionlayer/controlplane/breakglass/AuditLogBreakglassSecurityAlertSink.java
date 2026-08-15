@@ -11,9 +11,9 @@ import reactor.core.publisher.Mono;
 
 /**
  * The default {@link BreakglassSecurityAlertSink}: audits and logs break-glass
- * authentication to the one correlated audit stream. The
- * action {@code breakglass.authenticated} is what auditors query. Carries
- * public ids only — no key material, no resolving secret.
+ * authentication to the one correlated audit stream. The action
+ * {@code breakglass.authenticated} is what auditors query. Carries public ids
+ * only — no key material, no resolving secret.
  */
 @Component
 public class AuditLogBreakglassSecurityAlertSink implements BreakglassSecurityAlertSink {

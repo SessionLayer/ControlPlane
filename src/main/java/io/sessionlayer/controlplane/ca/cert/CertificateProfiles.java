@@ -37,8 +37,8 @@ public final class CertificateProfiles {
 
 	/**
 	 * Build the Gateway OUTER host-cert parameters: the short-lived HOST
-	 * certificate the Gateway presents on the ProxyJump inner
-	 * hop so a stock OpenSSH client accepts it as the target node with no TOFU.
+	 * certificate the Gateway presents on the ProxyJump inner hop so a stock
+	 * OpenSSH client accepts it as the target node with no TOFU.
 	 * {@code key_id = gateway-host:<gatewayName>} for the node-local audit trail.
 	 *
 	 * <p>

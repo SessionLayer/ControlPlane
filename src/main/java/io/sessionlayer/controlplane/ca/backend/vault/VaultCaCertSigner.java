@@ -13,9 +13,9 @@ import java.time.Instant;
 import java.util.Base64;
 
 /**
- * The Vault CA signer: unlike the raw-signer backends it does
- * <b>not</b> use the shared assembler — the Vault SSH engine assembles and
- * signs the certificate itself. It therefore overrides {@link #signCertificate}
+ * The Vault CA signer: unlike the raw-signer backends it does <b>not</b> use
+ * the shared assembler — the Vault SSH engine assembles and signs the
+ * certificate itself. It therefore overrides {@link #signCertificate}
  * wholesale, translating {@link CertificateParameters} into a
  * {@code POST /ssh/sign/:role} request (never {@code /ssh/issue}) and returning
  * the certificate Vault produced. {@link #rawSign} is unsupported (Vault does

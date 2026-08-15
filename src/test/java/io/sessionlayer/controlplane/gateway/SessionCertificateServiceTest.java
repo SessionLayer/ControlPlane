@@ -31,10 +31,9 @@ import reactor.test.StepVerifier;
 
 /**
  * {@code SessionCertificateService.sign} must audit every fail-closed path it
- * takes, each with its own distinguishable reason: a client
- * fault, an absent CA, and a CA that was reached and refused. The three must
- * never collapse into one, since an operator reads the reason to decide where
- * to look.
+ * takes, each with its own distinguishable reason: a client fault, an absent
+ * CA, and a CA that was reached and refused. The three must never collapse into
+ * one, since an operator reads the reason to decide where to look.
  */
 class SessionCertificateServiceTest {
 

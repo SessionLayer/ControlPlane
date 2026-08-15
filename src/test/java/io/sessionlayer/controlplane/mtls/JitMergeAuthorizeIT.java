@@ -43,10 +43,10 @@ import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * The regression matrix for the JIT/standing UNION restructure: an
- * approved, in-window JIT grant is now folded into the SAME evaluation as
- * standing access (never gated on a prior standing failure), so it can widen a
- * connect even when standing already matches something (just not enough). Every
+ * The regression matrix for the JIT/standing UNION restructure: an approved,
+ * in-window JIT grant is now folded into the SAME evaluation as standing access
+ * (never gated on a prior standing failure), so it can widen a connect even
+ * when standing already matches something (just not enough). Every
  * deny-wins/break-glass/self-approval/attribution invariant is proven here, not
  * assumed — see {@code ConnectAuthorizationService#resolveDecision}.
  */

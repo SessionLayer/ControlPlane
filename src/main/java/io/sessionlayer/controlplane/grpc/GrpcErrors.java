@@ -14,11 +14,11 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Maps service exceptions to fail-closed gRPC statuses with <b>generic,
- * non-leaking</b> descriptions. The specific cause is logged
- * server-side and never returned to the caller, so a client cannot distinguish
- * (say) "expired token" from "wrong gateway". A CA/signer that is unavailable
- * is a transient server condition ({@code UNAVAILABLE}); anything unexpected is
- * a generic {@code INTERNAL}.
+ * non-leaking</b> descriptions. The specific cause is logged server-side and
+ * never returned to the caller, so a client cannot distinguish (say) "expired
+ * token" from "wrong gateway". A CA/signer that is unavailable is a transient
+ * server condition ({@code UNAVAILABLE}); anything unexpected is a generic
+ * {@code INTERNAL}.
  */
 final class GrpcErrors {
 

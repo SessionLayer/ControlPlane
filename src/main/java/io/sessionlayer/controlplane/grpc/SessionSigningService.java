@@ -22,11 +22,11 @@ import reactor.core.publisher.Mono;
 
 /**
  * gRPC server for {@code SessionSigning}: mints the short-lived inner-leg
- * certificate for a session the caller owns and returns the
- * <b>certificate only</b>. mTLS-required tier — the {@link AuthInterceptor}
- * resolves the caller into the gRPC context; the request's single-use session
- * token is the per-RPC authority. The advisory {@code SignContext} is validated
- * against the token by the service (a disagreement fails closed).
+ * certificate for a session the caller owns and returns the <b>certificate
+ * only</b>. mTLS-required tier — the {@link AuthInterceptor} resolves the
+ * caller into the gRPC context; the request's single-use session token is the
+ * per-RPC authority. The advisory {@code SignContext} is validated against the
+ * token by the service (a disagreement fails closed).
  */
 @Service
 public class SessionSigningService extends SessionSigningGrpc.SessionSigningImplBase {

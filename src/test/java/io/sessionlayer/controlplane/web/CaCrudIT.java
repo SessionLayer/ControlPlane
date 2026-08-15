@@ -187,13 +187,13 @@ class CaCrudIT extends AbstractConfigApiIT {
 	}
 
 	/**
-	 * The write-path guarantee, over the real API: a version-less or
-	 * wrong-vault azure_keyvault keyReference is refused at create, before anything
-	 * is written — not left to fail only when a signature is attempted. This
-	 * targets CaConfigService.validate's KeyVaultKeyReference.parse call, the write
-	 * path; AzureKeyVaultRotationIT covers the same parser reached from
-	 * CaSignerService at sign time, which is defense-in-depth once this gate
-	 * exists, not the first line.
+	 * The write-path guarantee, over the real API: a version-less or wrong-vault
+	 * azure_keyvault keyReference is refused at create, before anything is written
+	 * — not left to fail only when a signature is attempted. This targets
+	 * CaConfigService.validate's KeyVaultKeyReference.parse call, the write path;
+	 * AzureKeyVaultRotationIT covers the same parser reached from CaSignerService
+	 * at sign time, which is defense-in-depth once this gate exists, not the first
+	 * line.
 	 */
 	@Test
 	void azureKeyvaultKeyReferenceRejectedAtTheWritePath() {

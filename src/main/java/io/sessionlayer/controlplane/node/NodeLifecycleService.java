@@ -30,11 +30,11 @@ import tools.jackson.databind.node.ObjectNode;
 
 /**
  * Node lifecycle. Enrollment, quarantine (expressed as a top-tier Lock on the
- * node, deny wins), release, soft-remove,
- * and listing. Every mutation is one transaction (state + lock + audit) and any
- * lock delta is pushed to Gateways via {@link LockFeedHub} <b>after</b> commit
- * (mirrors {@code io.sessionlayer.controlplane.web.LockController}), so a
- * Gateway can never be pushed a lock a rolled-back transaction never stored.
+ * node, deny wins), release, soft-remove, and listing. Every mutation is one
+ * transaction (state + lock + audit) and any lock delta is pushed to Gateways
+ * via {@link LockFeedHub} <b>after</b> commit (mirrors
+ * {@code io.sessionlayer.controlplane.web.LockController}), so a Gateway can
+ * never be pushed a lock a rolled-back transaction never stored.
  *
  * <p>
  * Enrollment is never TOFU: the node must present at least one

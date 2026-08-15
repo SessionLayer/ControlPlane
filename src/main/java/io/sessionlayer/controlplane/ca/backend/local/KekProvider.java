@@ -4,9 +4,9 @@ import java.security.MessageDigest;
 import java.util.Base64;
 
 /**
- * Sources the local-CA KEK: the 32-byte key-encryption key comes from
- * operator configuration / the environment, <b>never hardcoded and never from
- * the database</b>. A fresh {@link Kek} is minted per operation and the caller
+ * Sources the local-CA KEK: the 32-byte key-encryption key comes from operator
+ * configuration / the environment, <b>never hardcoded and never from the
+ * database</b>. A fresh {@link Kek} is minted per operation and the caller
  * {@link Kek#destroy() destroys} it after use (transient plaintext).
  *
  * <p>

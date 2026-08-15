@@ -46,11 +46,12 @@ import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * Spans carry correlation, never content. A Gateway-injected {@code traceparent}
- * makes the CP's {@code cp.authorize} and {@code cp.cert_sign} spans children of
- * the SAME trace — one trace across the CP↔GW gRPC plane — and NO span attribute
- * carries plaintext / key / token / recording content (the no-content
- * assertion). The SLO meters are emitted for the same flow.
+ * Spans carry correlation, never content. A Gateway-injected
+ * {@code traceparent} makes the CP's {@code cp.authorize} and
+ * {@code cp.cert_sign} spans children of the SAME trace — one trace across the
+ * CP↔GW gRPC plane — and NO span attribute carries plaintext / key / token /
+ * recording content (the no-content assertion). The SLO meters are emitted for
+ * the same flow.
  */
 @Import(ObservabilityIT.SpanCapture.class)
 class ObservabilityIT extends AbstractMtlsIT {

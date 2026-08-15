@@ -50,8 +50,8 @@ public final class X509Certificates {
 	/**
 	 * Build a {@code CN=<value>} subject via {@link X500NameBuilder}: the builder
 	 * RDN-escapes the value, so a name is never string-concatenated into the DN.
-	 * Callers additionally allowlist-validate the value (gateway names,
-	 * configured server hostnames).
+	 * Callers additionally allowlist-validate the value (gateway names, configured
+	 * server hostnames).
 	 */
 	private static X500Name cn(String commonName) {
 		return new X500NameBuilder(BCStyle.INSTANCE).addRDN(BCStyle.CN, commonName).build();

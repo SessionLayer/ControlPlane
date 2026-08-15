@@ -31,8 +31,8 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 /**
- * gRPC server for the connect-time decision. mTLS-required tier:
- * the {@link AuthInterceptor} authenticates the calling Gateway, and the minted
+ * gRPC server for the connect-time decision. mTLS-required tier: the
+ * {@link AuthInterceptor} authenticates the calling Gateway, and the minted
  * token is bound to <b>that</b> caller (never a request field). The handler
  * delegates to {@link ConnectAuthorizationService} and maps the outcome onto
  * the wire: on allow, the signed decision context + minted token; on deny, one

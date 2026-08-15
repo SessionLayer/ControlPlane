@@ -136,9 +136,9 @@ public class CaConfigService {
 
 	/**
 	 * Rotate the CA <b>kind</b> of {@code id} through the local rotation state
-	 * machine: provision a fresh incoming CA, promote it to active and
-	 * demote the current active to outgoing (both trusted during the overlap), then
-	 * return the new active CA. Never returns private material.
+	 * machine: provision a fresh incoming CA, promote it to active and demote the
+	 * current active to outgoing (both trusted during the overlap), then return the
+	 * new active CA. Never returns private material.
 	 *
 	 * <p>
 	 * {@code backend}/{@code keyReference}/{@code algorithm} are optional overrides

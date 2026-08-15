@@ -18,11 +18,11 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * The break-glass AUTHENTICATION path. Resolves an offered FIDO2
- * sk-ecdsa PUBLIC key (primary) or offline code (fallback) to an identity and
- * scoped principals, minting the single-use token. The alert fires at
- * authentication. Any failure is generic non-resolution (fail closed). The
- * offline code is a SECRET and is NEVER logged.
+ * The break-glass AUTHENTICATION path. Resolves an offered FIDO2 sk-ecdsa
+ * PUBLIC key (primary) or offline code (fallback) to an identity and scoped
+ * principals, minting the single-use token. The alert fires at authentication.
+ * Any failure is generic non-resolution (fail closed). The offline code is a
+ * SECRET and is NEVER logged.
  */
 @Service
 public class BreakglassResolutionService {

@@ -9,8 +9,8 @@ import java.security.Signature;
 import java.security.interfaces.ECPublicKey;
 
 /**
- * The local (in-process) CA backend: it signs with an in-memory ECDSA
- * private key that was decrypted transiently from its KEK-wrapped form. Java's
+ * The local (in-process) CA backend: it signs with an in-memory ECDSA private
+ * key that was decrypted transiently from its KEK-wrapped form. Java's
  * {@code SHA*withECDSA} produces a DER signature, which is normalized to
  * {@code (r, s)} — the same normalization path as AWS KMS, so the shared code
  * is exercised by the local backend too.

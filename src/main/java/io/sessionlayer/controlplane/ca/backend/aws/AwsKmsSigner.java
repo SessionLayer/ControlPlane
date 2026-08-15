@@ -102,15 +102,15 @@ public final class AwsKmsSigner implements KmsSigner {
 	}
 
 	/**
-	 * Fail-closed signing failure. {@code getMessage()} never carries KMS
-	 * response content — only the <b>account-redacted</b> key reference and the
-	 * failure's class name — so it is safe wherever a message alone is surfaced.
-	 * That matters more here than it reads: {@code GrpcErrors} logs this message at
-	 * WARN on every signing refusal, so an unredacted ARN would write the AWS
-	 * account id into the Control Plane's logs on exactly the failure an operator
-	 * is most likely to paste into a ticket. The constructors take the redacted
-	 * form rather than redacting here, so a caller cannot pass the full ARN by
-	 * reaching for the obvious field.
+	 * Fail-closed signing failure. {@code getMessage()} never carries KMS response
+	 * content — only the <b>account-redacted</b> key reference and the failure's
+	 * class name — so it is safe wherever a message alone is surfaced. That matters
+	 * more here than it reads: {@code GrpcErrors} logs this message at WARN on
+	 * every signing refusal, so an unredacted ARN would write the AWS account id
+	 * into the Control Plane's logs on exactly the failure an operator is most
+	 * likely to paste into a ticket. The constructors take the redacted form rather
+	 * than redacting here, so a caller cannot pass the full ARN by reaching for the
+	 * obvious field.
 	 */
 	public static final class KmsSigningException extends CaSigningFailedException {
 		KmsSigningException(String redactedKeyArn, Throwable cause) {

@@ -17,12 +17,12 @@ import reactor.core.publisher.Mono;
 
 /**
  * Server-generated single-use OTP. Issuance produces a high-entropy code
- * (≥128-bit) with a short TTL (60–300s, clamped) and stores
- * only its SHA-256; the raw value is returned once for out-of-band delivery.
- * Validation is <b>constant-time</b> (the presented value is hashed, never
- * compared char-by-char), <b>single-use</b> (an atomic mark-used UPDATE — a
- * replay matches no row), source-CIDR bound (deny-only), and rate-limited;
- * <b>the identity comes from the record</b>, never from client input.
+ * (≥128-bit) with a short TTL (60–300s, clamped) and stores only its SHA-256;
+ * the raw value is returned once for out-of-band delivery. Validation is
+ * <b>constant-time</b> (the presented value is hashed, never compared
+ * char-by-char), <b>single-use</b> (an atomic mark-used UPDATE — a replay
+ * matches no row), source-CIDR bound (deny-only), and rate-limited; <b>the
+ * identity comes from the record</b>, never from client input.
  */
 @Service
 public class OtpService {

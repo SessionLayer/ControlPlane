@@ -29,11 +29,11 @@ import org.slf4j.LoggerFactory;
 
 /**
  * The per-RPC authorization interceptor for the mTLS plane (VERSIONING.md §7).
- * mTLS authenticates the channel; this interceptor decides, per
- * method, whether a valid client certificate is required and — independently of
- * the TLS-layer {@code clientAuth} toggle — re-validates the presented client
- * chain against the internal CA trust anchor, checks validity, and resolves the
- * caller's {@code gateway_identity} id from the certificate SAN. The resolved
+ * mTLS authenticates the channel; this interceptor decides, per method, whether
+ * a valid client certificate is required and — independently of the TLS-layer
+ * {@code clientAuth} toggle — re-validates the presented client chain against
+ * the internal CA trust anchor, checks validity, and resolves the caller's
+ * {@code gateway_identity} id from the certificate SAN. The resolved
  * {@link MtlsPeer} is placed in the gRPC {@link Context} for handlers.
  *
  * <ul>

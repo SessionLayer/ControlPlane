@@ -26,9 +26,9 @@ import reactor.util.concurrent.Queues;
 
 /**
  * The CP→Gateway actively-pushed lock deny-list stream. On subscribe the
- * Gateway receives one authoritative
- * {@code LockSnapshot} (a full RESYNC), then live add/remove deltas from the
- * shared {@link LockFeedHub} interleaved with periodic heartbeats.
+ * Gateway receives one authoritative {@code LockSnapshot} (a full RESYNC), then
+ * live add/remove deltas from the shared {@link LockFeedHub} interleaved with
+ * periodic heartbeats.
  *
  * <p>
  * mTLS/gateway-identity tier: the

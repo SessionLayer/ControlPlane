@@ -5,9 +5,9 @@ import io.sessionlayer.controlplane.ca.wire.SshWriter;
 import java.math.BigInteger;
 
 /**
- * ECDSA signature normalization and OpenSSH signature-blob
- * encoding. Backends return a raw signature in one of two shapes; both are
- * normalized to the {@code (r, s)} pair the OpenSSH format needs:
+ * ECDSA signature normalization and OpenSSH signature-blob encoding. Backends
+ * return a raw signature in one of two shapes; both are normalized to the
+ * {@code (r, s)} pair the OpenSSH format needs:
  *
  * <ul>
  * <li><b>DER</b> — {@code SEQUENCE { INTEGER r, INTEGER s }} (Java's

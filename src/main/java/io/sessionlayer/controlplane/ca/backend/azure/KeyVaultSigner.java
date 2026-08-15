@@ -4,8 +4,7 @@ import java.security.interfaces.ECPublicKey;
 
 /**
  * The injectable seam for Azure Key Vault (Azure has no Ed25519, so ECDSA P-256
- * is the portable default). Production binds this to
- * the Key Vault
+ * is the portable default). Production binds this to the Key Vault
  * {@code CryptographyClient.sign(SignatureAlgorithm.ES256, digest)}, which
  * returns a <b>P1363</b> ({@code r‖s} fixed-width) signature that
  * {@link AzureKeyVaultCaBackend} normalizes. CI exercises the normalization

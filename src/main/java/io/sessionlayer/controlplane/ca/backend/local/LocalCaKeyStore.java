@@ -14,11 +14,11 @@ import java.util.Arrays;
 
 /**
  * Generates and loads a local CA ECDSA key, envelope-encrypted with a
- * {@link Kek}. On generation the plaintext PKCS#8 private key buffer
- * is <b>zeroized immediately after wrapping</b>; on load it is zeroized
+ * {@link Kek}. On generation the plaintext PKCS#8 private key buffer is
+ * <b>zeroized immediately after wrapping</b>; on load it is zeroized
  * immediately after import — the plaintext key material exists only transiently
- * in-process. The public key is stored as X.509 (public material) so it
- * can be reconstructed without the private key.
+ * in-process. The public key is stored as X.509 (public material) so it can be
+ * reconstructed without the private key.
  */
 public final class LocalCaKeyStore {
 

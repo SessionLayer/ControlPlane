@@ -25,12 +25,11 @@ import reactor.core.publisher.Mono;
 
 /**
  * The HA ownership WRITE path. A Gateway that holds a node's live agent control
- * channel heartbeats here to claim/refresh
- * ownership, and releases it on drain so a standby claims immediately. This is
- * the mTLS-required tier: the OWNER is the authenticated mTLS peer — never a
- * request field — so a Gateway can only claim, refresh, or release ownership
- * for itself. Auto-binds via the {@code List<BindableService>} injection in
- * {@code GrpcMtlsServer}.
+ * channel heartbeats here to claim/refresh ownership, and releases it on drain
+ * so a standby claims immediately. This is the mTLS-required tier: the OWNER is
+ * the authenticated mTLS peer — never a request field — so a Gateway can only
+ * claim, refresh, or release ownership for itself. Auto-binds via the
+ * {@code List<BindableService>} injection in {@code GrpcMtlsServer}.
  *
  * <p>
  * The request addresses the node by its stable enrollment <b>name</b>, not its
