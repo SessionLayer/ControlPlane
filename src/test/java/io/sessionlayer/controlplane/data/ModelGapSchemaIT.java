@@ -144,6 +144,53 @@ class ModelGapSchemaIT extends AbstractDataIT {
 				.verifyError(DataIntegrityViolationException.class);
 	}
 
+	// The certificate anchor the documentation calls PRIMARY: a certificate type
+	// token, and neither a public key nor a fingerprint, because its trust is the
+	// CA signature. The schema was shaped for the pinned-key case and rejected all
+	// three, so this row could not exist.
+	@Test
+	void aHostCaAnchorStoresACertificateWithNoKeyOrFingerprint() {
+		var node = nodes.save(Node.create("hk-cert-node", null, obj(), "agentless", "active", "10.0.0.6")).block();
+		var reread = hostKeys
+				.save(NodeHostKey.create(node.id(), "ssh-ed25519-cert-v01@openssh.com", null, null,
+						"ssh-ed25519-cert-v01@openssh.com AAAAIHNz... host@example", "host_ca", null))
+				.flatMap(k -> hostKeys.findByNodeId(node.id()).next()).block();
+		assertThat(reread.source()).isEqualTo("host_ca");
+		assertThat(reread.publicKey()).isNull();
+		assertThat(reread.fingerprint()).isNull();
+	}
+
+	// Relaxing those columns must not become a licence for a pinned key without
+	// one: a pinned_key row IS its public key and the fingerprint an operator
+	// compares, so the old guarantee still holds exactly where it applies.
+	@Test
+	void aPinnedKeyAnchorStillRequiresItsKeyAndFingerprint() {
+		var node = nodes.save(Node.create("hk-pin-node", null, obj(), "agentless", "active", "10.0.0.7")).block();
+		StepVerifier.create(hostKeys.save(NodeHostKey.create(node.id(), "ssh-ed25519", "ssh-ed25519 AAAAC3Nz...", null,
+				null, "pinned_key", null))).verifyError(DataIntegrityViolationException.class);
+		StepVerifier
+				.create(hostKeys.save(
+						NodeHostKey.create(node.id(), "ssh-ed25519", null, "SHA256:hk", null, "pinned_key", null)))
+				.verifyError(DataIntegrityViolationException.class);
+	}
+
+	// An all-null host_ca row anchors nothing; and the same certificate must not be
+	// recorded twice for one node, which UNIQUE (node_id, fingerprint) stopped
+	// constraining the moment fingerprints became nullable.
+	@Test
+	void aHostCaAnchorMustCarryMaterialAndIsRecordedOnce() {
+		var node = nodes.save(Node.create("hk-ca-guard", null, obj(), "agentless", "active", "10.0.0.8")).block();
+		StepVerifier.create(hostKeys.save(
+				NodeHostKey.create(node.id(), "ssh-ed25519-cert-v01@openssh.com", null, null, null, "host_ca", null)))
+				.verifyError(DataIntegrityViolationException.class);
+
+		String certLine = "ssh-ed25519-cert-v01@openssh.com AAAAIHNzZHVw... host@example";
+		hostKeys.save(NodeHostKey.create(node.id(), "ssh-ed25519-cert-v01@openssh.com", null, null, certLine, "host_ca",
+				null)).block();
+		StepVerifier.create(hostKeys.save(NodeHostKey.create(node.id(), "ssh-ed25519-cert-v01@openssh.com", null, null,
+				certLine, "host_ca", null))).verifyError(DataIntegrityViolationException.class);
+	}
+
 	@Test
 	void sessionLeaseConcurrencyCounts() {
 		String identity = "conc-" + UUID.randomUUID();

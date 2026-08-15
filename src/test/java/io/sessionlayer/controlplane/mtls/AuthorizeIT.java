@@ -194,15 +194,16 @@ class AuthorizeIT extends AbstractMtlsIT {
 	}
 
 	private AuditEvent lastDenial(String identity) {
-		return auditStore.search(new AuditQuery(null, identity, "authz.decision", "denied", null, null, null, null, null,
-				null, null, Map.of(), null, List.of(), null, 50)).block().items().stream().findFirst().orElseThrow();
+		return auditStore.search(new AuditQuery(null, identity, "authz.decision", "denied", null, null, null, null,
+				null, null, null, Map.of(), null, List.of(), null, 50)).block().items().stream().findFirst()
+				.orElseThrow();
 	}
 
 	private static AuthorizeRequest scoped(String identity, UUID nodeId, String principal,
 			List<String> credentialPrincipals) {
 		return AuthorizeRequest.newBuilder().setIdentity(identity).setNodeId(nodeId.toString())
-				.setRequestedPrincipal(principal).setSourceIp("203.0.113.7")
-				.setSessionId(UUID.randomUUID().toString()).addAllCredentialPrincipals(credentialPrincipals).build();
+				.setRequestedPrincipal(principal).setSourceIp("203.0.113.7").setSessionId(UUID.randomUUID().toString())
+				.addAllCredentialPrincipals(credentialPrincipals).build();
 	}
 
 	private List<UUID> searchIds(AuditQuery query) {
