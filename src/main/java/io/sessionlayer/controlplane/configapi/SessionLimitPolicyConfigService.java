@@ -67,7 +67,7 @@ public class SessionLimitPolicyConfigService {
 
 	public Mono<Void> delete(UUID id, String actor) {
 		// Idempotent + auditable: capture the before-state, then delete + record the
-		// change (before/after, FR-PADM-3); a delete of a missing row is still audited.
+		// change (before/after); a delete of a missing row is still audited.
 		return policies.findById(id).flatMap(before -> deleteWithAudit(id, actor, before))
 				.switchIfEmpty(Mono.defer(() -> deleteWithAudit(id, actor, null)));
 	}
@@ -96,7 +96,7 @@ public class SessionLimitPolicyConfigService {
 		requirePositive("maxSessionSeconds", maxSessionSeconds);
 		requirePositive("idleTimeoutSeconds", idleTimeoutSeconds);
 		// An all-null policy is a no-op that silently enforces nothing — reject it
-		// pre-commit (FR-SESS-3 "no dead config").
+		// pre-commit: no dead config.
 		if (maxConcurrentSessions == null && maxSessionSeconds == null && idleTimeoutSeconds == null) {
 			throw ApiProblemException.validation(
 					"at least one of maxConcurrentSessions/maxSessionSeconds/idleTimeoutSeconds must be set");
@@ -105,8 +105,8 @@ public class SessionLimitPolicyConfigService {
 
 	// Stricter than the dp_rule surface on purpose: a selector shape the
 	// evaluator quietly ignores (non-array/empty identities/groups, no all:true)
-	// would select NO ONE — a silently-dead limit policy (FR-SESS-3 "no dead
-	// config"). The evaluator-parse check still runs first so the accepted shapes
+	// would select NO ONE — a silently-dead limit policy, and no dead config is
+	// allowed. The evaluator-parse check still runs first so the accepted shapes
 	// are exactly the ones Authorize resolves.
 	private static void validateSelector(JsonNode selector) {
 		if (selector == null || !selector.isObject()) {

@@ -15,8 +15,8 @@ import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 /**
- * Mints and holds the CP's machine-identity token signing key (FR-AUTH-12);
- * regenerated per boot.
+ * Mints and holds the CP's machine-identity token signing key; regenerated per
+ * boot.
  */
 @Component
 public class MachineTokenSigner {

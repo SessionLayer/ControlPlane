@@ -12,14 +12,13 @@ import org.springframework.data.relational.core.mapping.Table;
 import tools.jackson.databind.JsonNode;
 
 /**
- * RUNTIME · {@code runtime.jit_request} (FR-ACC-2). The JIT state machine with
- * two clocks (approval window + grant TTL).
- * {@code jitPolicyId}/{@code approvalChain} /{@code policyMaxTtlSeconds} are
- * snapshots of the policy at request time (no FK), so a later policy edit or
- * delete cannot rewrite history OR widen an in-flight grant. Self-approval
- * (approver ≠ requester, FR-ACC-4) is a hard invariant enforced by the JIT
- * approval logic over {@code approvals}. The transition methods below are the
- * only sanctioned state changes; each is audited by
+ * RUNTIME · {@code runtime.jit_request}. The JIT state machine with two clocks
+ * (approval window + grant TTL). {@code jitPolicyId}/{@code approvalChain}
+ * /{@code policyMaxTtlSeconds} are snapshots of the policy at request time (no
+ * FK), so a later policy edit or delete cannot rewrite history OR widen an
+ * in-flight grant. Self-approval (approver ≠ requester) is a hard invariant
+ * enforced by the JIT approval logic over {@code approvals}. The transition
+ * methods below are the only sanctioned state changes; each is audited by
  * {@code JitLifecycleService}.
  */
 @Table(schema = "runtime", name = "jit_request")

@@ -74,8 +74,7 @@ public class RecordingRegistrationService {
 		}
 		// Fail closed when recording is un-provisioned: no operator_settings singleton,
 		// no customer key, or an unusable key. Keystroke capture is always on, so a
-		// session that would store keystrokes it can't seal must never start
-		// (FR-AUD-2).
+		// session that would store keystrokes it can't seal must never start.
 		Mono<RecordingRegistration> body = operatorSettings.findSingleton().switchIfEmpty(Mono.error(notProvisioned()))
 				.flatMap(settings -> {
 					byte[] publicKey = settings.recordingCustomerPublicKey();
@@ -107,8 +106,8 @@ public class RecordingRegistrationService {
 			byte[] publicKey, String keyRef, String algorithm, String wormMode, Instant retentionUntil) {
 		return recordingTokens.consume(recordingToken, caller, context).flatMap(token -> sshSessions
 				.findById(token.sessionId()).switchIfEmpty(Mono.error(notProvisioned())).flatMap(session -> {
-					// Break-glass recording is MANDATORY strict and not configurable-off (FR-ACC-6,
-					// §7), keyed on the ACCESS MODEL directly: re-assert a usable customer key for
+					// Break-glass recording is MANDATORY strict and not configurable-off,
+					// keyed on the ACCESS MODEL directly: re-assert a usable customer key for
 					// a break-glass session so a future best-effort/downgrade recording path can
 					// never apply to break-glass. Today it is redundant with the fail-closed key
 					// check in beginRecording (every recording is sealed to the key or the session
@@ -142,7 +141,7 @@ public class RecordingRegistrationService {
 					}
 					// A terminal recording gets NO fresh presigned PUT — else a
 					// compromised/buggy Gateway could shadow the finalized,
-					// WORM-locked object with a later version to the same key (§15). Uploads
+					// WORM-locked object with a later version to the same key. Uploads
 					// are only issued while the recording is still open.
 					if (!"recording".equals(ref.status())) {
 						return Mono.error(refused());
@@ -179,8 +178,8 @@ public class RecordingRegistrationService {
 		String head = normalizedDigest(hashChainHead);
 		String digest = normalizedDigest(contentDigest);
 		// The object-store version id replay/export pins so a later shadow PUT to the
-		// same key can't be served (§15). Empty ⇒ null (an
-		// N-1 Gateway that predates the field, or a non-versioned store).
+		// same key can't be served. Empty ⇒ null (an N-1 Gateway that predates the
+		// field, or a non-versioned store).
 		String versionId = (objectVersionId == null || objectVersionId.isBlank()) ? null : objectVersionId;
 		Long size = byteLen > 0 ? byteLen : null;
 		Mono<String> body = recordings.findById(recordingId).switchIfEmpty(Mono.error(refused())).flatMap(
@@ -191,7 +190,7 @@ public class RecordingRegistrationService {
 					if (!"recording".equals(ref.status())) {
 						// Already finalized: a same-status re-finalize is an idempotent no-op
 						// (write NOTHING — no duplicate audit rows); relabeling to a DIFFERENT
-						// terminal status (e.g. finalized→failed to hide it) is refused (§15).
+						// terminal status (e.g. finalized→failed to hide it) is refused.
 						return ref.status().equals(status)
 								? Mono.just(status)
 								: Mono.error(new GatewayRequestException(Reason.FAILED_PRECONDITION,
@@ -216,22 +215,20 @@ public class RecordingRegistrationService {
 				.retryWhen(Retry.max(1).filter(OptimisticLockingFailureException.class::isInstance));
 	}
 
-	// FR-SESS-3 lifecycle completion: the first terminal finalize closes the owning
-	// session — stamps ended_at/end_reason (the SessionController history) AND
-	// releases
-	// the session_lease, freeing the identity's concurrency slot (Authorize counts
+	// Lifecycle completion: the first terminal finalize closes the owning session —
+	// stamps ended_at/end_reason (the SessionController history) AND releases the
+	// session_lease, freeing the identity's concurrency slot (Authorize counts
 	// unreleased leases). Idempotent — an already-ended row is left untouched and
-	// the
-	// lease release is a no-op if already released. end_reason is derived from the
-	// recording's terminal status: it marks HOW the recording completed, not the
-	// authoritative teardown cause (a Lock teardown's "why" lives in the lock/audit
-	// trail).
+	// the lease release is a no-op if already released. end_reason is derived from
+	// the recording's terminal status: it marks HOW the recording completed, not
+	// the authoritative teardown cause (a Lock teardown's "why" lives in the
+	// lock/audit trail).
 	private Mono<Void> endSession(SshSession session, String status) {
 		Instant now = Instant.now();
 		Mono<Void> stampEnd = session.endedAt() == null
 				? sshSessions.save(session.ended(now, sessionEndReason(status))).then()
 				: Mono.empty();
-		// Release the FR-SESS-3 concurrency lease so the identity's slot frees the
+		// Release the concurrency lease so the identity's slot frees the
 		// moment the session ends (idempotent; a break-glass session never took a lease
 		// → a harmless no-op).
 		return stampEnd.then(sessionLeases.releaseBySessionId(session.id(), now)).then();
@@ -245,8 +242,8 @@ public class RecordingRegistrationService {
 		};
 	}
 
-	// One audit_event per decoded SFTP/SCP operation (FR-AUD-1), metadata only,
-	// normalized/validated at the boundary, correlated by session_id (FR-AUD-9).
+	// One audit_event per decoded SFTP/SCP operation, metadata only,
+	// normalized/validated at the boundary, correlated by session_id.
 	// Sequential (concatMap) — one tx connection.
 	private Mono<Void> writeTransferAudit(SshSession session, Map<String, String> nodeLabels,
 			List<FileTransferAuditEntry> sftpAudit) {
@@ -259,7 +256,7 @@ public class RecordingRegistrationService {
 				.then();
 	}
 
-	// One audit_event per admitted forward/X11 tunnel (FR-SESS-2), metadata
+	// One audit_event per admitted forward/X11 tunnel, metadata
 	// only — forwarded byte content is never captured (no universal decode).
 	// Sequential (concatMap) — one tx connection.
 	private Mono<Void> writeTunnelAudit(SshSession session, Map<String, String> nodeLabels,
@@ -292,7 +289,7 @@ public class RecordingRegistrationService {
 	}
 
 	// Every in-session recording event inherits the session's access model, its
-	// node-label snapshot and the FR-AUD-9 correlation key, so one correlation_id
+	// node-label snapshot and the correlation key, so one correlation_id
 	// search returns the recording (run/replay) alongside the connect + JIT
 	// approval that authorized it — for a node-label-scoped auditor too.
 	private static AuditRecord.Builder sessionEvent(SshSession session, Map<String, String> nodeLabels, String actor,
@@ -321,7 +318,7 @@ public class RecordingRegistrationService {
 	}
 
 	// Best-effort, OUT-OF-BAND failure record: recording is mandatory, so a failed
-	// Begin/RequestUpload must reach the audit stream, not just app logs (FR-AUD).
+	// Begin/RequestUpload must reach the audit stream, not just app logs.
 	// Its own transaction (the main one rolled back); a lost audit write must not
 	// mask the original error.
 	private Mono<Void> failureAudit(String action, UUID caller, Throwable error) {

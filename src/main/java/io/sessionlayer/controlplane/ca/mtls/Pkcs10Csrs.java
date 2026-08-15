@@ -14,20 +14,20 @@ import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 
 /**
  * Parses and validates a PKCS#10 {@code CertificationRequest} (the Gateway's
- * CSR) on the trust boundary. Fail-closed at every step (NFR-2):
+ * CSR) on the trust boundary. Fail-closed at every step:
  *
  * <ul>
  * <li><b>Proof of possession</b> — the CSR self-signature is verified against
  * the embedded public key, so a CSR cannot claim a key the requester does not
  * hold.</li>
- * <li><b>Key type</b> — only ECDSA P-256 is accepted (the platform default,
- * D6); a wrong curve/algorithm is refused.</li>
+ * <li><b>Key type</b> — only ECDSA P-256 is accepted (the platform default); a
+ * wrong curve/algorithm is refused.</li>
  * <li><b>Subject</b> — the CN is extracted for the caller to check against the
  * enrollment scope / current identity.</li>
  * </ul>
  *
  * The CP receives only the CSR (public key + PoP) and returns a certificate;
- * the private key never leaves the Gateway (D2/§15).
+ * the private key never leaves the Gateway.
  */
 public final class Pkcs10Csrs {
 

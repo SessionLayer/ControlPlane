@@ -69,7 +69,7 @@ public class SecurityConfiguration {
 		basic.validateIfEnabled();
 		if (basic.isEnabled()) {
 			LOG.warn(
-					"HTTP Basic escape hatch ENABLED (FR-AUTH-17): a discouraged, non-first-class scheme. "
+					"HTTP Basic escape hatch ENABLED: a discouraged, non-first-class scheme. "
 							+ "It is gated to CIDRs {} and MUST sit behind mTLS. Disable it in normal operation.",
 					basic.getAllowedCidrs());
 			http.addFilterAt(new BasicEscapeHatchFilter(basic, passwordEncoder), SecurityWebFiltersOrder.HTTP_BASIC);

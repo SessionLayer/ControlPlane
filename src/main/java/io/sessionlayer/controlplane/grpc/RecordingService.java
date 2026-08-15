@@ -47,7 +47,7 @@ public class RecordingService extends RecordingGrpc.RecordingImplBase {
 		MtlsPeer peer = MtlsContext.peer();
 		UUID caller = peer == null ? null : peer.gatewayId();
 		// The advisory context is parsed in a deferred callable so a set-but-malformed
-		// UUID surfaces reactively as one generic fail-closed error (§15).
+		// UUID surfaces reactively as one generic fail-closed error.
 		Mono<BeginRecordingResponse> result = Mono.fromCallable(() -> toContext(request))
 				.flatMap(context -> registration.beginRecording(caller, request.getRecordingToken(), context))
 				.map(RecordingService::toResponse);

@@ -4,10 +4,11 @@ import io.sessionlayer.controlplane.data.runtime.AuditEvent;
 import java.util.List;
 
 /**
- * Verifies the audit_event hash chain (FR-AUD-3): record_hash =
- * SHA-256(prev_hash || canonical(event)). Proves no row was altered, removed,
- * or reordered (WORM baseline in §12.2; tail truncation is SPEC-DEFERRED,
- * FR-AUD-10).
+ * Verifies the audit_event hash chain: record_hash = SHA-256(prev_hash ||
+ * canonical(event)). Proves no row inside the supplied range was altered,
+ * removed, or reordered. It cannot prove the newest rows were not dropped
+ * wholesale — a truncated tail still verifies — so durability of the tail rests
+ * on the WORM store, not on this check.
  */
 public final class AuditChainVerifier {
 

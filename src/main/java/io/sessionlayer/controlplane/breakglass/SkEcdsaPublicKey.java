@@ -6,8 +6,8 @@ import java.util.Base64;
 
 /**
  * Parses an OpenSSH sk-ecdsa-sha2-nistp256@openssh.com FIDO2 PUBLIC-key wire
- * blob and computes its OpenSSH SHA-256 fingerprint (FR-ACC-6). The fingerprint
- * is "SHA256:" + base64-nopad(SHA-256(blob)) over the exact wire bytes. Fail
+ * blob and computes its OpenSSH SHA-256 fingerprint. The fingerprint is
+ * "SHA256:" + base64-nopad(SHA-256(blob)) over the exact wire bytes. Fail
  * closed on malformed input.
  */
 public final class SkEcdsaPublicKey {

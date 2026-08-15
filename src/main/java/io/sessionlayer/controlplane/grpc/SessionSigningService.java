@@ -21,12 +21,12 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 /**
- * gRPC server for {@code SessionSigning} (Design §15): mints the short-lived
- * inner-leg certificate for a session the caller owns and returns the
- * <b>certificate only</b>. mTLS-required tier — the {@link AuthInterceptor}
- * resolves the caller into the gRPC context; the request's single-use session
- * token is the per-RPC authority. The advisory {@code SignContext} is validated
- * against the token by the service (a disagreement fails closed).
+ * gRPC server for {@code SessionSigning}: mints the short-lived inner-leg
+ * certificate for a session the caller owns and returns the <b>certificate
+ * only</b>. mTLS-required tier — the {@link AuthInterceptor} resolves the
+ * caller into the gRPC context; the request's single-use session token is the
+ * per-RPC authority. The advisory {@code SignContext} is validated against the
+ * token by the service (a disagreement fails closed).
  */
 @Service
 public class SessionSigningService extends SessionSigningGrpc.SessionSigningImplBase {
@@ -61,7 +61,7 @@ public class SessionSigningService extends SessionSigningGrpc.SessionSigningImpl
 	}
 
 	// The advisory context: an unset field is left null; a set-but-malformed UUID
-	// cannot match the token, so it fails closed generically (§15).
+	// cannot match the token, so it fails closed generically.
 	private static SignRequestContext toContext(SignSessionCertificateRequest request) {
 		if (!request.hasContext()) {
 			return SignRequestContext.EMPTY;

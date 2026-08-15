@@ -63,8 +63,7 @@ public class IdpJwtDecoder implements ReactiveJwtDecoder {
 	}
 
 	// OIDC Core §3.1.3.7 items 3–5: aud must contain client_id; if there are extra
-	// audiences the token must carry azp == client_id (our Design §5.3 wants
-	// aud==client_id).
+	// audiences the token must carry azp == client_id (we want aud==client_id).
 	private OAuth2TokenValidator<Jwt> audience() {
 		String clientId = properties.getClientId();
 		return jwt -> {

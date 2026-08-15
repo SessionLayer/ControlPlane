@@ -10,18 +10,17 @@ import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * Pure logic for the JIT approval chain (FR-ACC-3/4). The chain is an ordered
- * 0-3 array of {@code {kind: "email"|"oidc_group", value}} levels, snapshotted
- * onto the request at submit; {@code approvals} accumulates
+ * Pure logic for the JIT approval chain. The chain is an ordered 0-3 array of
+ * {@code {kind: "email"|"oidc_group", value}} levels, snapshotted onto the
+ * request at submit; {@code approvals} accumulates
  * {@code {approver, level, decision, reason, at}} entries. Levels are approved
  * in order — the next level to act is the count of accumulated approvals.
  *
  * <p>
  * Two hard invariants live here so no chain config, re-request, or delegation
- * can bypass them (FR-ACC-4): (1) an approver can NEVER be the requester
- * (self-approval impossible), checked before any level match; (2) an approver
- * may act at most once, so an N-level chain needs N DISTINCT non-requester
- * approvers.
+ * can bypass them: (1) an approver can NEVER be the requester (self-approval
+ * impossible), checked before any level match; (2) an approver may act at most
+ * once, so an N-level chain needs N DISTINCT non-requester approvers.
  */
 public final class JitApprovalChain {
 

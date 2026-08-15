@@ -7,11 +7,11 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 /**
- * A key-encryption key (KEK) used to envelope-encrypt a local CA private key
- * (FR-CA-8, Design §14). AES-256-GCM: the CA private key never touches disk in
- * the clear, and the KEK itself is sourced from the environment (never the DB,
- * never hardcoded — {@link KekProvider}), so a datastore-only compromise yields
- * ciphertext it cannot unwrap.
+ * A key-encryption key (KEK) used to envelope-encrypt a local CA private key.
+ * AES-256-GCM: the CA private key never touches disk in the clear, and the KEK
+ * itself is sourced from the environment (never the DB, never hardcoded —
+ * {@link KekProvider}), so a datastore-only compromise yields ciphertext it
+ * cannot unwrap.
  *
  * <p>
  * The KEK byte material is held in a {@code byte[]} that {@link #destroy()}

@@ -92,8 +92,9 @@ public class SessionLifecycleService {
 					return Mono.just(expiry);
 				}
 				// A LIVE session whose lease is released/absent is the signature of a
-				// reaped-while-alive lease (the one permanent exactness break, F3) — say
-				// so loudly: the identity under-counts until the session actually ends.
+				// reaped-while-alive lease, the one case where the concurrency count is
+				// permanently inexact — say so loudly: the identity under-counts until
+				// the session actually ends.
 				LOG.warn("ExtendSessionLease refused for live session {}: lease already released/absent — if the "
 						+ "reaper released it mid-run, concurrency under-counts until the session ends (check "
 						+ "sessionlayer.session-limits.reaper.grace vs the Gateway extend cadence)", sessionId);
@@ -102,8 +103,8 @@ public class SessionLifecycleService {
 		});
 	}
 
-	// The lifecycle end joins the session's FR-AUD-9 correlation chain (alongside
-	// the connect decision + recording events). Written only when this call
+	// The lifecycle end joins the session's correlation chain (alongside the
+	// connect decision + recording events). Written only when this call
 	// changed state — an idempotent repeat writes no duplicate rows.
 	private Mono<Void> auditEnd(UUID callerGatewayId, SshSession session, String reason, boolean stamped,
 			boolean released) {

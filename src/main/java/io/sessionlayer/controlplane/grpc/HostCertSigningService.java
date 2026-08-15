@@ -16,13 +16,13 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 /**
- * gRPC server for {@code HostCertSigning} (Design §9.3/§11): signs the
- * Gateway's OUTER host certificate for the ProxyJump host-cert MITM path and
- * returns the <b>certificate only</b>. mTLS-required tier — the
- * {@link AuthInterceptor} resolves the caller; this RPC is NOT session-bound,
- * so the caller's Gateway mTLS identity (active + unlocked) is the sole
- * authority. A null/agent/locked/revoked peer is refused with a generic error
- * by the service.
+ * gRPC server for {@code HostCertSigning}: signs the Gateway's OUTER host
+ * certificate for the ProxyJump host-cert MITM path and returns the
+ * <b>certificate only</b>. mTLS-required tier — the {@link AuthInterceptor}
+ * resolves the caller; this RPC is NOT session-bound, so the caller's Gateway
+ * mTLS identity (active + unlocked) is the sole authority. A
+ * null/agent/locked/revoked peer is refused with a generic error by the
+ * service.
  */
 @Service
 public class HostCertSigningService extends HostCertSigningGrpc.HostCertSigningImplBase {

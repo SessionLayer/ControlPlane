@@ -136,9 +136,9 @@ public class CaConfigService {
 
 	/**
 	 * Rotate the CA <b>kind</b> of {@code id} through the local rotation state
-	 * machine (FR-CA-7): provision a fresh incoming CA, promote it to active and
-	 * demote the current active to outgoing (both trusted during the overlap), then
-	 * return the new active CA. Never returns private material.
+	 * machine: provision a fresh incoming CA, promote it to active and demote the
+	 * current active to outgoing (both trusted during the overlap), then return the
+	 * new active CA. Never returns private material.
 	 *
 	 * <p>
 	 * {@code backend}/{@code keyReference}/{@code algorithm} are optional overrides
@@ -206,8 +206,9 @@ public class CaConfigService {
 		// wider than what any backend can actually sign: both are widened and never
 		// narrowed, so a row an upgraded deployment already holds stays readable. This
 		// is the stricter gate that stops a NEW one being written, and it asks the same
-		// capability table the signer asks (Design D6 lives there, per backend). A rule
-		// restated here would be a second list, free to drift from the one enforced.
+		// capability table the signer asks (which records, per backend, what that
+		// backend can sign). A rule restated here would be a second list, free to
+		// drift from the one enforced.
 		try {
 			CaBackendCapabilities.validate(backend, algorithm);
 		} catch (RuntimeException unsupported) {

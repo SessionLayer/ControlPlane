@@ -59,7 +59,7 @@ class SessionLimitPolicyCrudIT extends AbstractConfigApiIT {
 		List<AuditEvent> audit = auditEvents.findByActor(admin).collectList().block();
 		assertThat(audit).anySatisfy(e -> {
 			assertThat(e.action()).isEqualTo("session_limit_policy.create");
-			// FR-PADM-3 before/after: a create has no before-state and a full after
+			// Audit before/after: a create has no before-state and a full after
 			// snapshot.
 			assertThat(e.detail().get("before")).isNull();
 			assertThat(e.detail().get("after")).isNotNull();

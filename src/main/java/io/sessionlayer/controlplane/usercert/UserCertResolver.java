@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 /**
- * Resolves an outer-leg OpenSSH user certificate to its CP identity (FR-CA-2).
+ * Resolves an outer-leg OpenSSH user certificate to its CP identity.
  */
 @Service
 public class UserCertResolver {

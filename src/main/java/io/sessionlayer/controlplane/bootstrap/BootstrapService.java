@@ -20,13 +20,13 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 /**
- * First-admin bootstrap (Design §2A, FR-BOOT-2). On an unconfigured system it
- * provisions the initial platform admin — a config-named OIDC subject, or a
- * printed-once credential surrendered via {@code POST /v1/bootstrap/claim} —
- * seeding a {@code platform-admin} role + a {@code role_binding}. It
- * <b>self-disables</b> once a platform admin with {@code user:manage} +
- * {@code rbac:write} exists (a race-safe conditional flip of
- * {@code operator_settings.bootstrap_completed}), and every use is audited.
+ * First-admin bootstrap. On an unconfigured system it provisions the initial
+ * platform admin — a config-named OIDC subject, or a printed-once credential
+ * surrendered via {@code POST /v1/bootstrap/claim} — seeding a
+ * {@code platform-admin} role + a {@code role_binding}. It <b>self-disables</b>
+ * once a platform admin with {@code user:manage} + {@code rbac:write} exists (a
+ * race-safe conditional flip of {@code operator_settings.bootstrap_completed}),
+ * and every use is audited.
  */
 @Service
 public class BootstrapService {
@@ -109,7 +109,7 @@ public class BootstrapService {
 		}).then();
 	}
 
-	/** Claim the printed-once credential to become the first admin (FR-BOOT-2). */
+	/** Claim the printed-once credential to become the first admin. */
 	public Mono<ClaimOutcome> claim(String credential, String subject) {
 		if (subject == null || subject.isBlank() || credential == null || credential.isBlank()) {
 			return Mono.just(ClaimOutcome.INVALID_CREDENTIAL);
@@ -213,8 +213,8 @@ public class BootstrapService {
 				.flatMap(this::reconcileSessionLimitDefaults).doOnNext(BootstrapService::warnWhenCapUnlimited);
 	}
 
-	// FR-SESS-3: the cluster-default session-limit knobs (concurrent cap, max
-	// duration, idle timeout) are OPT-IN deployment-config values
+	// The cluster-default session-limit knobs (concurrent cap, max duration, idle
+	// timeout) are OPT-IN deployment-config values
 	// (sessionlayer.session-limits.default-*). Seed them into a freshly-created
 	// singleton, and — since the singleton may already have been created null at
 	// cold start — reconcile each on every boot when its property is set

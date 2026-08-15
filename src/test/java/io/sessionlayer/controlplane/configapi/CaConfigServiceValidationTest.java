@@ -487,9 +487,9 @@ class CaConfigServiceValidationTest {
 	}
 
 	/**
-	 * D-1: a Key Vault key_reference must be pinned to an exact version. A
-	 * reference with no version segment at all is refused at the write path, not
-	 * left to fail only when a signature is attempted.
+	 * A Key Vault key_reference must be pinned to an exact version. A reference
+	 * with no version segment at all is refused at the write path, not left to fail
+	 * only when a signature is attempted.
 	 */
 	@Test
 	void createRefusesAVersionLessAzureKeyReferenceAtTheWritePath() {
@@ -505,9 +505,9 @@ class CaConfigServiceValidationTest {
 	}
 
 	/**
-	 * D-3: the allow-list anchor. A key_reference naming any host but the
-	 * configured vault is refused, so a compromised write path cannot redirect CA
-	 * signing to a vault the operator did not configure.
+	 * The allow-list anchor. A key_reference naming any host but the configured
+	 * vault is refused, so a compromised write path cannot redirect CA signing to a
+	 * vault the operator did not configure.
 	 */
 	@Test
 	void createRefusesAWrongVaultAzureKeyReferenceAtTheWritePath() {

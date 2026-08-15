@@ -18,8 +18,8 @@ import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Mono;
 
 /**
- * FR-SESS-3 concurrency-lease diagnosis and single-lease release, replacing the
- * raw {@code SELECT}/{@code UPDATE} on {@code runtime.session_lease} the
+ * Concurrency-lease diagnosis and single-lease release, replacing the raw
+ * {@code SELECT}/{@code UPDATE} on {@code runtime.session_lease} the
  * disaster-recovery runbook required. A lease that outlived its session denies
  * its identity with the same generic problem as a real policy deny, so the read
  * half is what makes the two distinguishable without a database credential.

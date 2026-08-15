@@ -35,20 +35,18 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 /**
- * The outer-leg AUTHENTICATION gRPC service (Design §5.1-§5.5,
- * FR-AUTH-1..5/9/10, FR-CA-2), implemented over the OTP, pins, device flow, and
- * user-facing CA services. mTLS-required tier: the {@link AuthInterceptor}
- * authenticates the calling Gateway; these RPCs are not bootstrap methods, so
- * an unauthenticated call is refused {@code UNAUTHENTICATED} before it reaches
- * here.
+ * The outer-leg AUTHENTICATION gRPC service, implemented over the OTP, pins,
+ * device flow, and user-facing CA services. mTLS-required tier: the
+ * {@link AuthInterceptor} authenticates the calling Gateway; these RPCs are not
+ * bootstrap methods, so an unauthenticated call is refused
+ * {@code UNAUTHENTICATED} before it reaches here.
  *
  * <p>
- * AUTHENTICATION ONLY (invariant I2): every RPC answers "who is this?" and
- * never grants access — the Gateway still calls {@code Authorization.Authorize}
- * for the target node. Resolution failure is the single generic
- * {@code resolved = false} for ANY reason (§7.1, FR-AUTH-16); reasons go only
- * to the decision log. The CP maps identity → principals; a client-claimed
- * principal is never echoed.
+ * AUTHENTICATION ONLY: every RPC answers "who is this?" and never grants access
+ * — the Gateway still calls {@code Authorization.Authorize} for the target
+ * node. Resolution failure is the single generic {@code resolved = false} for
+ * ANY reason; reasons go only to the decision log. The CP maps identity →
+ * principals; a client-claimed principal is never echoed.
  */
 @Service
 public class OuterLegAuthService extends OuterLegAuthGrpc.OuterLegAuthImplBase {
@@ -106,9 +104,9 @@ public class OuterLegAuthService extends OuterLegAuthGrpc.OuterLegAuthImplBase {
 	@Override
 	public void beginDeviceFlow(BeginDeviceFlowRequest request, StreamObserver<BeginDeviceFlowResponse> observer) {
 		String verificationUri = oidcProperties.verificationBaseUrl() + "/v1/auth/verify";
-		// connectionBinding is a reserved field no path reads (RC-1): the real 1:1
+		// connectionBinding is a reserved field no path reads: the real 1:1
 		// device_code<->connection binding is device_code secrecy (per-connection,
-		// hashed at rest, never logged, §15). Minted for schema parity, not relied on.
+		// hashed at rest, never logged). Minted for schema parity, not relied on.
 		String connectionBinding = Secrets.randomToken(32);
 		Mono<BeginDeviceFlowResponse> result = deviceFlowService
 				.begin(blankToNull(request.getSourceIp()), connectionBinding)

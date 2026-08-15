@@ -21,11 +21,10 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 /**
- * Builds a {@link SshCertSigner} for a CA (FR-SIGN-3 — per-CA, independent
- * backends) and enforces the HA <b>fail-closed</b> semantics (FR-CA-9): if
- * there is no active CA of the requested kind, or the key material is missing,
- * it errors — it never returns a signer that would sign with the wrong key or
- * skip signing.
+ * Builds a {@link SshCertSigner} for a CA (per-CA, independent backends) and
+ * enforces the HA <b>fail-closed</b> semantics: if there is no active CA of the
+ * requested kind, or the key material is missing, it errors — it never returns
+ * a signer that would sign with the wrong key or skip signing.
  */
 @Service
 public class CaSignerService {
@@ -50,8 +49,7 @@ public class CaSignerService {
 	}
 
 	/**
-	 * Signals that no signer is available for a CA — the caller MUST fail closed
-	 * (FR-CA-9).
+	 * Signals that no signer is available for a CA — the caller MUST fail closed.
 	 */
 	public static final class NoSignerAvailable extends RuntimeException {
 		public NoSignerAvailable(String message) {
@@ -61,7 +59,7 @@ public class CaSignerService {
 
 	/**
 	 * The signer for the currently-active CA of a kind, or a fail-closed error. A
-	 * real cert-sign request; the NFR-3 availability SLI is measured over the
+	 * real cert-sign request; the signing-availability SLI is measured over the
 	 * {@code request} population.
 	 */
 	public Mono<SshCertSigner> activeSigner(String kind) {
@@ -69,7 +67,7 @@ public class CaSignerService {
 	}
 
 	public Mono<SshCertSigner> activeSigner(String kind, String source) {
-		// NFR-3 availability SLI: whether an active signer could be obtained. A missing
+		// Availability SLI: whether an active signer could be obtained. A missing
 		// CA / key material is NoSignerAvailable ("unavailable" = fail-closed, not an
 		// error); anything else is "error". Client-input rejections never reach here.
 		return caConfigs.findByCaKindAndRotationState(kind, "active")

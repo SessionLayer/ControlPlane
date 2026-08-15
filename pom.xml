@@ -63,10 +63,10 @@
 
 		<!--
 		  RE2/J — Google's linear-time regular-expression engine (a Java port of
-		  RE2). Used for the data-plane RBAC label `regex` operator
-		  (FR-AUTHZ-2): it is guaranteed to run in time linear in the input, so a
-		  catastrophic-backtracking pattern cannot cause ReDoS on the decision hot
-		  path (a security property here — see guardrails). We do NOT use
+		  RE2). Used for the data-plane RBAC label `regex` operator: it is
+		  guaranteed to run in time linear in the input, so a
+		  catastrophic-backtracking pattern cannot cause ReDoS on the decision
+		  hot path (a security property here — see guardrails). We do NOT use
 		  java.util.regex for that operator. BSD-style licence (Go licence),
 		  GPL-3.0-compatible; not managed by the Spring Boot BOM, so pinned here.
 		-->
@@ -87,7 +87,7 @@
 		  Spring Boot BOM). Backs two unrelated things: the recording WORM object store
 		  (`s3` — an S3-compatible client plus the S3Presigner that issues the
 		  short-lived, single-object presigned PUT the Gateway uploads the encrypted
-		  recording with, so bytes never proxy through the CP, Design §12.2) and the
+		  recording with, so bytes never proxy through the CP) and the
 		  AWS KMS CA backend (`kms`). Both use the SYNC clients only. Version pinned
 		  via the awssdk BOM (imported below); CVE management is Dependabot's.
 		-->
@@ -142,10 +142,10 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
-		<!-- ============ OpenTelemetry distributed tracing (§14) ============ -->
+		<!-- =============== OpenTelemetry distributed tracing =============== -->
 		<!--
 		  One trace stock-client -> Gateway -> CP (authorize + cert-sign) -> node,
-		  W3C-context-propagated over the CP<->GW gRPC plane (OTEL-CONTRACT). Versions
+		  W3C-context-propagated over the CP<->GW gRPC plane. Versions
 		  are Boot-managed (spring-boot-dependencies imports the micrometer-tracing +
 		  opentelemetry BOMs) — do NOT hand-pin. The OTLP exporter is OFF unless
 		  management.otlp.tracing.endpoint is set (see application.yml); with no endpoint
@@ -165,16 +165,16 @@
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
 
-		<!-- ============ REST API security (FR-AUTH-17) ============ -->
+		<!-- ================== REST API security =================== -->
 		<!--
 		  Backs the WebFlux security filter chain, the three first-class schemes
-		  (OIDC bearer JWT, mTLS, OAuth client-credentials — Design §5.7), and the
+		  (OIDC bearer JWT, mTLS, OAuth client-credentials), and the
 		  OIDC relying-party machinery.
 		    - starter-security          : the reactive SecurityWebFilterChain.
 		    - oauth2-resource-server     : nimbus-jose-jwt ID/bearer-token validation
 		                                   (positive alg allow-list, iss/aud/nonce/exp).
 		    - oauth2-client              : the auth-code + PKCE relying party for the
-		                                   CP-hosted verification page (FR-AUTH-6).
+		                                   CP-hosted verification page.
 		    - starter-webclient          : the reactive HTTP client the CP uses to reach
 		                                   the IdP (discovery/JWKS/token/device endpoints).
 		  Public meta probes stay unauthenticated via an explicit permitAll rule.
@@ -289,9 +289,9 @@
 
 		<!-- ============ Data-plane RBAC label-regex: RE2/J (linear-time) ======= -->
 		<!--
-		  The anchored-RE2 label operator (FR-AUTHZ-2). Linear-time by construction,
-		  so a catastrophic-backtracking pattern completes in bounded time — no
-		  ReDoS on the decision path (guardrails). NOT java.util.regex.
+		  The anchored-RE2 label operator. Linear-time by construction, so a
+		  catastrophic-backtracking pattern completes in bounded time — no ReDoS
+		  on the decision path (guardrails). NOT java.util.regex.
 		-->
 		<dependency>
 			<groupId>com.google.re2j</groupId>
@@ -305,7 +305,7 @@
 		  S3Presigner. The CP creates the bucket with object-lock enabled and issues a
 		  short-lived, single-object presigned PUT (object-lock mode + retain-until baked
 		  into the signature so the uploader cannot strip the WORM lock). The Gateway
-		  uploads the encrypted bytes directly — never through the CP (Design §12.2). The
+		  uploads the encrypted bytes directly — never through the CP. The
 		  `s3` artifact bundles the client and the presigner; version from the BOM above.
 
 		  The `netty-nio-client` exclusion is the same hazard the Azure block below
@@ -435,8 +435,7 @@
 		    - opentelemetry-sdk              : the SdkTracerProvider we hand-wire in
 		                                       TracingConfiguration (Boot 4.1 does not
 		                                       auto-configure tracing on this classpath).
-		    - micrometer-registry-prometheus : /actuator/prometheus for the NFR-3/NFR-4
-		                                       SLO metrics.
+		    - micrometer-registry-prometheus : /actuator/prometheus for the SLO metrics.
 		  All versions are Boot-BOM-managed (opentelemetry-bom + micrometer BOMs) — not
 		  hand-pinned.
 		-->
@@ -567,7 +566,7 @@
 			  Generates Spring WebFlux API interfaces + models from the FROZEN
 			  OpenAPI spec on every build. Controllers implement the generated
 			  interfaces, so a spec change that alters the surface fails the compile
-			  (this is the drift gate FR-API-1 requires). Generated code is not committed.
+			  (this is the drift gate). Generated code is not committed.
 			-->
 			<plugin>
 				<groupId>org.openapitools</groupId>

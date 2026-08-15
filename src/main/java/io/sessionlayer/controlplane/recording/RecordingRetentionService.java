@@ -91,12 +91,10 @@ public class RecordingRetentionService {
 		});
 	}
 
-	// Governance-mode erasure (FR-AUD-3/6). The pre-checks give the caller a
-	// precise
-	// 404/409; the atomic claim then re-asserts them at delete time (closes the
-	// legal-hold TOCTOU + HA double-delete). Idempotent: an already-pruned
-	// recording
-	// is a 204 no-op; a lost claim race is a 409 (retry → 204 or the real 409).
+	// Governance-mode erasure. The pre-checks give the caller a precise 404/409;
+	// the atomic claim then re-asserts them at delete time (closes the legal-hold
+	// TOCTOU + HA double-delete). Idempotent: an already-pruned recording is a 204
+	// no-op; a lost claim race is a 409 (retry → 204 or the real 409).
 	public Mono<Void> governanceDelete(String actor, UUID recordingId) {
 		return loadRef(recordingId).flatMap(ref -> {
 			if (ref.prunedAt() != null) {

@@ -12,8 +12,8 @@ import tools.jackson.databind.ObjectMapper;
 
 /**
  * Reference {@link AuditForwarder} implementation: emit events as structured
- * JSON to {@code audit.forward} logger (§15/NFR-5). Registered only when no
- * other bean is present; deployments can swap in a connector or no-op.
+ * JSON to the {@code audit.forward} logger. Registered only when no other bean
+ * is present; deployments can swap in a connector or no-op.
  */
 @Configuration
 public class LoggingAuditForwarder {

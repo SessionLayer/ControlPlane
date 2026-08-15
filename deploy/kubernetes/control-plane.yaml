@@ -78,7 +78,7 @@ data:
   # below for a WebFlux + gRPC + R2DBC workload.
   JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0"
 
-  # Uncomment to enforce a cluster-default session-limit (FR-SESS-3); unset
+  # Uncomment to enforce a cluster-default session-limit; unset
   # leaves the stored operator_settings.default_* column untouched and the CP
   # WARNs at boot that identities are unlimited. See
   # ../session-limits-example.properties.

@@ -5,10 +5,10 @@ info:
   summary: Contract-first REST surface for the SessionLayer Control Plane.
   description: |
     The **SessionLayer Control Plane API** is the contract-first source of truth
-    for the platform's REST surface (Design §13, FR-API-1). The UI is a *client* of
+    for the platform's REST surface. The UI is a *client* of
     this contract; server interfaces and typed clients are code-generated from this
     document, and CI fails if generated code drifts from the spec. Postgres is the
-    single source of truth; the UI and the API share one write path (D11).
+    single source of truth; the UI and the API share one write path.
 
     **Complete contract.** This document is the complete resource surface: the
     config resources (`node-policies`, `rules`, `roles` + `role-bindings`, `cas`,
@@ -21,7 +21,7 @@ info:
     **Config vs runtime.** Config resources carry an `origin` provenance label
     (`api|ui|default`) and an optimistic-concurrency `version`; runtime resources
     (locks, sessions, issuance, audit) are never provenance-labelled. `locks` is an
-    API-only runtime resource (Design §13).
+    API-only runtime resource.
 
     **Conventions.** URI versioning (`/v1`); cursor pagination on collections;
     `Idempotency-Key` on mutating operations; RFC 9457 `application/problem+json`
@@ -45,14 +45,14 @@ tags:
     description: Liveness, readiness, and version metadata probes. Public and unauthenticated.
   - name: bootstrap
     description: >-
-      First-admin bootstrap (Design §2A; FR-BOOT-2). Single-use claim of a
+      First-admin bootstrap. Single-use claim of a
       printed-once credential, seeding the initial `platform-admin`
       role-binding; self-disables once a platform admin exists. Public — like
       the device-flow poll endpoint, the credential itself is the
       authenticator, not a bearer/mTLS scheme.
   - name: auth
     description: >-
-      Runtime credential issuance and revocation (Design §5; FR-AUTH-9/10/12) —
+      Runtime credential issuance and revocation —
       machine tokens, OTPs, public-key pins, service-account credentials, and the
       OIDC device flow. These are the ISSUED credentials; the definitions they
       belong to live under `service-accounts`. Gating varies by operation and is
@@ -62,20 +62,20 @@ tags:
   - name: nodes
     description: >-
       Node lifecycle — agentless enrollment, listing, quarantine (a Lock),
-      and remove (deregister + agent-credential revoke) (Design §9/§12A;
-      FR-NODE-1/2/3). Platform-RBAC gated (`node:enroll`/`node:quarantine`/
+      and remove (deregister + agent-credential revoke).
+      Platform-RBAC gated (`node:enroll`/`node:quarantine`/
       `node:remove`) and audited; provisioning is an API flow.
   - name: locks
-    description: Incident-response lock CRUD (Design §8.3). Platform-RBAC gated and audited.
+    description: Incident-response lock CRUD. Platform-RBAC gated and audited.
   - name: join-tokens
     description: >-
-      Agent join-token issuance & CRUD (Design §8.1; FR-JOIN-2). Single-use,
+      Agent join-token issuance & CRUD. Single-use,
       self-destruct, short-TTL, node-scoped. Platform-RBAC gated (`node:enroll`)
       and audited, so an autoscaler/config-mgmt re-provisions an agent without a
       human (the GitHub-Actions-runner pattern).
   - name: gateway-enrollment-tokens
     description: >-
-      Gateway enrollment-token issuance & revocation (Design §4.B; FR-JOIN-3).
+      Gateway enrollment-token issuance & revocation.
       Single-use, short-TTL, scoped to one Gateway name. Platform-RBAC gated
       (`gateway:enroll`) and audited, so bringing up a Gateway needs an API
       credential rather than a database one. Paired with
@@ -83,8 +83,8 @@ tags:
       Gateway pins.
   - name: gateways
     description: >-
-      Enrolled Gateway identities (`runtime.gateway_identity`; Design §4.B,
-      FR-BOOT-3). Metadata only — NEVER certificates and never key material.
+      Enrolled Gateway identities (`runtime.gateway_identity`).
+      Metadata only — NEVER certificates and never key material.
       Reads gated (`gateway:enroll`), matching `nodes`, whose list is gated
       `node:enroll` rather than the generic reader: names, fingerprints and node
       ownership are fleet-targeting metadata. Removal, which frees the name for
@@ -93,33 +93,33 @@ tags:
       `node:remove` are.
   - name: jit-requests
     description: >-
-      Just-in-time access requests & approval chain (Design §7; FR-ACC-2/3/4).
+      Just-in-time access requests & approval chain.
       Submit is open to any authenticated principal; approve/deny/revoke are
       platform-RBAC gated (`request:approve`). Self-approval is impossible;
       revoking an active grant also tears down live sessions via a Lock. Audited.
   - name: breakglass
     description: >-
-      Break-glass credential management & activation review (Design §7; FR-ACC-6).
+      Break-glass credential management & activation review.
       Register FIDO2 `sk-ecdsa` public keys / issue single-use offline codes
       (platform-RBAC gated `breakglass:manage`); list activations and record the
       mandatory post-hoc review. Audited.
   - name: rules
     description: >-
-      Data-plane RBAC rule CRUD (`config.dp_rule`, Design §6.1; FR-AUTHZ-1/API-2).
+      Data-plane RBAC rule CRUD (`config.dp_rule`).
       Config resource; platform-RBAC gated (`rbac:read`/`rbac:write`) + audited,
       invalid config rejected pre-commit.
   - name: roles
     description: >-
-      Platform-RBAC role CRUD (`config.platform_role`; FR-PADM-1/API-2). Named sets
+      Platform-RBAC role CRUD (`config.platform_role`). Named sets
       of the closed permission vocabulary; gated (`rbac:read`/`rbac:write`) + audited.
   - name: role-bindings
     description: >-
-      Platform role-binding CRUD (`config.role_binding`; FR-PADM-2/API-2). Binds a
+      Platform role-binding CRUD (`config.role_binding`). Binds a
       subject to a role, optionally scoped; gated (`rbac:read`/`rbac:write`) + audited.
   - name: cas
     description: >-
-      Certificate-authority config CRUD + rotation (`config.ca_config`;
-      FR-CA-1/4/7/API-2). NEVER exposes private key material; gated
+      Certificate-authority config CRUD + rotation (`config.ca_config`).
+      NEVER exposes private key material; gated
       (`ca:manage`/`ca:rotate`) + audited. Two read-only siblings export PUBLIC
       verification material for the components that must pin it — the internal
       mTLS trust anchor (`gateway:enroll`) and an SSH CA's public key
@@ -127,36 +127,36 @@ tags:
       needs rather than on CA administration.
   - name: service-accounts
     description: >-
-      Machine-consumer definition CRUD (`config.service_account`; FR-AUTH-12/API-2).
+      Machine-consumer definition CRUD (`config.service_account`).
       NEVER exposes a secret; gated (`user:manage`) + audited. Issued runtime
       credentials live under the `auth` tag.
   - name: node-policies
     description: >-
-      Node-policy CRUD (`config.node_policy`; Design §12A/API-2). Desired labels,
+      Node-policy CRUD (`config.node_policy`). Desired labels,
       connector kind, host-trust refs; gated (`settings:write`) + audited.
   - name: capability-defs
     description: >-
-      Requestable-capability catalogue CRUD (`config.capability_def`; Design
-      §12A/API-2). Gated (`settings:write`) + audited.
+      Requestable-capability catalogue CRUD (`config.capability_def`).
+      Gated (`settings:write`) + audited.
   - name: jit-policies
     description: >-
-      JIT-policy CRUD (`config.jit_policy`; FR-ACC-3/API-2). Requestable targets +
+      JIT-policy CRUD (`config.jit_policy`). Requestable targets +
       0-3 level approval chain; gated (`settings:write`) + audited.
   - name: breakglass-policies
     description: >-
-      Break-glass-policy CRUD (`config.breakglass_policy`; FR-ACC-6/API-2). Gated
+      Break-glass-policy CRUD (`config.breakglass_policy`). Gated
       (`breakglass:manage`) + audited.
   - name: session-limit-policies
     description: >-
-      Session-limit-policy CRUD (`config.session_limit_policy`; FR-SESS-3/API-2).
+      Session-limit-policy CRUD (`config.session_limit_policy`).
       Per-identity overrides for the concurrent-session cap, max session
       duration, and idle timeout — enforced at Authorize (cap + duration) and
       the Gateway (idle, signed into the decision context). Reads gated
       (`rbac:read`); writes gated (`settings:write`) + audited.
   - name: operator-settings
     description: >-
-      Cluster-wide operator settings (`config.operator_settings`; Design §13,
-      FR-PADM-1/API-2) — retention/WORM/OTP defaults, the session-limit cluster
+      Cluster-wide operator settings (`config.operator_settings`) —
+      retention/WORM/OTP defaults, the session-limit cluster
       defaults, and the customer recording key. A DB-enforced singleton, so the
       shape is `GET`/`PUT` on one resource rather than a collection. Reads gated
       (`rbac:read`); writes gated (`settings:write`) + audited; the recording key
@@ -165,12 +165,12 @@ tags:
       and the evidence-retention knobs ratchet one way only.
   - name: sessions
     description: >-
-      Runtime SSH-session management (`runtime.ssh_session`; Design §12A). List +
+      Runtime SSH-session management (`runtime.ssh_session`). List +
       get (`audit:read`); terminate pushes a Lock (`lock:write`) + audited.
   - name: session-leases
     description: >-
-      Concurrency-lease diagnosis and release (`runtime.session_lease`;
-      FR-SESS-3). A lease that outlives its session still occupies a slot, and
+      Concurrency-lease diagnosis and release (`runtime.session_lease`).
+      A lease that outlives its session still occupies a slot, and
       the resulting refusal reaches the user as a generic policy denial — so the
       read half is the diagnostic that tells an over-count apart from a real
       deny. A lease counts while it is unreleased AND unexpired, so the ghost to
@@ -179,18 +179,18 @@ tags:
       audited, one lease at a time and never in bulk.
   - name: recordings
     description: >-
-      Session-recording admin surface (Design §12/§18; FR-AUD-5/6, FR-PADM-2).
+      Session-recording admin surface.
       List/get + replay/export short-lived signed URLs (bytes never proxy through
       the CP; the object stays customer-key encrypted) gated
       (`recording:replay`/`recording:export`, scopable); legal-hold + governance
       delete gated (`recording:delete`) + audited.
   - name: audit-events
     description: >-
-      Correlated audit-stream search (`runtime.audit_event`; Design §12,
-      FR-AUD-8/9). Gated (`audit:read`), RBAC-scope-filtered, read-only.
+      Correlated audit-stream search (`runtime.audit_event`).
+      Gated (`audit:read`), RBAC-scope-filtered, read-only.
 # Default security applied to operations that do not override it. The public
 # meta probes below explicitly opt out with `security: []`. Declaring the three
-# first-class schemes here (Design §13, FR-AUTH-17) fixes them in the contract.
+# first-class schemes here fixes them in the contract.
 security:
   - oidcBearer: []
   - clientCredentials: []
@@ -268,8 +268,8 @@ paths:
       summary: Claim the printed-once first-admin bootstrap credential.
       description: |
         Surrenders the credential printed once to the CP's own log at cold
-        start, binding `subject` as the initial `platform-admin` (Design §2A,
-        FR-BOOT-2). Public and unauthenticated by scheme — the credential
+        start, binding `subject` as the initial `platform-admin`.
+        Public and unauthenticated by scheme — the credential
         itself is the authenticator, matching `POST /v1/auth/device/poll`'s
         opaque-device-code model. Single-use: the underlying
         `operator_settings.bootstrap_completed` flip is a single
@@ -333,7 +333,7 @@ paths:
         Machine consumers exchange a client credential — a `private_key_jwt`
         client assertion (RFC 7523) or a mutual-TLS client certificate,
         preferred over a static secret — for a short-lived CP-signed bearer
-        token (Design §5.6, FR-AUTH-12). The token resolves to a first-class
+        token. The token resolves to a first-class
         RBAC principal. The client authenticates itself here, so the endpoint is
         not behind the bearer/mTLS API gate; the `clientCredentials`/`mtls`
         schemes below document the accepted client-authentication methods.
@@ -367,7 +367,7 @@ paths:
       summary: Issue a single-use OTP for an identity (admin).
       description: |
         Server-generates a single-use, short-TTL OTP bound to an identity and
-        allowed principals (Design §5.4, FR-AUTH-9). The raw OTP is returned once
+        allowed principals. The raw OTP is returned once
         (for out-of-band delivery); only its hash is stored. Platform-RBAC gated
         (`user:manage`) and audited.
       tags:
@@ -419,7 +419,7 @@ paths:
       summary: Create an authN-shortcut pin (admin).
       description: |
         Pins a public-key fingerprint to `{identity, source-cidr, principals}`
-        with a TTL capped at the authorization TTL (Design §5.5, FR-AUTH-10).
+        with a TTL capped at the authorization TTL.
         Source IP is a deny-only reducer. Platform-RBAC gated + audited.
       tags:
         - auth
@@ -469,8 +469,8 @@ paths:
       operationId: issueServiceAccountCredential
       summary: Issue a machine-consumer credential (admin).
       description: |
-        Issues a rotatable, revocable credential for a service account
-        (FR-AUTH-12): a `private_key_jwt` public-key/JWKS reference, an mTLS
+        Issues a rotatable, revocable credential for a service account:
+        a `private_key_jwt` public-key/JWKS reference, an mTLS
         certificate fingerprint, or (discouraged) a generated `client_secret`
         returned once. Stored hashed / by reference. Platform-RBAC gated +
         audited.
@@ -506,7 +506,7 @@ paths:
     delete:
       operationId: revokeServiceAccountCredential
       summary: Revoke a machine-consumer credential (admin).
-      description: Revocation takes effect immediately (new sessions denied, FR-AUTH-12).
+      description: Revocation takes effect immediately (new sessions denied).
       tags:
         - auth
       parameters:
@@ -536,8 +536,8 @@ paths:
       operationId: beginDeviceFlow
       summary: Begin an OIDC device-authorization flow (RFC 8628).
       description: |
-        Starts a device flow bound to the SSH source context (Design §5.2,
-        FR-AUTH-3). Returns the user code + CP verification URI to present to the
+        Starts a device flow bound to the SSH source context.
+        Returns the user code + CP verification URI to present to the
         user, and the device code the caller polls with. Fallback-only. The
         caller is the Gateway (mTLS).
       tags:
@@ -598,7 +598,7 @@ paths:
       summary: List active locks (admin).
       description: |
         Lists the current unexpired locks. Platform-RBAC gated (`lock:read`) +
-        audited (Design §8.3; FR-LOCK-1). A lock is the incident-response deny
+        audited. A lock is the incident-response deny
         primitive; the deny reason is operator-only.
       tags:
         - locks
@@ -618,8 +618,8 @@ paths:
       summary: Create a lock (admin).
       description: |
         Creates an incident-response lock that blocks new session issuance AND
-        tears down existing matching sessions on every Gateway (Design §8.3,
-        §8.4; FR-LOCK-1/2), pushed over the actively-pushed deny-list. Ingest
+        tears down existing matching sessions on every Gateway, pushed over the
+        actively-pushed deny-list. Ingest
         validation rejects an empty/unrecognised target; a fleet-wide lock
         requires an explicit `all: true`. Platform-RBAC gated (`lock:write`) +
         audited.
@@ -677,8 +677,7 @@ paths:
       description: |
         Lists the current unconsumed, unexpired join tokens. The raw token value
         is NEVER returned (only its metadata) — it is shown exactly once at
-        issuance. Platform-RBAC gated (`node:enroll`) + audited (Design §8.1;
-        FR-JOIN-2).
+        issuance. Platform-RBAC gated (`node:enroll`) + audited.
       tags:
         - join-tokens
       responses:
@@ -697,7 +696,7 @@ paths:
       summary: Issue an agent join token (admin).
       description: |
         Issues a short-lived, single-use, self-destruct join token bound to a
-        stable node identity/scope (Design §8.1; FR-JOIN-2/6). The raw token is
+        stable node identity/scope. The raw token is
         returned exactly ONCE (for out-of-band delivery to the joining Agent);
         only its SHA-256 hash is stored. Because issuance is a pure API
         operation, an autoscaler/config-mgmt re-provisions a token-join agent
@@ -731,7 +730,7 @@ paths:
       description: |
         Revokes (deletes) an unconsumed join token so it can never be used.
         Idempotent. Revoking an already-consumed token has no effect on the
-        identity it produced (revocation of an issued identity is a Lock, §8.1).
+        identity it produced (revocation of an issued identity is a Lock).
         Platform-RBAC gated (`node:enroll`) + audited.
       tags:
         - join-tokens
@@ -757,7 +756,7 @@ paths:
       summary: List nodes (admin).
       description: |
         Lists enrolled nodes with their connectivity model, lifecycle status, and
-        health (Design §12A; FR-NODE-1/2). Removed nodes are excluded by default.
+        health. Removed nodes are excluded by default.
         Platform-RBAC gated (`node:enroll`) + audited.
       tags:
         - nodes
@@ -776,7 +775,7 @@ paths:
       operationId: registerNode
       summary: Register an agentless node (admin).
       description: |
-        Enrolls an AGENTLESS node (Design §9.2/§9.3; FR-NODE-1): registers its dial
+        Enrolls an AGENTLESS node: registers its dial
         address and host-identity material — a host-CA-signed host certificate OR
         an explicitly pinned host key (at least one; NEVER TOFU) — with no software
         install. An agent node instead joins via a join token
@@ -842,7 +841,7 @@ paths:
         targeting; session/audit history preserved) and, for an AGENT node, REVOKES
         its agent credential — the identity is flipped off `active` and a covering
         Lock is pushed, so the generation counter + lock make a stale clone
-        unusable and re-join cannot bypass the revocation (FR-NODE-3). Idempotent.
+        unusable and re-join cannot bypass the revocation. Idempotent.
         Platform-RBAC gated (`node:remove`) + audited.
       tags:
         - nodes
@@ -868,7 +867,7 @@ paths:
       summary: Quarantine a node (admin).
       description: |
         Immediately blocks NEW sessions to the node and tears down or drains
-        EXISTING ones (FR-NODE-3), expressed as a top-tier Lock on the node
+        EXISTING ones, expressed as a top-tier Lock on the node
         (deny wins) actively pushed to every Gateway — fail-closed. The
         `existingSessions` policy selects `kill` (default, torn down at once) vs
         `drain` (finish, no new channels). Platform-RBAC gated (`node:quarantine`)
@@ -937,8 +936,8 @@ paths:
       operationId: listJitRequests
       summary: List JIT requests (admin).
       description: |
-        Lists JIT requests, optionally filtered by `state` or `requester` (Design
-        §7; FR-ACC-2). Platform-RBAC gated (`request:approve`) + audited.
+        Lists JIT requests, optionally filtered by `state` or `requester`.
+        Platform-RBAC gated (`request:approve`) + audited.
       tags:
         - jit-requests
       parameters:
@@ -968,7 +967,7 @@ paths:
       summary: Submit a JIT access request.
       description: |
         Requests just-in-time access to a target node as a principal for a bounded
-        duration (Design §7; FR-ACC-2/3). Open to any authenticated principal — the
+        duration. Open to any authenticated principal — the
         requester is recorded from the authenticated caller, never a body field. The
         matching JIT policy's approval chain is snapshotted; a zero-level chain
         auto-approves (but a Lock still denies on use). Audited.
@@ -1024,7 +1023,7 @@ paths:
       operationId: approveJitRequest
       summary: Approve a JIT request level (admin).
       description: |
-        Approves the next level of a pending JIT request (Design §7; FR-ACC-3/4).
+        Approves the next level of a pending JIT request.
         The approver can NEVER be the requester (self-approval impossible) and may
         act at most once; when all levels are approved the grant clock starts.
         Platform-RBAC gated (`request:approve`) + audited.
@@ -1100,9 +1099,9 @@ paths:
       operationId: revokeJitRequest
       summary: Revoke an active JIT grant (admin).
       description: |
-        Revokes an approved/active JIT grant (Design §7; FR-ACC-2). Also writes a
-        strict Lock on the grant's identity+node so a LIVE session tears down
-        (§8.4). Platform-RBAC gated (`request:approve`) + audited.
+        Revokes an approved/active JIT grant. Also writes a strict Lock on the
+        grant's identity+node so a LIVE session tears down.
+        Platform-RBAC gated (`request:approve`) + audited.
       tags:
         - jit-requests
       parameters:
@@ -1138,8 +1137,8 @@ paths:
       operationId: listBreakglassCredentials
       summary: List break-glass credentials (admin).
       description: |
-        Lists registered break-glass FIDO2 credentials (public metadata only)
-        (Design §7; FR-ACC-6). Platform-RBAC gated (`breakglass:manage`) + audited.
+        Lists registered break-glass FIDO2 credentials (public metadata only).
+        Platform-RBAC gated (`breakglass:manage`) + audited.
       tags:
         - breakglass
       responses:
@@ -1157,7 +1156,7 @@ paths:
       operationId: registerBreakglassCredential
       summary: Register a break-glass FIDO2 key (admin).
       description: |
-        Registers a break-glass FIDO2 `sk-ecdsa` PUBLIC key (Design §7; FR-ACC-6).
+        Registers a break-glass FIDO2 `sk-ecdsa` PUBLIC key.
         Attestation is not required — an admin vouches for the key; only PUBLIC
         material and the SHA-256 fingerprint are stored. Platform-RBAC gated
         (`breakglass:manage`) + audited.
@@ -1212,8 +1211,8 @@ paths:
       operationId: listBreakglassOfflineCodes
       summary: List break-glass offline codes (admin).
       description: |
-        Lists issued offline-code metadata (NEVER the raw codes) (Design §7;
-        FR-ACC-6). Platform-RBAC gated (`breakglass:manage`) + audited.
+        Lists issued offline-code metadata (NEVER the raw codes).
+        Platform-RBAC gated (`breakglass:manage`) + audited.
       tags:
         - breakglass
       responses:
@@ -1231,8 +1230,8 @@ paths:
       operationId: issueBreakglassOfflineCodes
       summary: Issue a batch of break-glass offline codes (admin).
       description: |
-        Issues a batch of single-use break-glass offline codes (Design §7;
-        FR-ACC-6). The raw codes are returned exactly ONCE; only their SHA-256
+        Issues a batch of single-use break-glass offline codes.
+        The raw codes are returned exactly ONCE; only their SHA-256
         hashes are stored. Platform-RBAC gated (`breakglass:manage`) + audited.
       tags:
         - breakglass
@@ -1260,8 +1259,8 @@ paths:
       operationId: listBreakglassActivations
       summary: List break-glass activations (admin).
       description: |
-        Lists break-glass activations, optionally filtered by `reviewStatus`
-        (Design §7; FR-ACC-6/FR-AUD-7). An unreviewed activation is a standing
+        Lists break-glass activations, optionally filtered by `reviewStatus`.
+        An unreviewed activation is a standing
         signal. Platform-RBAC gated (`breakglass:manage`) + audited.
       tags:
         - breakglass
@@ -1290,9 +1289,8 @@ paths:
       operationId: reviewBreakglassActivation
       summary: Record the mandatory review of a break-glass activation (admin).
       description: |
-        Records the mandatory post-hoc review of a break-glass activation (Design
-        §7; FR-ACC-6/FR-AUD-7). Platform-RBAC gated (`breakglass:manage`) +
-        audited.
+        Records the mandatory post-hoc review of a break-glass activation.
+        Platform-RBAC gated (`breakglass:manage`) + audited.
       tags:
         - breakglass
       parameters:
@@ -1322,7 +1320,7 @@ paths:
         default:
           $ref: '#/components/responses/Problem'
   # ===================================================================
-  # Config resource CRUD (FR-API-2/5). Contract-first; each
+  # Config resource CRUD. Contract-first; each
   # resource is platform-RBAC gated + audited, invalid config rejected
   # pre-commit (422). Config resources carry read-only `origin` provenance
   # and an optimistic-concurrency `version`.
@@ -1332,10 +1330,10 @@ paths:
       operationId: listRules
       summary: List data-plane rules (admin).
       description: |
-        Lists data-plane RBAC rules (`config.dp_rule`, Design §6.1; FR-AUTHZ-1) —
-        the typed allow/deny grants the engine evaluates. A committed deny that
+        Lists data-plane RBAC rules (`config.dp_rule`) — the typed allow/deny
+        grants the engine evaluates. A committed deny that
         must persist is a rule; "deny now and keep it" is a runtime `Lock`, not a
-        rule (Design §13). Cursor-paginated. Platform-RBAC gated (`rbac:read`).
+        rule. Cursor-paginated. Platform-RBAC gated (`rbac:read`).
       tags:
         - rules
       parameters:
@@ -1360,7 +1358,7 @@ paths:
       description: |
         Creates a data-plane rule. Invalid config (empty principals, ttl <= 0, an
         unknown capability, a malformed selector, effect not allow|deny) is
-        rejected PRE-COMMIT (`422`, FR-API-5). The `origin` is server-set to `api`.
+        rejected PRE-COMMIT (`422`). The `origin` is server-set to `api`.
         Platform-RBAC gated (`rbac:write`) + audited.
       tags:
         - rules
@@ -1466,7 +1464,7 @@ paths:
       operationId: listRoles
       summary: List platform roles (admin).
       description: |
-        Lists platform-RBAC roles (`config.platform_role`; FR-PADM-1) — named sets
+        Lists platform-RBAC roles (`config.platform_role`) — named sets
         of the closed platform-permission vocabulary. Cursor-paginated.
         Platform-RBAC gated (`rbac:read`).
       tags:
@@ -1596,7 +1594,7 @@ paths:
       operationId: listRoleBindings
       summary: List role bindings (admin).
       description: |
-        Lists platform role bindings (`config.role_binding`; FR-PADM-2) — subject
+        Lists platform role bindings (`config.role_binding`) — subject
         (user|group) -> role, optionally scoped for `recording:replay/export`.
         Cursor-paginated. Platform-RBAC gated (`rbac:read`).
       tags:
@@ -1725,9 +1723,9 @@ paths:
       operationId: listCas
       summary: List certificate authorities (admin).
       description: |
-        Lists CA configurations (`config.ca_config`; FR-CA-1/4/7) — per-CA
+        Lists CA configurations (`config.ca_config`) — per-CA
         (user|session|host) backend + key REFERENCE and rotation state. NEVER
-        exposes private key material (Design §13). Cursor-paginated. Platform-RBAC
+        exposes private key material. Cursor-paginated. Platform-RBAC
         gated (`ca:manage`).
       tags:
         - cas
@@ -1752,9 +1750,9 @@ paths:
       summary: Create a CA configuration (admin).
       description: |
         Registers a CA configuration. An algorithm/backend mismatch (e.g.
-        `ed25519` on `azure_keyvault`, which has no Ed25519 — Design D6) or a
+        `ed25519` on `azure_keyvault`, which has no Ed25519) or a
         `keyReference` that looks like private material is rejected pre-commit
-        (`422`, FR-API-5). The response NEVER contains private key material.
+        (`422`). The response NEVER contains private key material.
         Platform-RBAC gated (`ca:manage`) + audited.
 
         **This is not how you adopt a new backend.** Cold start provisions an
@@ -1875,7 +1873,7 @@ paths:
       operationId: rotateCa
       summary: Rotate a CA (admin).
       description: |
-        Triggers key rotation for the CA kind of this configuration (FR-CA-7): a new
+        Triggers key rotation for the CA kind of this configuration: a new
         key is provisioned and becomes `incoming`, the current `active` row moves to
         `outgoing` (both trusted during the overlap window), and the new key is
         promoted to `active`. The outgoing key still verifies existing certs until it
@@ -1923,7 +1921,7 @@ paths:
       description: |
         Returns the PEM-encoded X.509 **certificate** of the active internal mTLS
         CA — the trust anchor a Gateway pins to verify the Control Plane on the
-        CP↔Gateway plane (Design §2A, §15; FR-CA-3). This is public material: it
+        CP↔Gateway plane. This is public material: it
         reads `runtime.ca_key_material.ca_certificate` and nothing else, and the
         wrapped private key is never touched, unwrapped, or returned.
 
@@ -2007,8 +2005,7 @@ paths:
       description: |
         Lists the current unconsumed, unexpired Gateway enrollment tokens. The raw
         token value is NEVER returned (only its metadata) — it is shown exactly
-        once at issuance. Platform-RBAC gated (`gateway:enroll`) + audited
-        (Design §4.B; FR-JOIN-3).
+        once at issuance. Platform-RBAC gated (`gateway:enroll`) + audited.
       tags:
         - gateway-enrollment-tokens
       responses:
@@ -2027,15 +2024,15 @@ paths:
       summary: Issue a Gateway enrollment token (admin).
       description: |
         Issues a short-lived, single-use enrollment token bound to one stable
-        Gateway name (Design §4.B; FR-JOIN-3). The raw token is returned exactly
+        Gateway name. The raw token is returned exactly
         ONCE, for out-of-band delivery to the Gateway being installed; only its
         SHA-256 hash is stored. It authorises nothing beyond the enrollment
         handshake the Gateway already performs, for that name, once, before it
         expires.
 
-        This is the API equivalent of the raw `INSERT INTO
-        runtime.gateway_enrollment_token` the install guide used to require, so
-        installing a Gateway no longer needs a database credential. Platform-RBAC
+        This is the API path for arming a Gateway enrollment, so installing a
+        Gateway needs no database credential and no direct write to
+        `runtime.gateway_enrollment_token`. Platform-RBAC
         gated (`gateway:enroll`) + audited.
       tags:
         - gateway-enrollment-tokens
@@ -2091,7 +2088,7 @@ paths:
       operationId: listGateways
       summary: List enrolled Gateway identities (admin).
       description: |
-        Lists enrolled Gateways (`runtime.gateway_identity`; FR-BOOT-3) with the
+        Lists enrolled Gateways (`runtime.gateway_identity`) with the
         identity metadata an operator needs to recognise one: name, certificate
         fingerprint, generation counter, join method, status, the current
         identity's validity window, and how many node control channels it
@@ -2212,7 +2209,7 @@ paths:
       operationId: listServiceAccounts
       summary: List service accounts (admin).
       description: |
-        Lists machine-consumer definitions (`config.service_account`; FR-AUTH-12).
+        Lists machine-consumer definitions (`config.service_account`).
         Issued credentials are RUNTIME and live under
         `/v1/service-accounts/{id}/credentials`; this resource is the DEFINITION and
         NEVER returns a secret. Cursor-paginated. Platform-RBAC gated (`user:manage`).
@@ -2345,7 +2342,7 @@ paths:
       operationId: listNodePolicies
       summary: List node policies (admin).
       description: |
-        Lists node policies (`config.node_policy`; Design §12A) — desired labels,
+        Lists node policies (`config.node_policy`) — desired labels,
         connector kind, and declared host-trust references. Cursor-paginated.
         Platform-RBAC gated (`settings:write`).
       tags:
@@ -2473,8 +2470,8 @@ paths:
       operationId: listCapabilityDefs
       summary: List capability definitions (admin).
       description: |
-        Lists the requestable-capability catalogue (`config.capability_def`; Design
-        §12A / D14). Cursor-paginated. Platform-RBAC gated (`settings:write`).
+        Lists the requestable-capability catalogue (`config.capability_def`).
+        Cursor-paginated. Platform-RBAC gated (`settings:write`).
       tags:
         - capability-defs
       parameters:
@@ -2600,7 +2597,7 @@ paths:
       operationId: listJitPolicies
       summary: List JIT policies (admin).
       description: |
-        Lists JIT-requestable policies (`config.jit_policy`; FR-ACC-3) — requestable
+        Lists JIT-requestable policies (`config.jit_policy`) — requestable
         targets, capabilities, max TTL, and the 0-3 level approval chain.
         Cursor-paginated. Platform-RBAC gated (`settings:write`).
       tags:
@@ -2729,7 +2726,7 @@ paths:
       operationId: listBreakglassPolicies
       summary: List break-glass policies (admin).
       description: |
-        Lists break-glass policies (`config.breakglass_policy`; FR-ACC-6) —
+        Lists break-glass policies (`config.breakglass_policy`) —
         recording-strict, alert target, review-required, and the IdP-independent
         auth path. Cursor-paginated. Platform-RBAC gated (`breakglass:manage`).
       tags:
@@ -2854,7 +2851,7 @@ paths:
         default:
           $ref: '#/components/responses/Problem'
   # ===================================================================
-  # Session-limit policies (FR-SESS-3 write surface).
+  # Session-limit policies — the write surface.
   # Per-identity overrides for the three session-limit knobs; every stored
   # value is ENFORCED (no dead config): cap + duration at Authorize, idle
   # via the signed decision context at the Gateway.
@@ -2864,10 +2861,10 @@ paths:
       operationId: listSessionLimitPolicies
       summary: List session-limit policies (admin).
       description: |
-        Lists per-identity session-limit policies (`config.session_limit_policy`;
-        FR-SESS-3) — overrides for the concurrent-session cap, max session
-        duration, and idle timeout. When several policies match an identity the
-        most restrictive value wins per knob; the `operator_settings` cluster
+        Lists per-identity session-limit policies
+        (`config.session_limit_policy`) — overrides for the concurrent-session
+        cap, max session duration, and idle timeout. When several policies match
+        an identity the most restrictive value wins per knob; the `operator_settings` cluster
         defaults apply where no policy matches. Cursor-paginated. Platform-RBAC
         gated (`rbac:read`).
       tags:
@@ -2894,7 +2891,7 @@ paths:
       description: |
         Creates a session-limit policy. Invalid config (a malformed
         `identitySelector`, a non-positive limit, or all three limits absent) is
-        rejected PRE-COMMIT (`422`, FR-API-5). The `origin` is server-set to
+        rejected PRE-COMMIT (`422`). The `origin` is server-set to
         `api`. Platform-RBAC gated (`settings:write`) + audited.
       tags:
         - session-limit-policies
@@ -3011,7 +3008,7 @@ paths:
       description: |
         Returns the cluster-wide operator settings (`config.operator_settings`) —
         audit/recording retention, the WORM default for new recordings, the OTP
-        TTL, the session-limit cluster defaults (FR-SESS-3), and whether the
+        TTL, the session-limit cluster defaults, and whether the
         customer recording key is provisioned. The row is a singleton written by
         cold start, so it is addressed by this path and has no id.
 
@@ -3108,8 +3105,8 @@ paths:
       operationId: getRecordingCustomerKey
       summary: Get the customer recording key (admin).
       description: |
-        Returns the provisioned customer recording key — PUBLIC material only
-        (FR-AUD-2, Design §15). The Gateway seals every per-recording data key to
+        Returns the provisioned customer recording key — PUBLIC material only.
+        The Gateway seals every per-recording data key to
         this public key and the private half never reaches the platform, so the
         platform cannot decrypt its own recordings.
 
@@ -3198,14 +3195,14 @@ paths:
   # ===================================================================
   # Runtime session management (list + terminate).
   # `sessions` is RUNTIME (never config); terminate reuses the Lock
-  # teardown path (Design §8.3/§8.4).
+  # teardown path.
   # ===================================================================
   /v1/sessions:
     get:
       operationId: listSessions
       summary: List SSH sessions (admin).
       description: |
-        Lists SSH sessions (`runtime.ssh_session`; Design §12A) with their decision
+        Lists SSH sessions (`runtime.ssh_session`) with their decision
         snapshot (identity, node, principal, access model, capabilities, grant
         expiry). Optional filters narrow by identity, node, access model, and
         active-only. Cursor-paginated. Platform-RBAC gated (`audit:read`).
@@ -3282,7 +3279,7 @@ paths:
       operationId: terminateSession
       summary: Terminate an SSH session (admin).
       description: |
-        Tears down a live session by pushing a top-tier `Lock` (Design §8.3/§8.4)
+        Tears down a live session by pushing a top-tier `Lock`
         scoped to the session's subject identity, reusing the teardown path — a
         deny that wins and is actively pushed to every Gateway (fail-closed). Because
         the wire `Lock` selector has no per-session facet, the teardown is
@@ -3319,7 +3316,7 @@ paths:
       operationId: listSessionLeases
       summary: List concurrency leases (admin).
       description: |
-        Lists FR-SESS-3 concurrency leases (`runtime.session_lease`) — the rows
+        Lists concurrency leases (`runtime.session_lease`) — the rows
         the per-identity cap is counted from. This is the diagnostic half, and
         the sharper of the two gaps it closes: an identity blocked by a lease
         that outlived its session is refused with the same generic policy denial
@@ -3445,7 +3442,7 @@ paths:
       operationId: listRecordings
       summary: List session recordings (admin).
       description: |
-        Lists session recording metadata (`runtime.recording_ref`; Design §12).
+        Lists session recording metadata (`runtime.recording_ref`).
         NEVER returns recording bytes — replay/export issue short-lived signed URLs.
         Optional filters narrow by session, node, and identity. Cursor-paginated.
         Platform-RBAC gated (`recording:replay`).
@@ -3515,10 +3512,10 @@ paths:
       operationId: deleteRecording
       summary: Governance-delete a recording (admin, privileged).
       description: |
-        Governance-mode erasure escape hatch (Design §12.2/§12.3, FR-AUD-3/6): a
+        Governance-mode erasure escape hatch: a
         specifically-privileged, audited role deletes the encrypted recording object
         and marks the metadata pruned. Platform-RBAC gated (`recording:delete`) +
-        audited (FR-PADM-3). Refused (`409`) for a **compliance**-mode recording
+        audited. Refused (`409`) for a **compliance**-mode recording
         (truly un-deletable, object-lock) or one under **legal hold**. Idempotent —
         `204` whether or not the object was still present.
       tags:
@@ -3543,11 +3540,11 @@ paths:
       operationId: replayRecording
       summary: Issue a replay signed URL (admin).
       description: |
-        Issues a short-lived, single-object SIGNED URL for replaying a recording
-        (Design §12.2/§18) — bytes NEVER proxy through the CP and the object stays
-        customer-key encrypted (the CP cannot decrypt); the access is itself audited
-        (FR-AUD-5/FR-PADM-3). Platform-RBAC gated (`recording:replay`), scopable by
-        node-label/user/time (FR-PADM-2).
+        Issues a short-lived, single-object SIGNED URL for replaying a
+        recording — bytes NEVER proxy through the CP and the object stays
+        customer-key encrypted (the CP cannot decrypt); the access is itself
+        audited. Platform-RBAC gated (`recording:replay`), scopable by
+        node-label/user/time.
       tags:
         - recordings
       parameters:
@@ -3574,10 +3571,10 @@ paths:
       operationId: exportRecording
       summary: Issue an export signed URL (admin).
       description: |
-        Issues a short-lived, single-object SIGNED URL for exporting a recording
-        (Design §12.2/§18) — bytes NEVER proxy through the CP and the object stays
-        customer-key encrypted (the CP cannot decrypt); itself audited (FR-AUD-5).
-        Platform-RBAC gated (`recording:export`), scopable (FR-PADM-2).
+        Issues a short-lived, single-object SIGNED URL for exporting a
+        recording — bytes NEVER proxy through the CP and the object stays
+        customer-key encrypted (the CP cannot decrypt); itself audited.
+        Platform-RBAC gated (`recording:export`), scopable.
       tags:
         - recordings
       parameters:
@@ -3604,10 +3601,10 @@ paths:
       operationId: setRecordingLegalHold
       summary: Set or release a recording's legal hold (admin, privileged).
       description: |
-        Places or releases a legal hold on a recording (Design §12.3, FR-AUD-6). A
+        Places or releases a legal hold on a recording. A
         held recording is exempt from retention pruning AND governance delete in
-        either WORM mode. Platform-RBAC gated (`recording:delete`) + audited
-        (FR-PADM-3). Idempotent by desired state.
+        either WORM mode. Platform-RBAC gated (`recording:delete`) + audited.
+        Idempotent by desired state.
       tags:
         - recordings
       parameters:
@@ -3638,13 +3635,13 @@ paths:
       operationId: searchAuditEvents
       summary: Search the correlated audit stream (admin).
       description: |
-        Searches the correlated audit stream (`runtime.audit_event`; Design §12,
-        FR-AUD-8/9) — one append-only stream for SSH-session and web/admin events,
-        correlated by id, newest-first. Search dimensions (FR-AUD-8): identity
+        Searches the correlated audit stream (`runtime.audit_event`) — one
+        append-only stream for SSH-session and web/admin events,
+        correlated by id, newest-first. Search dimensions: identity
         (`actor`), subject, action, outcome, node (`nodeId`) and node label
         (`nodeLabel`), session, source IP, capability, access model, and a time
         range; `correlationId` reconstructs one full path (approve → connect → run →
-        replay, FR-AUD-9). Cursor-paginated. Read-only — a search never mutates the
+        replay). Cursor-paginated. Read-only — a search never mutates the
         append-only stream and the hash chain stays verifiable. Platform-RBAC gated
         (`audit:read`); results are additionally filtered to the caller's RBAC scope
         (a node-label/user/time-scoped `audit:read` grant returns only in-scope
@@ -3715,20 +3712,20 @@ paths:
         - name: capability
           in: query
           required: false
-          description: Filter to events whose capability set includes this capability (FR-AUD-8).
+          description: Filter to events whose capability set includes this capability.
           schema:
             $ref: '#/components/schemas/Capability'
         - name: accessModel
           in: query
           required: false
-          description: Filter by the session's access model (FR-AUD-8).
+          description: Filter by the session's access model.
           schema:
             $ref: '#/components/schemas/AccessModel'
         - name: nodeLabel
           in: query
           required: false
           description: |
-            Filter by a snapshot node label as `key=value` (FR-AUD-8). Repeatable;
+            Filter by a snapshot node label as `key=value`. Repeatable;
             all supplied labels must match (AND).
           schema:
             type: array
@@ -3738,7 +3735,7 @@ paths:
         - name: correlationId
           in: query
           required: false
-          description: Filter to one correlation id — the FR-AUD-9 full-path join key.
+          description: Filter to one correlation id — the full-path join key.
           schema:
             type: string
             format: uuid
@@ -3785,13 +3782,13 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: |
-        OIDC bearer access via an ID/JWT token validated by the Control Plane
-        (Design §5.7, FR-AUTH-17). The ID token is the authentication proof.
+        OIDC bearer access via an ID/JWT token validated by the Control Plane.
+        The ID token is the authentication proof.
     clientCredentials:
       type: oauth2
       description: |
-        OAuth 2.0 client-credentials for machine consumers (Design §5.6,
-        FR-AUTH-12). `private_key_jwt`/mTLS client authentication is preferred
+        OAuth 2.0 client-credentials for machine consumers.
+        `private_key_jwt`/mTLS client authentication is preferred
         over static secrets.
       flows:
         clientCredentials:
@@ -3800,8 +3797,8 @@ components:
     mtls:
       type: mutualTLS
       description: |
-        Mutual TLS client-certificate authentication (Design §5.7, FR-AUTH-17),
-        also used by the internal CP<->Gateway plane.
+        Mutual TLS client-certificate authentication, also used by the internal
+        CP<->Gateway plane.
   parameters:
     Cursor:
       name: cursor
@@ -4059,7 +4056,7 @@ components:
         credential:
           type: string
           description: >-
-            The printed-once bootstrap credential (Design §2A). Its SHA-256
+            The printed-once bootstrap credential. Its SHA-256
             is compared to the armed hash in constant time; this value is the
             sole authenticator for the call.
         subject:
@@ -4089,7 +4086,7 @@ components:
       type: object
       title: OAuth Token Request
       description: |
-        Client-credentials token request (Design §5.6). Sent as
+        Client-credentials token request. Sent as
         `application/x-www-form-urlencoded`. Client authentication is by
         `client_assertion` (private_key_jwt) or by the mTLS client certificate;
         a static `client_secret` is accepted but discouraged.
@@ -4190,7 +4187,7 @@ components:
           type: string
         sourceCidr:
           type: string
-          description: Source-CIDR binding (deny-only reducer, FR-AUTH-15).
+          description: Source-CIDR binding (deny-only reducer).
         principals:
           type: array
           items:
@@ -4198,7 +4195,7 @@ components:
         ttlSeconds:
           type: integer
           format: int64
-          description: Pin lifetime; capped at the authorization TTL (FR-AUTH-10).
+          description: Pin lifetime; capped at the authorization TTL.
       additionalProperties: false
     PinResource:
       type: object
@@ -4305,7 +4302,7 @@ components:
       properties:
         sourceIp:
           type: string
-          description: The SSH source IP to bind for anti-phishing correlation (§5.2).
+          description: The SSH source IP to bind for anti-phishing correlation.
         connectionBinding:
           type: string
           description: An opaque 1:1 device-code↔connection binding value.
@@ -4372,13 +4369,13 @@ components:
           description: The resolved identity, present when status=authorized.
         sourceContextMatch:
           type: boolean
-          description: Whether the approving browser source correlated with the SSH source (§5.2).
+          description: Whether the approving browser source correlated with the SSH source.
       additionalProperties: false
     LockMode:
       type: string
       title: Lock Mode
       description: |
-        Lock enforcement mode (Design §8.3). `strict` tears down matching live
+        Lock enforcement mode. `strict` tears down matching live
         sessions and blocks new ones; `best_effort` blocks new issuance but does
         not forcibly tear down an already-established session.
       enum:
@@ -4433,7 +4430,7 @@ components:
           $ref: '#/components/schemas/LockTarget'
         reason:
           type: string
-          description: Operator/audit reason (mandatory). Never disclosed to the SSH user (§7.1).
+          description: Operator/audit reason (mandatory). Never disclosed to the SSH user.
         mode:
           $ref: '#/components/schemas/LockMode'
           description: Enforcement mode; omitted defaults to `strict` (backward-compatible).
@@ -4495,8 +4492,8 @@ components:
           minLength: 1
           maxLength: 253
           description: >-
-            The stable node identity the token authorizes an agent to join as
-            (FR-JOIN-6). The token is scoped to exactly this node.
+            The stable node identity the token authorizes an agent to join as.
+            The token is scoped to exactly this node.
         ttlSeconds:
           type: integer
           format: int32
@@ -4596,7 +4593,7 @@ components:
           description: >-
             The stable Gateway name the token authorises an enrollment as. The
             token is scoped to exactly this name; enrolling under any other name
-            is refused (FR-JOIN-3).
+            is refused.
         ttlSeconds:
           type: integer
           format: int32
@@ -4814,7 +4811,7 @@ components:
       title: Register Node Request
       description: |
         Enrol a node. At least one of `hostCertificate` / `pinnedHostKey` is
-        required for BOTH connector kinds (host-identity anchor — no TOFU, §9.3):
+        required for BOTH connector kinds (host-identity anchor — no TOFU):
         the Gateway verifies the node's host identity on the inner leg however it
         reached the node, so an anchorless node aborts every session. `address`
         (host:port) is required for `agentless` and rejected for `agent`.
@@ -4865,7 +4862,7 @@ components:
       properties:
         reason:
           type: string
-          description: Operator/audit reason (mandatory). Never disclosed to the SSH user (§7.1).
+          description: Operator/audit reason (mandatory). Never disclosed to the SSH user.
         existingSessions:
           type: string
           enum:
@@ -5326,7 +5323,7 @@ components:
       type: string
       title: Config Provenance
       description: |
-        Provenance of a config row (Design §13). `api`/`ui` mark which admin surface
+        Provenance of a config row. `api`/`ui` mark which admin surface
         last wrote it; `default` is a seeded/cold-start default. Read-only.
       enum:
         - api
@@ -5335,7 +5332,7 @@ components:
     Capability:
       type: string
       title: SSH Capability
-      description: A policy-gated SSH channel capability (Design D14).
+      description: A policy-gated SSH channel capability.
       enum:
         - shell
         - exec
@@ -5348,7 +5345,7 @@ components:
     PlatformPermission:
       type: string
       title: Platform Permission
-      description: A granular platform-RBAC permission from the closed vocabulary (FR-PADM-1).
+      description: A granular platform-RBAC permission from the closed vocabulary.
       enum:
         - rbac:read
         - rbac:write
@@ -5478,7 +5475,7 @@ components:
       type: string
       title: WORM Mode
       description: >-
-        Object-lock mode for new recordings (FR-AUD-3/6). `governance` is
+        Object-lock mode for new recordings. `governance` is
         deletable by a privileged audited role (the GDPR escape hatch);
         `compliance` is truly un-deletable. The cluster default only ratchets
         towards `compliance`.
@@ -6448,7 +6445,7 @@ components:
       type: object
       title: Session-Limit Policy
       description: |
-        A per-identity override for the FR-SESS-3 session-limit knobs. Every
+        A per-identity override for the session-limit knobs. Every
         stored value is enforced: `maxConcurrentSessions` as the HARD cap at
         Authorize, `maxSessionSeconds` folded into the decision's `grant_expiry`,
         `idleTimeoutSeconds` signed into the decision context and applied
@@ -6588,7 +6585,7 @@ components:
           format: int32
           minimum: 1
           description: >-
-            How long audit-event partitions are kept (FR-AUD-6). Increases only
+            How long audit-event partitions are kept. Increases only
             over this API.
         recordingRetentionDays:
           type: integer
@@ -6596,7 +6593,7 @@ components:
           minimum: 1
           description: >-
             The retention window stamped on new recordings as the object-lock
-            retain-until (FR-AUD-6). Increases only over this API.
+            retain-until. Increases only over this API.
         defaultWormMode:
           $ref: '#/components/schemas/WormMode'
         otpTtlSeconds:
@@ -6604,7 +6601,7 @@ components:
           format: int32
           minimum: 60
           maximum: 300
-          description: Default OTP lifetime (FR-AUTH-9).
+          description: Default OTP lifetime.
         defaultCaBackend:
           $ref: '#/components/schemas/CaBackend'
         defaultMaxSessionSeconds:
@@ -6612,20 +6609,20 @@ components:
           format: int32
           minimum: 1
           description: >-
-            Cluster default max session duration (FR-SESS-3); absent means no
+            Cluster default max session duration; absent means no
             cluster-wide ceiling. Per-identity overrides live in
             `/v1/session-limit-policies`.
         defaultIdleTimeoutSeconds:
           type: integer
           format: int32
           minimum: 1
-          description: Cluster default idle timeout (FR-SESS-3); absent means none.
+          description: Cluster default idle timeout; absent means none.
         defaultMaxConcurrentSessions:
           type: integer
           format: int32
           minimum: 1
           description: >-
-            Cluster default concurrent-session cap (FR-SESS-3); absent means
+            Cluster default concurrent-session cap; absent means
             uncapped by default.
         deploymentManagedFields:
           type: array
@@ -6724,9 +6721,9 @@ components:
       type: object
       title: Customer Recording Key
       description: >-
-        The customer-held recording key, PUBLIC half only (FR-AUD-2, Design
-        §15). The private half never reaches the platform, so the platform
-        cannot decrypt recordings sealed to it.
+        The customer-held recording key, PUBLIC half only. The private half
+        never reaches the platform, so the platform cannot decrypt recordings
+        sealed to it.
       required:
         - configured
         - sealAlgorithm
@@ -6908,7 +6905,7 @@ components:
       type: object
       title: Concurrency Lease
       description: >-
-        One FR-SESS-3 concurrency lease. The per-identity cap counts the leases
+        One concurrency lease. The per-identity cap counts the leases
         that are unreleased AND unexpired, so a lease outliving its session keeps
         occupying a slot until it is released or its safety TTL passes.
       required:
@@ -6993,7 +6990,7 @@ components:
     RecordingResource:
       type: object
       title: Recording
-      description: Session recording metadata (Design §12). NEVER carries recording bytes.
+      description: Session recording metadata. NEVER carries recording bytes.
       required:
         - id
         - sessionId
@@ -7050,7 +7047,7 @@ components:
     LegalHoldRequest:
       type: object
       title: Legal Hold Request
-      description: Places or releases a legal hold on a recording (FR-AUD-6).
+      description: Places or releases a legal hold on a recording.
       required:
         - held
       properties:
@@ -7097,7 +7094,7 @@ components:
       type: object
       title: Audit Event
       description: |
-        One row of the correlated append-only audit stream (Design §12).
+        One row of the correlated append-only audit stream.
 
         `seq`, `prevHash` and `recordHash` are the tamper-evidence chain, and
         they are present ONLY for an unscoped `audit:read` binding. A
@@ -7142,7 +7139,7 @@ components:
           type: array
           items:
             type: string
-          description: The session's capability snapshot (FR-AUD-8 search dimension).
+          description: The session's capability snapshot; a search dimension.
         accessModel:
           $ref: '#/components/schemas/AccessModel'
         nodeLabels:

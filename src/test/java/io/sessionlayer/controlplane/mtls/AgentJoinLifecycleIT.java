@@ -46,13 +46,12 @@ import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * Agent join &amp; renewable-identity lifecycle over the real mTLS gRPC plane
- * (FR-JOIN-1/3/4/6, §8). Enrollment via each in-scope JoinMethod (token /
- * delegated-OIDC / operator-mTLS) issues a generation-0 identity bound to a
- * distinct per-node credential; renewal rotates the cert + increments the
- * generation; a generation mismatch auto-locks the identity + node (clone
- * detection, §8.2); a Lock covering the node refuses enroll; a consumed token
- * is single-use.
+ * Agent join &amp; renewable-identity lifecycle over the real mTLS gRPC plane.
+ * Enrollment via each in-scope JoinMethod (token / delegated-OIDC /
+ * operator-mTLS) issues a generation-0 identity bound to a distinct per-node
+ * credential; renewal rotates the cert + increments the generation; a
+ * generation mismatch auto-locks the identity + node (clone detection); a Lock
+ * covering the node refuses enroll; a consumed token is single-use.
  */
 class AgentJoinLifecycleIT extends AbstractMtlsIT {
 
@@ -215,7 +214,7 @@ class AgentJoinLifecycleIT extends AbstractMtlsIT {
 
 	// An agentless-registered node is one the authorizer tells the Gateway to DIAL,
 	// so attaching an Agent to it points the session at an address while leaving
-	// the Agent's control channel unused (§9.2).
+	// the Agent's control channel unused.
 	@Test
 	void enrollRefusesANodeRegisteredForTheAgentlessConnector() {
 		Node node = nodes.save(Node.create("node-agentless-join", null, JsonNodeFactory.instance.objectNode(),

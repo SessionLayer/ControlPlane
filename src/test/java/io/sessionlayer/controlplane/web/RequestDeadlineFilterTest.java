@@ -10,7 +10,7 @@ import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-// M10: without this filter a wedged downstream (lock contention, a stalled
+// Without this filter a wedged downstream (lock contention, a stalled
 // scan) hangs the caller's connection forever with no signal at all.
 class RequestDeadlineFilterTest {
 

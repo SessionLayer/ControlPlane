@@ -14,7 +14,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 /**
- * CA rotation without fleet downtime (FR-CA-7): overlap-then-drain over
+ * CA rotation without fleet downtime: overlap-then-drain over
  * {@code ca_config.rotation_state} ({@code incoming → active → outgoing →
  * expired}) with the partial-unique active-per-kind index as a backstop. During
  * an overlap the trusted set (what nodes trust via {@code TrustedUserCAKeys})

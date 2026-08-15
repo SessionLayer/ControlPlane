@@ -14,8 +14,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
- * Pin store (FR-AUTH-10/11): authentication shortcut binding fingerprint +
- * identity + source-CIDR.
+ * Pin store: an authentication shortcut binding fingerprint + identity +
+ * source-CIDR.
  */
 @Service
 public class PinService {

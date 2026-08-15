@@ -31,12 +31,12 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 /**
- * gRPC server for the connect-time decision (FR-CHAN-1). mTLS-required tier:
- * the {@link AuthInterceptor} authenticates the calling Gateway, and the minted
+ * gRPC server for the connect-time decision. mTLS-required tier: the
+ * {@link AuthInterceptor} authenticates the calling Gateway, and the minted
  * token is bound to <b>that</b> caller (never a request field). The handler
  * delegates to {@link ConnectAuthorizationService} and maps the outcome onto
  * the wire: on allow, the signed decision context + minted token; on deny, one
- * generic {@code DECISION_DENY} with nothing else populated (§7.1).
+ * generic {@code DECISION_DENY} with nothing else populated.
  */
 @Service
 public class AuthorizationService extends AuthorizationGrpc.AuthorizationImplBase {
@@ -79,24 +79,23 @@ public class AuthorizationService extends AuthorizationGrpc.AuthorizationImplBas
 		// subject to the Lock. The AUTHENTICATED caller is the mTLS peer, never a
 		// field.
 		// node_name (field 9) is server-side authoritative when set: the CP resolves it
-		// via findByName and ignores node_id (§2.6/§11).
+		// via findByName and ignores node_id.
 		Mono<ConnectDecision> decision = authorization.authorize(caller, callerFingerprint, request.getIdentity(),
 				request.getIdentityGroupsList(), parseUuid(request.getNodeId()), blankToNull(request.getNodeName()),
 				blankToNull(request.getRequestedPrincipal()), blankToNull(request.getSourceIp()),
 				parseUuid(request.getSessionId()), blankToNull(request.getBreakglassToken()));
-		// Establishment SLO (NFR-4) times the CP machine work; the span (§14) makes it
-		// a
-		// child of the Gateway root. Both carry correlation only — never content.
+		// The establishment SLO times the CP machine work; the span makes it a child
+		// of the Gateway root. Both carry correlation only — never content.
 		Mono<AuthorizeResponse> result = tracing.traceAuthorize(traceParent, blankToNull(request.getSessionId()),
 				blankToNull(request.getNodeId()), metrics.timeEstablishment(decision))
 				.map(AuthorizationService::toResponse);
 		ReactiveBridge.forward(result, observer, properties.getRpcTimeout(), "Authorize");
 	}
 
-	// The Gateway's reliable session-end signal — releases the
-	// FR-SESS-3 lease (and stamps the session ended) on every teardown path,
-	// independent of FinalizeRecording. mTLS-required tier (any non-bootstrap
-	// method); the service enforces the caller-owns-session gate.
+	// The Gateway's reliable session-end signal — releases the concurrency lease
+	// (and stamps the session ended) on every teardown path, independent of
+	// FinalizeRecording. mTLS-required tier (any non-bootstrap method); the
+	// service enforces the caller-owns-session gate.
 	@Override
 	public void notifySessionEnd(NotifySessionEndRequest request, StreamObserver<NotifySessionEndResponse> observer) {
 		MtlsPeer peer = MtlsContext.peer();
@@ -175,8 +174,7 @@ public class AuthorizationService extends AuthorizationGrpc.AuthorizationImplBas
 				.setConnectorKind(connectorKind(info.connectorKind())).setNodeName(info.nodeName())
 				.setDialAddress(info.dialAddress()).setHostVerification(verification.build());
 		// HA owner fields ride only when a fresh presence owner exists (agent nodes);
-		// empty otherwise so the ingress Gateway fails closed to "node offline"
-		// (§10.2).
+		// empty otherwise so the ingress Gateway fails closed to "node offline".
 		if (info.hasOwner()) {
 			builder.setOwningGatewayId(info.owningGatewayId()).setOwningGatewayAddr(info.owningGatewayAddr())
 					.setOwnerNonce(info.ownerNonce()).setOwnerNonceId(info.ownerNonceId());

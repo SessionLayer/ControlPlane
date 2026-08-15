@@ -18,11 +18,11 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * The break-glass AUTHENTICATION path (FR-ACC-6). Resolves an offered FIDO2
- * sk-ecdsa PUBLIC key (primary) or offline code (fallback) to an identity and
- * scoped principals, minting the single-use token. The alert fires at
- * authentication. Any failure is generic non-resolution (fail closed). The
- * offline code is a SECRET and is NEVER logged.
+ * The break-glass AUTHENTICATION path. Resolves an offered FIDO2 sk-ecdsa
+ * PUBLIC key (primary) or offline code (fallback) to an identity and scoped
+ * principals, minting the single-use token. The alert fires at authentication.
+ * Any failure is generic non-resolution (fail closed). The offline code is a
+ * SECRET and is NEVER logged.
  */
 @Service
 public class BreakglassResolutionService {
@@ -112,7 +112,7 @@ public class BreakglassResolutionService {
 			UUID callerGatewayId, String method) {
 		String source = (sourceIp == null || sourceIp.isBlank()) ? null : sourceIp;
 		// Fire the high-priority alert AT AUTHENTICATION so a break-glass use always
-		// alerts even if no session follows (FR-ACC-6); the activation at Authorize is
+		// alerts even if no session follows; the activation at Authorize is
 		// the durable review record and does not re-alert.
 		return tokens.mint(callerGatewayId, identity, nodeId, principals, source)
 				.flatMap(token -> alerts.authenticated(identity, nodeId, source, method)

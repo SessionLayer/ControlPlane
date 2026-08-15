@@ -120,7 +120,7 @@ class OuterLegAuthIT extends AbstractMtlsIT {
 				.block();
 		// Burn the per-source budget (max=2) with wrong codes, then present the VALID
 		// code: it is throttled → resolved=false. Throttle is indistinguishable on the
-		// wire from any other failure (§7.1).
+		// wire from any other failure.
 		assertThat(authed().resolveOtp(otpRequest("WRONG1", ip)).getIdentity().getResolved()).isFalse();
 		assertThat(authed().resolveOtp(otpRequest("WRONG2", ip)).getIdentity().getResolved()).isFalse();
 		assertThat(authed().resolveOtp(otpRequest(issued.otp(), ip)).getIdentity().getResolved()).isFalse();

@@ -1,8 +1,7 @@
 # SessionLayer — Protocol & API Versioning Policy
 
 This document is the authoritative statement of how the three cross-repo
-contracts are versioned and how compatibility is maintained. It implements
-**Design D33 / §16A** and **FR-HA-9**.
+contracts are versioned and how compatibility is maintained.
 
 > **Why this matters.** SessionLayer components are released independently
 > (OSS; mixed-version fleets are normal). A CP upgrade MUST NOT force a
@@ -99,18 +98,19 @@ below) — a new RPC, message, or field within an already-bumped minor does not
 move the number again. The advertised range therefore stays `[1.0, 1.1]`,
 `protocol_min` stays 1.0, throughout, and the protocol stays within **major 1**.
 
-**The protocol moved from 1.0 to 1.1 with the mTLS transport (§7).** Three
+**The protocol moved from 1.0 to 1.1 with the mTLS transport.** Three
 additive services carry the mTLS-authenticated plane: `GatewayIdentity`
 (`EnrollGateway`, `RenewGatewayIdentity`) and `SessionSigning`
-(`SignSessionCertificate`). Adding an RPC/message is, per §2, a **MINOR**
-change, so the advertised range is `[1.0, 1.1]`. This is the first MINOR bump,
-so the N-1 window (§4) is load-bearing: a 1.1 CP keeps `protocol_min = 1.0` and
-still negotiates `1.0` with a Gateway that has not upgraded (and vice-versa).
+(`SignSessionCertificate`). Adding an RPC/message is strictly additive and
+therefore a **MINOR** change, so the advertised range is `[1.0, 1.1]`. This is
+the first MINOR bump, so the N-1 window is load-bearing: a 1.1 CP keeps
+`protocol_min = 1.0` and still negotiates `1.0` with a Gateway that has not
+upgraded (and vice-versa).
 The version number is the compatibility contract, not the wire-shape gate
 (`buf breaking` catches the latter separately).
 
-**`Authorization` (`Authorize`)** is the connect-time data-plane RBAC decision
-(FR-CHAN-1). It returns a **signed** decision context: the signature is
+**`Authorization` (`Authorize`)** is the connect-time data-plane RBAC
+decision. It returns a **signed** decision context: the signature is
 ECDSA-P256/SHA-256 over `{"sessionlayer:decision-context:v1\n" || signed_context}`
 where `signed_context` is the deterministic serialization of `DecisionContext`
 (no maps → stable field-order encoding across Java/prost). The signer's leaf
@@ -122,49 +122,46 @@ Gateway is responsible for verification, caching, and the per-channel recheck.
 
 **`OuterLegAuth`** carries the outer-leg **authentication** RPCs the Gateway
 calls to resolve an SSH credential to a CP-owned identity: `ResolveUserCert`,
-`ResolvePin`, `ResolveOtp`, `BeginDeviceFlow`, `PollDeviceFlow` (FR-AUTH-1..5,
-FR-AUTH-9/10). Every RPC is on the identity/session (mTLS-required) tier —
-only an authenticated Gateway may resolve credentials. These RPCs authenticate
-only (resolve credential → `{identity, principals}`); the Gateway still calls
-`Authorization.Authorize` for the target node afterwards (invariant I2).
-Resolution failure is **generic** (`resolved = false`, no reason) so the
-outer-leg auth surface discloses no existence (§7.1). Source IP is a deny-only
+`ResolvePin`, `ResolveOtp`, `BeginDeviceFlow`, `PollDeviceFlow`. Every RPC is
+on the identity/session (mTLS-required) tier — only an authenticated Gateway
+may resolve credentials. These RPCs authenticate only (resolve credential →
+`{identity, principals}`); the Gateway still calls `Authorization.Authorize`
+for the target node afterwards — resolving a credential never authorizes a
+target. Resolution failure is **generic** (`resolved = false`, no reason) so
+the outer-leg auth surface discloses no existence. Source IP is a deny-only
 reducer throughout.
 
 **`NodeConnection`** (field 8 on `AuthorizeResponse`, plus the `ConnectorKind`
 enum and the `NodeConnection`/`HostVerification` messages) tells the Gateway
 how to reach the target node (connector kind + dial address) and how to verify
 the node's host identity — host-CA trust keys + expected principals + the
-enrollment host cert(s), or pinned host keys (Design §9; FR-CONN-1/2/5/7). It
-is returned **UNSIGNED** on the ALLOW path (unlike the signed decision
-context): it travels over the authenticated, integrity-protected mTLS channel
-from the trusted CP, and forging it requires compromising the CP itself (which
-already holds the decision-context signing key), so a separate signature would
-add no security.
+enrollment host cert(s), or pinned host keys. It is returned **UNSIGNED** on
+the ALLOW path (unlike the signed decision context): it travels over the
+authenticated, integrity-protected mTLS channel from the trusted CP, and
+forging it requires compromising the CP itself (which already holds the
+decision-context signing key), so a separate signature would add no security.
 
 **`Recording`** (`BeginRecording`, `RequestUpload`, `FinalizeRecording`)
 registers and finalizes a session recording and issues short-lived,
-single-object WORM upload credentials (Design §12; FR-AUD-1/2/3/9).
-`RequestUpload` issues that credential at upload time (session end) rather
-than at `BeginRecording`, so its TTL need only cover the PUT — never the whole
-session (§12.2; no long-lived upload creds). `recording_token` (field 9 on
-`AuthorizeResponse`) is a second single-use token minted on ALLOW, bound to the
-same `{gateway_id, session_id, node, principal, exp}` as `session_token`, that
-authorises exactly one `BeginRecording` (session-bound authorization, §15).
-The `Recording` RPCs are on the identity/session (mTLS-required) tier;
+single-object WORM upload credentials. `RequestUpload` issues that credential
+at upload time (session end) rather than at `BeginRecording`, so its TTL need
+only cover the PUT — never the whole session (no long-lived upload creds).
+`recording_token` (field 9 on `AuthorizeResponse`) is a second single-use token
+minted on ALLOW, bound to the same
+`{gateway_id, session_id, node, principal, exp}` as `session_token`, that
+authorises exactly one `BeginRecording` (session-bound authorization). The
+`Recording` RPCs are on the identity/session (mTLS-required) tier;
 `BeginRecording` additionally consumes the single-use `recording_token`. The
-Gateway uploads the ENCRYPTED recording **directly** to the WORM store with
-the issued credential — bytes never proxy through the CP (§12.2) — and the CP
-never sees recording plaintext nor the per-recording data key
-(customer-held-key sealing, FR-AUD-2).
+Gateway uploads the ENCRYPTED recording **directly** to the WORM store with the
+issued credential — bytes never proxy through the CP — and the CP never sees
+recording plaintext nor the per-recording data key (customer-held-key sealing).
 
 **`LockFeed`** (`StreamLocks`, the CP's only **server-streaming** RPC)
-actively pushes the lock deny-list to every Gateway (Design §6.3/§8.3/§8.4;
-FR-CHAN-3, FR-LOCK-1/2). `DecisionContext` carries `identity` (13),
-`identity_groups` (14), and `node_labels` (15), SIGNED into the context so the
-Gateway matches identity-/group-/label-targeted locks against trusted data
-locally, without a CP round-trip on the per-channel hot path (FR-CHAN-2).
-`StreamLocks` is on the gateway-identity (mTLS-required) tier; the whole
+actively pushes the lock deny-list to every Gateway. `DecisionContext` carries
+`identity` (13), `identity_groups` (14), and `node_labels` (15), SIGNED into
+the context so the Gateway matches identity-/group-/label-targeted locks
+against trusted data locally, without a CP round-trip on the per-channel hot
+path. `StreamLocks` is on the gateway-identity (mTLS-required) tier; the whole
 fleet-wide lock set is delivered to every Gateway (no per-Gateway filtering)
 and matching is a local Gateway decision. The feed is the datastore-independent
 deny-list: a lock pushed once keeps denying on every Gateway even under total
@@ -172,23 +169,21 @@ datastore loss (the asymmetric-degradation invariant). Lock CRUD is REST
 (`/v1/locks`, platform-RBAC gated) — the **push** is gRPC; the **CRUD** is
 REST.
 
-**`AgentIdentity`** (`EnrollAgent`, `RenewAgentIdentity`, Design §8;
-FR-JOIN-1/3/4/6) is the CP↔Agent bootstrap + renewable-mTLS-identity plane,
-paired with the REST join-token API (`/v1/join-tokens`, platform-RBAC
-`node:enroll`, FR-JOIN-2). It mirrors `GatewayIdentity`: the durable credential
-is ALWAYS a renewable internal mTLS X.509 identity carrying a generation
-counter (§8.2), regardless of which JoinMethod (`TokenJoinProof`/
-`OidcJoinProof`/`MtlsJoinProof`) bootstrapped it — further delegated methods,
-including a deferred `BoundKeypairJoin` (§17), drop in as new `proof` oneof
-variants without a breaking change. `EnrollAgent` is on the bootstrap tier (the
-join proof is the credential — the documented bootstrap exception, like
-`EnrollGateway`); `RenewAgentIdentity` is on the mTLS-required (agent-identity)
-tier. Revocation for every join method is via lock + generation counter (no
-join method is a standing bypass). Join-token **issuance/CRUD is REST**; the
-enroll/renew plane is **gRPC**.
+**`AgentIdentity`** (`EnrollAgent`, `RenewAgentIdentity`) is the CP↔Agent
+bootstrap + renewable-mTLS-identity plane, paired with the REST join-token API
+(`/v1/join-tokens`, platform-RBAC `node:enroll`). It mirrors `GatewayIdentity`:
+the durable credential is ALWAYS a renewable internal mTLS X.509 identity
+carrying a generation counter, regardless of which JoinMethod
+(`TokenJoinProof`/`OidcJoinProof`/`MtlsJoinProof`) bootstrapped it — further
+delegated methods, including a future `BoundKeypairJoin`, drop in as new
+`proof` oneof variants without a breaking change. `EnrollAgent` is on the
+bootstrap tier (the join proof is the credential — the documented bootstrap
+exception, like `EnrollGateway`); `RenewAgentIdentity` is on the
+mTLS-required (agent-identity) tier. Revocation for every join method is via
+lock + generation counter (no join method is a standing bypass). Join-token
+**issuance/CRUD is REST**; the enroll/renew plane is **gRPC**.
 
-**The access-models surface** (JIT + break-glass, Design §7, D15/D17;
-FR-ACC-2..8) spans three changes:
+**The access-models surface** (JIT + break-glass) spans three changes:
 
 1. **`OuterLegAuth` carries two break-glass RPCs** — `ResolveBreakglassKey` (a
    registered FIDO2 `sk-ecdsa` PUBLIC key) and `ResolveBreakglassCode` (a
@@ -197,7 +192,7 @@ FR-ACC-2..8) spans three changes:
    the identity/session (mTLS-required) tier, authenticate only (resolve
    credential → `{identity, principals}` + a single-use `breakglass_token`),
    and fail generically (`resolved = false`, no token) so the surface
-   discloses no existence (§7.1). The `code` is a secret (never logged).
+   discloses no existence. The `code` is a secret (never logged).
 2. **`AuthorizeRequest` carries `breakglass_token` (field 8).** Present only
    on a break-glass connect: the CP consumes it atomically, creates the
    `breakglass_activation`, fires the high-priority alert (on use), forces
@@ -211,12 +206,12 @@ FR-ACC-2..8) spans three changes:
    explicit deny or a Lock.
 3. **`DecisionContext` carries `access_model` (field 16) + the `AccessModel`
    enum** (STANDING/JIT/BREAKGLASS), SIGNED into the context so the Gateway
-   selects the per-model mid-session-expiry behaviour (FR-ACC-8/D17) and
-   forces strict recording for break-glass against trusted data. An older
-   (N-1) Gateway ignores the field and treats the decision as STANDING — the
-   safe default. JIT/break-glass revocation is expressed **as a Lock**
-   (runtime), inheriting the same fail-closed teardown as any other lock — no
-   new revocation RPC. The JIT/approval-chain/break-glass **admin CRUD is
+   selects the per-model mid-session-expiry behaviour and forces strict
+   recording for break-glass against trusted data. An older (N-1) Gateway
+   ignores the field and treats the decision as STANDING — the safe default.
+   JIT/break-glass revocation is expressed **as a Lock** (runtime), inheriting
+   the same fail-closed teardown as any other lock — no new revocation RPC.
+   The JIT/approval-chain/break-glass **admin CRUD is
    REST** (`/v1/jit-requests` + approve/deny/revoke, `/v1/breakglass/*`); only
    the break-glass **auth resolution** and the JIT/break-glass **grant
    flow-through** are gRPC.
@@ -226,7 +221,7 @@ FR-ACC-2..8) spans three changes:
 1. **The wire protocol itself** (`wire/agent-gateway-v1.md` + the
    messages-only `proto/sessionlayer/agent/v1/wire.proto`) is a **separate
    contract with its own version line**, negotiated in its own connection
-   preface (§2 of this document already tracks it). The CP is **not a party**
+   preface under the same `major.minor` semantics. The CP is **not a party**
    to it: it is Agent↔Gateway only, and lives here because `contracts/` is
    the canonical cross-repo home. Its baseline is **1.0**
    (`protocol_min = protocol_max = 1.0`), so the N-1 window is trivially
@@ -261,8 +256,8 @@ specifically.
 1. **`Presence` service** (`proto/sessionlayer/controlplane/v1/presence.proto`)
    — `Heartbeat` (claim/refresh/standby with a monotonic nonce) and
    `Release`. The Gateway has no database access, so ownership of
-   `runtime.presence` is written through the CP (Design D11: the CP is the
-   sole Postgres owner), preserving the datastore boundary. The **owner is
+   `runtime.presence` is written through the CP (the CP is the sole Postgres
+   owner), preserving the datastore boundary. The **owner is
    the authenticated mTLS peer** (`gateway_id`), never a request field.
    mTLS-required tier. Message names are package-unique
    (`PresenceHeartbeatRequest/Response`, not `Heartbeat` — that name is taken
@@ -294,19 +289,19 @@ already in the schema.
 1. **`AuthorizeRequest.node_name` (field 9)** — the target node's HUMAN NAME
    the Gateway forwards from its `TargetResolver`. When set, the CP resolves
    it to `runtime.node.id` via `findByName` — **server-side + authoritative**
-   (a client-asserted `node_id` is ignored when a name is present; §2.6/§11)
-   — and an unknown name yields the same generic deny as any no-match
-   (§7.1). Empty ⇒ the CP falls back to `node_id` (UUID) for direct-id
+   (a client-asserted `node_id` is ignored when a name is present) — and an
+   unknown name yields the same generic deny as any no-match, disclosing no
+   existence. Empty ⇒ the CP falls back to `node_id` (UUID) for direct-id
    callers. The platform is usable by human node name across all three
    OpenSSH addressing modes. An N-1 CP without the field falls back to the
    `node_id` UUID (unchanged behaviour), so the window holds.
 2. **`HostCertSigning`** (`signing.proto`) — `SignGatewayHostCertificate`
    issues the Gateway's OUTER SSH host certificate (host CA) for the
-   ProxyJump host-cert MITM path (§9.3/§11; FR-ADDR-1). Unlike
-   `SessionSigning` it is NOT session-bound: it is authorized purely by the
-   caller's ACTIVE, UNLOCKED gateway mTLS identity (the lock is the
-   revocation). Key custody per D2 (Gateway sends only the public key;
-   cert-only return).
+   ProxyJump host-cert MITM path. Unlike `SessionSigning` it is NOT
+   session-bound: it is authorized purely by the caller's ACTIVE, UNLOCKED
+   gateway mTLS identity (the lock is the revocation). Key custody is
+   unchanged: the Gateway sends only the public key and gets back only a
+   certificate.
 3. **OpenAPI `/v1/nodes`** — the `nodes` resource (register agentless / list /
    get / quarantine=Lock / release / remove=deregister+revoke) plus
    join-token issuance, so provisioning is an API flow, not hand-SQL.
@@ -322,8 +317,8 @@ protobuf or wire.
    `jit-policies`, `breakglass-policies` — plus runtime `sessions` (list/get/
    terminate). Controllers implement the **generated** interfaces (the drift
    gate). Each is platform-RBAC gated + audited, invalid config rejected
-   pre-commit (`422`, FR-API-5). `cas` NEVER exposes private key material.
-2. **The API conventions (FR-API-1)** are realised across the surface: cursor
+   pre-commit (`422`). `cas` NEVER exposes private key material.
+2. **The API conventions** are realised across the surface: cursor
    (keyset) pagination on collections (`cursor`/`limit` params + `*Page`
    envelopes with `nextCursor`), an `Idempotency-Key` header on mutating
    operations (retry-safe replay; a same-key-different-body reuse is a
@@ -331,26 +326,25 @@ protobuf or wire.
    URIs.
 3. **`origin` provenance** (config `origin` CHECK constrained to
    `IN ('api','ui','default')`): external config automation is out of scope
-   by design — config is UI + API over Postgres (D11). The column and the
+   by design — config is UI + API over Postgres. The column and the
    config/runtime schema split are retained.
-4. **Audit-event search / get** (`/v1/audit-events`, FR-AUD-8/9) covers every
-   FR-AUD-8 dimension: `capability`, `accessModel`, `nodeLabel` (repeatable),
+4. **Audit-event search / get** (`/v1/audit-events`) covers every search
+   dimension: `capability`, `accessModel`, `nodeLabel` (repeatable),
    and `correlationId` are optional query params alongside the base set.
    `audit:read`-gated, results RBAC-scope-filtered, read-only (the
    append-only hash chain stays verifiable).
-5. **Recording replay/export** (`/v1/recordings/{id}/replay|export`,
-   FR-AUD-5) is implemented as short-lived signed **GET** URLs to the still-
-   encrypted object (bytes never through the CP; the CP cannot decrypt).
-   `recording:replay`/`recording:export`-gated, scopable (FR-PADM-2), itself
-   audited.
-6. **Recording retention/legal-hold/governance-delete** (FR-AUD-3/6):
+5. **Recording replay/export** (`/v1/recordings/{id}/replay|export`) is
+   implemented as short-lived signed **GET** URLs to the still-encrypted
+   object (bytes never through the CP; the CP cannot decrypt).
+   `recording:replay`/`recording:export`-gated, scopable, itself audited.
+6. **Recording retention/legal-hold/governance-delete**:
    `DELETE /v1/recordings/{id}` (governance erasure) and
    `PUT /v1/recordings/{id}/legal-hold`, both gated on `recording:delete`.
    `RecordingResource` carries `identity`, `nodeId`, `status`, `wormMode`,
    `prunedAt`. Compliance-mode = un-deletable (object-lock); legal hold
    blocks both prune and governance delete.
 
-**FR-SESS-3 session-limit enforcement** (gRPC stays `1.1`, wire stays `1.0`,
+**Session-limit enforcement** (gRPC stays `1.1`, wire stays `1.0`,
 URI major stays `v1`, `info.version` stays `0.1.0`):
 
 1. **`DecisionContext.idle_timeout_seconds` (field 17)** — the resolved
@@ -362,11 +356,11 @@ URI major stays `v1`, `info.version` stays `0.1.0`):
    ceiling, folded into `grant_expiry`, still holds). The per-identity **max
    session duration** needed NO wire change: the CP folds
    `min(policy.max_session_seconds, grant TTL)` into the existing
-   `grant_expiry_epoch_seconds`, which the FR-ACC-8 expiry machinery already
-   enforces.
+   `grant_expiry_epoch_seconds`, which the per-access-model expiry machinery
+   already enforces.
 2. **Two `Authorization` RPCs**:
    - **`NotifySessionEnd`** — the Gateway's reliable session-end signal:
-     releases the FR-SESS-3 concurrency lease (and stamps the session ended)
+     releases the concurrency lease (and stamps the session ended)
      promptly on EVERY teardown path, including the degraded ones where no
      recording exists and `Recording.FinalizeRecording` never fires.
      Idempotent; caller-bound to the session's brokering gateway (mTLS
@@ -382,14 +376,14 @@ URI major stays `v1`, `info.version` stays `0.1.0`):
    An N-1 CP without these RPCs returns `UNIMPLEMENTED`; the Gateway treats
    that as best-effort and the lease self-heals via the reaper, so the window
    holds.
-3. **OpenAPI `/v1/session-limit-policies`** — the FR-SESS-3 write surface
+3. **OpenAPI `/v1/session-limit-policies`** — the session-limit write surface
    (`config.session_limit_policy` CRUD): cursor pagination, `Idempotency-Key`,
    RFC 9457, version-required optimistic concurrency, pre-commit
    selector/limit validation (`422`), `origin='api'`. Reads `rbac:read`;
    writes `settings:write` + audited.
 
 **`FinalizeRecordingRequest.tunnel_audit` (field 8) + `TunnelAudit`** is the
-admission side of FR-SESS-2 (port-forward/X11 data plane). `TunnelAudit`
+admission side of the port-forward/X11 data plane. `TunnelAudit`
 mirrors `FileTransferAudit`'s shape (metadata-only, no content capture —
 forwarded bytes have no universal decode, unlike SFTP's known wire format)
 and lands at `FinalizeRecording` time like `sftp_audit`, not live. An N-1 CP
@@ -400,9 +394,9 @@ correspondingly never populates it) — the window holds.
 URI major stays `v1`, `info.version` stays `0.1.0`) lets an operator register an
 **agent**-connected node, with its host anchor, before the Agent joins.
 `hostCertificate`/`pinnedHostKey` govern both kinds: the Gateway runs the same
-no-TOFU verification on the inner leg however it reached the node (§9.3), so an
-anchorless agent node aborts every session — the anchor was previously
-unreachable except by writing `runtime.node_host_key` directly. `address` moves
+no-TOFU verification on the inner leg however it reached the node, so an
+anchorless agent node aborts every session, and this request is what supplies
+that anchor without a direct write to `runtime.node_host_key`. `address` moves
 out of `required` because an agent node is reached through the Agent's outbound
 channel and must not carry a dial address; a request that supplies one is
 rejected. Optional, defaulting to `agentless`, so every existing caller is
@@ -421,8 +415,8 @@ the trust model the two repos implement against.
   CP presents a **server certificate** issued by it; the Gateway presents a
   **client certificate** issued by it. Each peer verifies the other's chain
   against the internal CA, checks validity, and checks the SAN. No other trust
-  anchor is accepted; plaintext and non-CA certs are refused (fail closed,
-  NFR-2). TLS 1.3 only.
+  anchor is accepted; plaintext and non-CA certs are refused (fail closed).
+  TLS 1.3 only.
 
 - **Bootstrap exception (the one asymmetry).** A Gateway that has not yet
   enrolled holds no CP-issued client certificate. `GatewayIdentity.EnrollGateway`
@@ -436,7 +430,7 @@ the trust model the two repos implement against.
   independently re-validates the peer chain), so the requirement never depends on
   a single TLS-layer toggle.
 
-- **Layered per-RPC authorization (Design §15).** mTLS authenticates the
+- **Layered per-RPC authorization.** mTLS authenticates the
   *channel* (which Gateway). `SignSessionCertificate` additionally requires a
   single-use, CP-minted **session token** bound to
   `{gateway_id, session_id, node, principal, exp}`; the token authorizes the
@@ -448,12 +442,12 @@ the trust model the two repos implement against.
   field) plus `{session, node, principal, capabilities, source_address, exp}`.
   A DENY or a matching Lock mints nothing (fail closed).
 
-- **Key custody (D2).** Gateways generate their own keypairs (mTLS identity and
+- **Key custody.** Gateways generate their own keypairs (mTLS identity and
   inner-leg) and send only a CSR / public key. The CP returns certificates only
   and never receives or stores a Gateway private key.
 
 - **Versioning interaction.** Version negotiation (`Handshake.Negotiate`) now
   runs over the secured channel. A version mismatch fails closed with gRPC
-  `FAILED_PRECONDITION` exactly as before (§3); it is independent of the mTLS
+  `FAILED_PRECONDITION` exactly as before; it is independent of the mTLS
   outcome (a peer that fails mTLS never reaches negotiation on the mTLS-required
   RPCs).

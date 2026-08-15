@@ -1,10 +1,10 @@
 # SessionLayer Control Plane — Prometheus SLO alert rules.
 #
-# The service emits the OTel traces + the SLO histograms (Design §14,
-# NFR-3/NFR-4); these are the alerts over them. They page
-# on the two SLOs and on fail-closed spikes, off the meters SloMetrics.java
-# actually registers (Micrometer → Prometheus, percentiles-histogram buckets, so
-# histogram_quantile() is fleet-aggregatable across CP replicas).
+# The service emits the OTel traces + the SLO histograms; these are the alerts
+# over them. They page on the two SLOs and on fail-closed spikes, off the meters
+# SloMetrics.java actually registers (Micrometer → Prometheus,
+# percentiles-histogram buckets, so histogram_quantile() is fleet-aggregatable
+# across CP replicas).
 #
 # Metric provenance (all from ControlPlane observability/SloMetrics.java):
 #   sessionlayer.session.establishment  -> sessionlayer_session_establishment_seconds_{bucket,count,sum}
@@ -14,22 +14,22 @@
 #   sessionlayer.ca.signer (Counter)    -> sessionlayer_ca_signer_total
 #       tags: kind, source{request,probe}, outcome{available,unavailable,error}
 #
-# Targets: NFR-4 establishment p95 = 250 ms; cert-sign p95 = 100 ms;
-# NFR-3 CA-signer availability = 99.9% (computed over source="request" only, so the
-# ~6/min health-probe baseline never masks partial degradation).
+# Targets: establishment p95 = 250 ms; cert-sign p95 = 100 ms; CA-signer
+# availability = 99.9% (computed over source="request" only, so the ~6/min
+# health-probe baseline never masks partial degradation).
 groups:
   - name: sessionlayer-cp-slo
     rules:
-      # --- NFR-4: session-establishment latency (p95, ex-human-OIDC) --------------
+      # --- Session-establishment latency (p95, ex-human-OIDC) ---------------------
       - alert: SessionEstablishmentP95SloBreach
         expr: >
           histogram_quantile(0.95,
             sum by (le) (rate(sessionlayer_session_establishment_seconds_bucket[5m]))
           ) > 0.25
         for: 10m
-        labels: { severity: critical, slo: nfr-4 }
+        labels: { severity: critical, slo: latency }
         annotations:
-          summary: "CP session-establishment p95 > 250 ms (NFR-4)"
+          summary: "CP session-establishment p95 > 250 ms"
           description: "p95 = {{ $value | humanizeDuration }} over 5m; SLO is 250 ms. The Authorize→session-write→token-mint machine path is slow; check DB pool saturation and CA-signer latency."
           runbook_url: "https://github.com/SessionLayer/Documentation/blob/main/docs/operations/monitoring.md#the-two-slos"
 
@@ -39,13 +39,13 @@ groups:
             sum by (le) (rate(sessionlayer_cert_sign_seconds_bucket[5m]))
           ) > 0.1
         for: 10m
-        labels: { severity: critical, slo: nfr-4 }
+        labels: { severity: critical, slo: latency }
         annotations:
           summary: "CP cert-sign p95 > 100 ms"
           description: "Inner/host cert signing p95 = {{ $value | humanizeDuration }}; SLO is 100 ms. Check the CA backend (KMS/Vault) latency."
           runbook_url: "https://github.com/SessionLayer/Documentation/blob/main/docs/operations/monitoring.md#the-two-slos"
 
-      # --- NFR-3: session-CA signing availability (99.9%, real requests only) -----
+      # --- Session-CA signing availability (99.9%, real requests only) ------------
       - alert: CaSignerAvailabilitySloBreach
         expr: >
           (
@@ -54,9 +54,9 @@ groups:
             sum(rate(sessionlayer_ca_signer_total{source="request"}[30m]))
           ) < 0.999
         for: 15m
-        labels: { severity: critical, slo: nfr-3 }
+        labels: { severity: critical, slo: availability }
         annotations:
-          summary: "CP CA-signer availability < 99.9% (NFR-3)"
+          summary: "CP CA-signer availability < 99.9%"
           description: "Availability = {{ $value | humanizePercentage }} over 30m of REAL sign requests. The session CA gates all NEW sessions — this is an SLO peer of the datastore. Fails CLOSED (no cert ever issued), so this is a hard new-session outage, not a security regression."
           runbook_url: "https://github.com/SessionLayer/Documentation/blob/main/docs/operations/troubleshooting.md#service-temporarily-unavailable"
 
@@ -66,13 +66,13 @@ groups:
         expr: >
           sum(rate(sessionlayer_ca_signer_total{source="request",outcome=~"unavailable|error"}[5m])) > 0
         for: 5m
-        labels: { severity: critical, slo: nfr-3 }
+        labels: { severity: critical, slo: availability }
         annotations:
           summary: "CP CA-signer returning unavailable/error (fail-closed) on real requests"
-          description: "{{ $value | humanize }}/s real sign requests are failing closed. All redundant signer backends may be down (FR-CA-9). New sessions cannot start until a signer recovers."
+          description: "{{ $value | humanize }}/s real sign requests are failing closed. All redundant signer backends may be down. New sessions cannot start until a signer recovers."
           runbook_url: "https://github.com/SessionLayer/Documentation/blob/main/docs/operations/troubleshooting.md#service-temporarily-unavailable"
 
-      # --- Fail-closed / deny observability (NFR-2, §8.4) -------------------------
+      # --- Fail-closed / deny observability ---------------------------------------
       - alert: SessionEstablishmentErrorSpike
         expr: >
           sum(rate(sessionlayer_session_establishment_seconds_count{outcome="error"}[5m]))
@@ -83,7 +83,7 @@ groups:
         labels: { severity: critical }
         annotations:
           summary: "CP Authorize error-rate > 10%"
-          description: "Errored (not deny — {{ $value | humanizePercentage }}) establishment decisions. Errors fail closed (NFR-2); a spike means a degraded dependency (DB/lock-stream) turning legitimate sessions away. Investigate before it becomes an availability incident."
+          description: "Errored (not deny — {{ $value | humanizePercentage }}) establishment decisions. Errors fail closed; a spike means a degraded dependency (DB/lock-stream) turning legitimate sessions away. Investigate before it becomes an availability incident."
           runbook_url: "https://github.com/SessionLayer/Documentation/blob/main/docs/operations/troubleshooting.md#access-denied-by-policy-when-the-user-swears-they-should-have-access"
 
       - alert: NoAuthorizeTraffic

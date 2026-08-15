@@ -43,10 +43,10 @@ import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * The §1.1-E regression matrix for the JIT/standing UNION restructure: an
- * approved, in-window JIT grant is now folded into the SAME evaluation as
- * standing access (never gated on a prior standing failure), so it can widen a
- * connect even when standing already matches something (just not enough). Every
+ * The regression matrix for the JIT/standing UNION restructure: an approved,
+ * in-window JIT grant is now folded into the SAME evaluation as standing access
+ * (never gated on a prior standing failure), so it can widen a connect even
+ * when standing already matches something (just not enough). Every
  * deny-wins/break-glass/self-approval/attribution invariant is proven here, not
  * assumed — see {@code ConnectAuthorizationService#resolveDecision}.
  */
@@ -95,8 +95,8 @@ class JitMergeAuthorizeIT extends AbstractMtlsIT {
 		UUID deploySessionId = UUID.randomUUID();
 		AuthorizeResponse asDeploy = authorize(gateway, identity, nodeId, "deploy", deploySessionId);
 		assertThat(asDeploy.getDecision()).isEqualTo(Decision.DECISION_ALLOW);
-		// STANDING is the wire-compat default (absent field, N-1 Gateway safe — §16
-		// D15), so assert via the persisted decision snapshot, not the proto enum.
+		// STANDING is the wire-compat default (absent field, N-1 Gateway safe), so
+		// assert via the persisted decision snapshot, not the proto enum.
 		assertThat(sshSessions.findById(deploySessionId).block().accessModel()).isEqualTo("standing");
 	}
 
@@ -137,8 +137,8 @@ class JitMergeAuthorizeIT extends AbstractMtlsIT {
 
 		assertThat(response.getDecision()).isEqualTo(Decision.DECISION_ALLOW);
 		SshSession session = sshSessions.findById(sessionId).block();
-		// STANDING is the wire-compat default (absent field, N-1 Gateway safe — §16
-		// D15), so assert via the persisted decision snapshot, not the proto enum.
+		// STANDING is the wire-compat default (absent field, N-1 Gateway safe), so
+		// assert via the persisted decision snapshot, not the proto enum.
 		assertThat(session.accessModel()).isEqualTo("standing");
 		assertThat(session.jitRequestId()).isNull();
 		assertThat(session.capabilities()).containsExactlyInAnyOrder("shell", "exec");
@@ -160,8 +160,8 @@ class JitMergeAuthorizeIT extends AbstractMtlsIT {
 
 		assertThat(response.getDecision()).isEqualTo(Decision.DECISION_ALLOW);
 		SshSession session = sshSessions.findById(sessionId).block();
-		// STANDING is the wire-compat default (absent field, N-1 Gateway safe — §16
-		// D15), so assert via the persisted decision snapshot, not the proto enum.
+		// STANDING is the wire-compat default (absent field, N-1 Gateway safe), so
+		// assert via the persisted decision snapshot, not the proto enum.
 		assertThat(session.accessModel()).isEqualTo("standing");
 		assertThat(session.jitRequestId()).isNull();
 		assertThat(jitRequests.findById(grant.id()).block().state()).isEqualTo(JitRequest.APPROVED);
@@ -356,7 +356,7 @@ class JitMergeAuthorizeIT extends AbstractMtlsIT {
 		// it blocks EVERY connect for this identity (standing included) until it
 		// expires, exactly as it would for a pure-standing or pure-JIT session. This
 		// is accessModel-blind by construction (LockMatching never reads accessModel),
-		// proving provenance doesn't matter to the lock re-check (§ doctrine).
+		// proving provenance doesn't matter to the lock re-check.
 		AuthorizeResponse after = authorize(gateway, identity, nodeId, "deploy", UUID.randomUUID());
 		assertThat(after.getDecision()).isEqualTo(Decision.DECISION_DENY);
 	}

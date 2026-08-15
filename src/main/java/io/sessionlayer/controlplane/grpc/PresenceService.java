@@ -24,13 +24,12 @@ import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Mono;
 
 /**
- * The HA ownership WRITE path (Design §10.2/§10.3; FR-HA-2/5). A Gateway that
- * holds a node's live agent control channel heartbeats here to claim/refresh
- * ownership, and releases it on drain so a standby claims immediately. This is
- * the mTLS-required tier: the OWNER is the authenticated mTLS peer — never a
- * request field — so a Gateway can only claim, refresh, or release ownership
- * for itself. Auto-binds via the {@code List<BindableService>} injection in
- * {@code GrpcMtlsServer}.
+ * The HA ownership WRITE path. A Gateway that holds a node's live agent control
+ * channel heartbeats here to claim/refresh ownership, and releases it on drain
+ * so a standby claims immediately. This is the mTLS-required tier: the OWNER is
+ * the authenticated mTLS peer — never a request field — so a Gateway can only
+ * claim, refresh, or release ownership for itself. Auto-binds via the
+ * {@code List<BindableService>} injection in {@code GrpcMtlsServer}.
  *
  * <p>
  * The request addresses the node by its stable enrollment <b>name</b>, not its
@@ -55,7 +54,7 @@ import reactor.core.publisher.Mono;
  * and a concurrent claim that trips the {@code @Version} optimistic lock (or
  * the {@code presence_nonce_monotonic} DB trigger backstop) is <b>rejected as a
  * failed RPC</b> — the caller fails closed to "not owner" rather than
- * clobbering a higher nonce (FR-HA-5, per the {@code Presence} contract).
+ * clobbering a higher nonce (per the {@code Presence} contract).
  */
 @Service
 public class PresenceService extends PresenceGrpc.PresenceImplBase {
@@ -129,7 +128,7 @@ public class PresenceService extends PresenceGrpc.PresenceImplBase {
 			return tx.transactional(applied)
 					// A concurrent claim tripped the optimistic lock or the monotonic trigger:
 					// the write was rejected, so fail the RPC (the Gateway treats that as "not
-					// owner"). Never retry a lower-nonce write (FR-HA-5).
+					// owner"). Never retry a lower-nonce write.
 					.onErrorMap(PresenceService::isContention, contended -> contention())
 					.map(state -> toResponse(state, owner));
 		}));

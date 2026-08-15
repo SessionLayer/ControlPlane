@@ -23,13 +23,13 @@ import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * The HA routing READ path folded into {@code Authorize} (Design §10.2/§10.3;
- * FR-HA-2/4/5): the ALLOW {@code NodeConnection} carries the presence owner
- * ONLY for an outbound-agent node with a FRESH owner. A stale/absent owner, or
- * an agentless node, leaves the owner fields empty so the ingress Gateway fails
- * closed to "node offline" (the anti-stale + no-TOFU-of-liveness posture). The
- * owner is written by a heartbeat addressing the node by NAME; the read still
- * keys presence by the node UUID that Authorize resolves.
+ * The HA routing READ path folded into {@code Authorize}: the ALLOW
+ * {@code NodeConnection} carries the presence owner ONLY for an outbound-agent
+ * node with a FRESH owner. A stale/absent owner, or an agentless node, leaves
+ * the owner fields empty so the ingress Gateway fails closed to "node offline"
+ * (the anti-stale + no-TOFU-of-liveness posture). The owner is written by a
+ * heartbeat addressing the node by NAME; the read still keys presence by the
+ * node UUID that Authorize resolves.
  */
 class AuthorizeOwnerRoutingIT extends AbstractMtlsIT {
 

@@ -17,7 +17,7 @@ public interface AuditEventRepository extends ReactiveCrudRepository<AuditEvent,
 	 * The hash-chained rows in gapless {@code seq} order (the DB-assigned total
 	 * order). Filtered to rows that carry a {@code record_hash} (the chained rows)
 	 * so a mix with any pre-chain history verifies cleanly. Backs the
-	 * {@code AuditChainVerifier} tamper-evidence check (FR-AUD-3).
+	 * {@code AuditChainVerifier} tamper-evidence check.
 	 */
 	@Query("SELECT * FROM runtime.audit_event WHERE record_hash IS NOT NULL ORDER BY seq")
 	Flux<AuditEvent> findChainOrdered();

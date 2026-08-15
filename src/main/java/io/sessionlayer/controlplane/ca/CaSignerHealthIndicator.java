@@ -9,11 +9,11 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 /**
- * NFR-3 session-CA signing availability, as an {@code /actuator/health}
- * contributor (Design §14 — an SLO peer of the datastore). Reports whether an
- * active session signer can be obtained (UP) or not (OUT_OF_SERVICE, the
- * fail-closed state {@code CaSignerService} already enforces). Cached for a
- * short TTL so the probe never hammers the datastore.
+ * Session-CA signing availability, as an {@code /actuator/health} contributor
+ * (an SLO peer of the datastore). Reports whether an active session signer can
+ * be obtained (UP) or not (OUT_OF_SERVICE, the fail-closed state
+ * {@code CaSignerService} already enforces). Cached for a short TTL so the
+ * probe never hammers the datastore.
  *
  * <p>
  * Like {@code WormHealthIndicator} it does <b>not</b> gate readiness by

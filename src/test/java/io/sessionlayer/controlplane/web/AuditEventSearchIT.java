@@ -210,7 +210,7 @@ class AuditEventSearchIT extends AbstractConfigApiIT {
 		assertThat(getStatus(none, event.id())).isEqualTo(403);
 	}
 
-	// FR-AUD-8 completeness: an auditor can filter by capability/node-label, so a
+	// Search completeness: an auditor can filter by capability/node-label, so a
 	// returned event must also PROJECT them (not just source_ip/correlation_id).
 	@Test
 	void returnedEventProjectsCapabilitiesAndNodeLabels() {

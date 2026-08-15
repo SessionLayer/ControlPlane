@@ -81,7 +81,7 @@ public class GatewayHostCertificateService {
 									Long.toString(notAfter.getEpochSecond())))
 							.thenReturn(cert));
 		})
-				// Signer-unavailable (NFR-3 fail-closed) is not a GatewayRequestException;
+				// A fail-closed signer-unavailable is not a GatewayRequestException;
 				// audit it distinctly so a CA-availability incident is forensically visible.
 				.onErrorResume(CaSignerService.NoSignerAvailable.class,
 						unavailable -> audit.record(identity.name(), identity.name(), "gateway.host_cert.sign",

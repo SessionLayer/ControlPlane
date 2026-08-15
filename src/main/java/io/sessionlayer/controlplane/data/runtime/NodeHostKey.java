@@ -10,11 +10,11 @@ import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Table;
 
 /**
- * RUNTIME · {@code runtime.node_host_key} (FR-CONN-5, Design §9.3).
- * Enrollment-anchored node host identity so inner-leg host verification is
- * <b>never TOFU</b>: {@code hostCertRef} (host-CA-signed host cert) is the
- * primary anchor, {@code publicKey}/{@code fingerprint} the pinned-key
- * fallback. Public material only.
+ * RUNTIME · {@code runtime.node_host_key}. Enrollment-anchored node host
+ * identity so inner-leg host verification is <b>never TOFU</b>:
+ * {@code hostCertRef} (host-CA-signed host cert) is the primary anchor,
+ * {@code publicKey}/{@code fingerprint} the pinned-key fallback. Public
+ * material only.
  */
 @Table(schema = "runtime", name = "node_host_key")
 public record NodeHostKey(@Id UUID id, UUID nodeId, String keyType, String publicKey, String fingerprint,

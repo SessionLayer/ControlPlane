@@ -29,17 +29,17 @@ import org.springframework.stereotype.Component;
  * anchor for the CP↔Gateway plane (VERSIONING.md §7). Mirrors
  * {@code LocalCaFactory} (the SSH local CA) but produces an X.509 self-signed
  * CA certificate rather than an SSH signer. The CA private key is
- * envelope-encrypted under the operator KEK (FR-CA-8) with the identical
- * row-binding AAD scheme, so a wrapped blob cannot be lifted into a different
- * CA's row (cross-CA substitution). Only the local backend is implemented; a
- * cloud X.509 backend plugs in behind {@link X509CaBackend}.
+ * envelope-encrypted under the operator KEK with the identical row-binding AAD
+ * scheme, so a wrapped blob cannot be lifted into a different CA's row
+ * (cross-CA substitution). Only the local backend is implemented; a cloud X.509
+ * backend plugs in behind {@link X509CaBackend}.
  */
 @Component
 public class InternalMtlsCaFactory {
 
 	private static final Logger LOG = LoggerFactory.getLogger(InternalMtlsCaFactory.class);
 
-	/** The internal mTLS CA is ECDSA P-256 (platform default, D6). */
+	/** The internal mTLS CA is ECDSA P-256 (platform default). */
 	private static final CaKeyType KEY_TYPE = CaKeyType.ECDSA_NISTP256;
 	/** {@code config.ca_config.ca_kind} for the internal mTLS CA (V14). */
 	public static final String CA_KIND = "mtls";
@@ -154,6 +154,6 @@ public class InternalMtlsCaFactory {
 					+ "(sessionlayer.ca.local.kek-base64 / env). This is dev/test ONLY.");
 		}
 		LOG.warn("local X.509 backend in use for the internal mTLS CA; production SHOULD use a cloud X.509 CA so the "
-				+ "CA private key is never in-process (FR-CA-8, Design §14).");
+				+ "CA private key is never in-process.");
 	}
 }

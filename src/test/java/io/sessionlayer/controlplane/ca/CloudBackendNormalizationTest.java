@@ -25,8 +25,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 /**
- * Cloud CA backends (D7): the KMS/Azure/Vault backends are implemented in full
- * and their signature normalization (FR-SIGN-2) and TBS assembly are exercised
+ * Cloud CA backends: the KMS/Azure/Vault backends are implemented in full and
+ * their signature normalization and TBS assembly are exercised
  * deterministically with an <b>injected signer double</b> (correct testing of
  * an external dependency, not a deferral — no cloud credentials in CI). The
  * doubles are backed by a real EC key so the resulting certificate verifies

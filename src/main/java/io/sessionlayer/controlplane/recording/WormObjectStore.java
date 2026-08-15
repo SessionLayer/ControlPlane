@@ -104,17 +104,14 @@ public class WormObjectStore implements RecordingStore {
 	public Mono<Void> deleteObject(String objectKey, String wormMode) {
 		// Compliance objects are truly un-deletable (object-lock); refuse in-app too so
 		// the intent is explicit and we never even attempt a call the store would
-		// reject
-		// (FR-AUD-3).
+		// reject.
 		if ("compliance".equals(wormMode)) {
 			return Mono.error(new UnsupportedOperationException("compliance-mode recordings are un-deletable"));
 		}
 		// Object-lock ⇒ VERSIONED bucket: a key-only delete just writes a delete marker
 		// and the governance-locked VERSION survives (GetObjectVersion still returns
-		// the
-		// data) — GDPR erasure would be illusory + storage never reclaimed. Real
-		// erasure
-		// (FR-AUD-6) removes EVERY version + delete marker of the key, bypassing
+		// the data) — GDPR erasure would be illusory + storage never reclaimed. Real
+		// erasure removes EVERY version + delete marker of the key, bypassing
 		// governance retention (the caller's credential carries
 		// s3:BypassGovernanceRetention).
 		return Mono.<Void>fromRunnable(() -> deleteAllVersionsBlocking(objectKey))
@@ -170,11 +167,10 @@ public class WormObjectStore implements RecordingStore {
 	// A read-only presigned GET for admin replay/export. No object-lock headers (a
 	// GET does not mutate); the object remains customer-key encrypted end to end.
 	private PresignedAccess presignDownloadBlocking(String objectKey, String objectVersionId, Duration ttl) {
-		// Pin the finalized version (§15): Object Lock
-		// protects an object VERSION, not the key from a new PUT, so an unversioned GET
-		// would serve a later shadow version. A stored version id makes replay/export
-		// serve exactly the finalized bytes; null (N-1 recording) falls back to
-		// current.
+		// Pin the finalized version: Object Lock protects an object VERSION, not the
+		// key from a new PUT, so an unversioned GET would serve a later shadow
+		// version. A stored version id makes replay/export serve exactly the finalized
+		// bytes; null (an N-1 recording) falls back to current.
 		GetObjectRequest.Builder getBuilder = GetObjectRequest.builder().bucket(properties.getBucket()).key(objectKey);
 		if (objectVersionId != null && !objectVersionId.isBlank()) {
 			getBuilder.versionId(objectVersionId);
@@ -229,7 +225,7 @@ public class WormObjectStore implements RecordingStore {
 			// A missing object-lock configuration is a DEFINITIVE "not immutable" → fail
 			// fast. Any other failure (a read-permission gap, a store that can't answer)
 			// warns loudly but proceeds; the per-upload lock header is still the hard
-			// fail-closed control (FR-AUD-3), so we never weaken it by refusing to start.
+			// fail-closed control, so we never weaken it by refusing to start.
 			String code = e.awsErrorDetails() != null ? e.awsErrorDetails().errorCode() : "";
 			if ("ObjectLockConfigurationNotFoundError".equals(code)) {
 				throw notImmutable(bucket, e);
@@ -246,7 +242,7 @@ public class WormObjectStore implements RecordingStore {
 
 	private static IllegalStateException notImmutable(String bucket, Throwable cause) {
 		return new IllegalStateException("WORM recording bucket " + bucket
-				+ " is not object-lock enabled (FR-AUD-3): recordings would not be immutable — enable object-lock "
+				+ " is not object-lock enabled: recordings would not be immutable — enable object-lock "
 				+ "on the bucket before starting.", cause);
 	}
 

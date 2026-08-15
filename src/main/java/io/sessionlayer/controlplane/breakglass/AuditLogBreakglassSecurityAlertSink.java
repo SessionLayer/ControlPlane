@@ -10,10 +10,10 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 /**
- * The default {@link BreakglassSecurityAlertSink} (§7 / FR-ACC-6): audits and
- * logs break-glass authentication to the one correlated audit stream. The
- * action {@code breakglass.authenticated} is what auditors query. Carries
- * public ids only — no key material, no resolving secret.
+ * The default {@link BreakglassSecurityAlertSink}: audits and logs break-glass
+ * authentication to the one correlated audit stream. The action
+ * {@code breakglass.authenticated} is what auditors query. Carries public ids
+ * only — no key material, no resolving secret.
  */
 @Component
 public class AuditLogBreakglassSecurityAlertSink implements BreakglassSecurityAlertSink {

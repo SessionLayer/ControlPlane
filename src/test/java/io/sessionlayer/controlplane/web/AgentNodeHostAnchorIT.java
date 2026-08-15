@@ -37,11 +37,10 @@ import tools.jackson.databind.node.ObjectNode;
 
 /**
  * An agent-connected node's host identity is anchored at REGISTRATION, before
- * the Agent joins (§9.3; FR-CONN-5/7). The Gateway runs the same no-TOFU
- * verification on the inner leg whichever connector reached the node, so an
- * anchorless agent node aborts every session — which is why the anchor must be
- * writable through the API and must reach the Gateway in the authorizer's
- * answer, not merely exist as a row.
+ * the Agent joins. The Gateway runs the same no-TOFU verification on the inner
+ * leg whichever connector reached the node, so an anchorless agent node aborts
+ * every session — which is why the anchor must be writable through the API and
+ * must reach the Gateway in the authorizer's answer, not merely exist as a row.
  */
 @AutoConfigureWebTestClient
 class AgentNodeHostAnchorIT extends AbstractAuthIT {
@@ -115,7 +114,7 @@ class AgentNodeHostAnchorIT extends AbstractAuthIT {
 				.block();
 	}
 
-	// A deny discloses nothing on ConnectDecision (§7.1), so a failure here would
+	// A deny discloses nothing on ConnectDecision, so a failure here would
 	// otherwise read only "expected true". The reason is server-side, in the audit
 	// row the deny wrote: a lock that matched, a limit, or no matching allow.
 	private String denyDetail(String identity) {

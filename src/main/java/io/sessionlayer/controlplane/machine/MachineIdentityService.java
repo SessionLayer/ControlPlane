@@ -26,8 +26,8 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 /**
- * Machine identity (FR-AUTH-12): issues/revokes credentials and runs the OAuth
- * token endpoint.
+ * Machine identity: issues/revokes credentials and runs the OAuth token
+ * endpoint.
  */
 @Service
 public class MachineIdentityService {

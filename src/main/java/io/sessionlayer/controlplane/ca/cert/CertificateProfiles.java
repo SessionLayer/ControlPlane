@@ -36,9 +36,9 @@ public final class CertificateProfiles {
 	}
 
 	/**
-	 * Build the Gateway OUTER host-cert parameters (FR-ADDR-1, Design §9.3/§11):
-	 * the short-lived HOST certificate the Gateway presents on the ProxyJump inner
-	 * hop so a stock OpenSSH client accepts it as the target node with no TOFU.
+	 * Build the Gateway OUTER host-cert parameters: the short-lived HOST
+	 * certificate the Gateway presents on the ProxyJump inner hop so a stock
+	 * OpenSSH client accepts it as the target node with no TOFU.
 	 * {@code key_id = gateway-host:<gatewayName>} for the node-local audit trail.
 	 *
 	 * <p>
@@ -62,11 +62,10 @@ public final class CertificateProfiles {
 		if (capabilities.contains("port_forward_local") || capabilities.contains("port_forward_remote")) {
 			extensions.add("permit-port-forwarding");
 		}
-		// Agent forwarding is ALWAYS refused at the
-		// Gateway (FR-SESS-2), so the inner-leg cert MUST NEVER carry
-		// permit-agent-forwarding even when RBAC grants agent_forward. Belt-and-
-		// suspenders: the node is never told to permit it (two controls, not just
-		// the outer-leg refusal).
+		// Agent forwarding is ALWAYS refused at the Gateway, so the inner-leg cert
+		// MUST NEVER carry permit-agent-forwarding even when RBAC grants
+		// agent_forward. Belt-and-suspenders: the node is never told to permit it
+		// (two controls, not just the outer-leg refusal).
 		if (capabilities.contains("x11")) {
 			extensions.add("permit-X11-forwarding");
 		}

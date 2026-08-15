@@ -12,7 +12,7 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 
 /**
- * Wires the first-admin bootstrap (FR-BOOT-2). The startup runner is
+ * Wires the first-admin bootstrap. The startup runner is
  * {@code LOWEST_PRECEDENCE}; the CA cold-start runner is unordered, so their
  * relative order is not guaranteed — correctness does <b>not</b> depend on it:
  * {@code BootstrapService.ensureSettings()} self-creates the operator-settings
@@ -31,7 +31,7 @@ public class BootstrapConfiguration {
 	@ConditionalOnProperty(value = "sessionlayer.bootstrap.enabled", havingValue = "true", matchIfMissing = true)
 	ApplicationRunner firstAdminBootstrapRunner(BootstrapService bootstrapService) {
 		return args -> {
-			LOG.info("first-admin bootstrap: evaluating (FR-BOOT-2)");
+			LOG.info("first-admin bootstrap: evaluating");
 			bootstrapService.runAtStartup().block(Duration.ofSeconds(30));
 		};
 	}

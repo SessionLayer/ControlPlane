@@ -85,7 +85,7 @@ public class JitPolicyConfigService {
 	}
 
 	// The approval-chain length ceiling (<= 3) is a bean-validation 400; here we
-	// reject the semantic gaps a schema cannot catch (FR-ACC-3): a non-positive TTL
+	// reject the semantic gaps a schema cannot catch: a non-positive TTL
 	// and an approval level with no addressable value.
 	private static void validate(int maxTtlSeconds, JsonNode targetSelector, JsonNode approvalChain) {
 		if (maxTtlSeconds <= 0) {

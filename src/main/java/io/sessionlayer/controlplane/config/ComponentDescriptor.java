@@ -4,8 +4,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Identity of this Control Plane build: the formal component name (fixed,
- * Design §1) and the SemVer build version.
+ * Identity of this Control Plane build: the fixed formal component name and the
+ * SemVer build version.
  *
  * <p>
  * The version is filtered from the Maven project version into

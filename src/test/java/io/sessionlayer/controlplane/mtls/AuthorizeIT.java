@@ -55,9 +55,9 @@ import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * The connect-time {@code Authorize} RPC over mTLS (FR-CHAN-1). An allow
- * returns a verifiable signed context + a minted session token that then signs
- * an inner-leg cert via the SessionSigning signer; a deny or a Lock returns a
+ * The connect-time {@code Authorize} RPC over mTLS. An allow returns a
+ * verifiable signed context + a minted session token that then signs an
+ * inner-leg cert via the SessionSigning signer; a deny or a Lock returns a
  * generic deny with no token (fail closed), and the {@code ssh_session}
  * decision snapshot is written on allow.
  */
@@ -122,8 +122,7 @@ class AuthorizeIT extends AbstractMtlsIT {
 	// "16909060" passes InetAddress's inet_aton-style
 	// parse but Postgres ::inet REJECTS it; the strict auditableIp validator drops
 	// it to NULL so the best-effort DENY audit INSERT does not violate the
-	// source_ip
-	// CHECK and the decision-log row is NOT lost (FR-AUD-7).
+	// source_ip CHECK and the decision-log row is NOT lost.
 	@Test
 	void denyWithNonInetSourceIpStillWritesTheDecisionRow() {
 		String identity = "denyip-" + unique();
@@ -302,8 +301,7 @@ class AuthorizeIT extends AbstractMtlsIT {
 	// caller was used only for the audit name, so a locked Gateway stayed a full
 	// RBAC oracle and could consume break-glass tokens / flip JIT grants / write
 	// session rows with its un-expired cert (there is no CRL on the internal mTLS
-	// CA
-	// — the status lock IS the revocation, FR-BOOT-3/§8.4/FR-LOCK-2).
+	// CA — the status lock IS the revocation).
 	@Test
 	void aLockedCallerGatewayIsRefusedOnAuthorizeWithNoStateChange() {
 		String identity = "alice-" + unique();
@@ -373,7 +371,7 @@ class AuthorizeIT extends AbstractMtlsIT {
 		AuthorizeResponse response = authorize(gateway,
 				requestByName(identity, "no-such-node-" + unique(), "deploy", "10.0.0.5", UUID.randomUUID()));
 
-		// The SAME generic deny as any no-match — no existence disclosure (§7.1).
+		// The SAME generic deny as any no-match — no existence disclosure.
 		assertThat(response.getDecision()).isEqualTo(Decision.DECISION_DENY);
 		assertThat(response.getSessionToken()).isEmpty();
 		assertThat(response.hasContext()).isFalse();

@@ -136,7 +136,7 @@ class PresenceServiceIT extends AbstractMtlsIT {
 
 		// The partitioned old owner returns and heartbeats: the row now names gwB at a
 		// higher nonce and gwB is fresh, so gwA is fenced out (standby) — it can never
-		// reclaim with its stale view, and it learns the advanced nonce (FR-HA-5).
+		// reclaim with its stale view, and it learns the advanced nonce.
 		PresenceHeartbeatResponse fenced = presenceHeartbeat(gwA, node.name(), ADDR_A);
 		assertThat(fenced.getIsSelfOwner()).isFalse();
 		assertThat(fenced.getOwningGatewayId()).isEqualTo(nameB);
@@ -174,7 +174,7 @@ class PresenceServiceIT extends AbstractMtlsIT {
 	@Test
 	void anAgentAuthenticatedPeerCannotClaimOwnership() {
 		// The interceptor authenticates an agent cert (it is a valid principal), but a
-		// non-Gateway peer must not own a node — the handler fails closed (FR-HA-2).
+		// non-Gateway peer must not own a node — the handler fails closed.
 		Node node = seedAgentNode();
 		KeyPair agentKey = MtlsTestSupport.generateEcKeyPair();
 		X509Certificate agentCert = agentClientCert(agentKey.getPublic(), UUID.randomUUID());

@@ -17,14 +17,13 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * OIDC device flow (Design §5.2, FR-AUTH-3/5). The CP generates the device/user
- * codes and hosts the verification page as an auth-code + PKCE relying party
- * (the anti-phishing design — the CP page restores state/nonce/PKCE a raw
- * device grant lacks). Approval happens when the user completes the CP
- * verification page; the approving browser's source context is correlated with
- * the SSH source IP as a deny-only reducer (FR-AUTH-15) and recorded.
- * Fallback-only; the Gateway polls {@link #poll} and moves this onto the auth
- * gRPC plane.
+ * OIDC device flow. The CP generates the device/user codes and hosts the
+ * verification page as an auth-code + PKCE relying party (the anti-phishing
+ * design — the CP page restores state/nonce/PKCE a raw device grant lacks).
+ * Approval happens when the user completes the CP verification page; the
+ * approving browser's source context is correlated with the SSH source IP as a
+ * deny-only reducer and recorded. Fallback-only; the Gateway polls
+ * {@link #poll} and moves this onto the auth gRPC plane.
  */
 @Service
 public class DeviceFlowService {
@@ -75,15 +74,14 @@ public class DeviceFlowService {
 
 	/**
 	 * Approve a device flow from a completed verification-page login: resolve the
-	 * identity and record the source-context correlation (§5.2). A mismatch is
-	 * flagged (+ audited); it denies only when source-match enforcement is on.
+	 * identity and record the source-context correlation. A mismatch is flagged (+
+	 * audited); it denies only when source-match enforcement is on.
 	 */
 	public Mono<DeviceFlow> approve(UUID deviceFlowId, String identity, String approverSourceIp) {
 		return deviceFlows.findById(deviceFlowId).filter(f -> "pending".equals(f.status())).flatMap(flow -> {
 			Boolean match = correlate(approverSourceIp, flow.sourceIp());
 			// Fail closed under enforcement: an indeterminate (null) correlation denies
-			// too,
-			// so an attacker cannot bypass the binding by blanking a source (NFR-2).
+			// too, so an attacker cannot bypass the binding by blanking a source.
 			boolean deny = oidcProperties.getDevice().isEnforceSourceMatch() && !Boolean.TRUE.equals(match);
 			ObjectNode context = objectMapper.createObjectNode();
 			context.put("approver_source_ip", approverSourceIp == null ? "" : approverSourceIp);
