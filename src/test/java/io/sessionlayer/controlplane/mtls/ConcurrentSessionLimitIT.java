@@ -99,14 +99,10 @@ class ConcurrentSessionLimitIT extends AbstractMtlsIT {
 		return counter == null ? 0 : counter.count();
 	}
 
-	// C1 (redteam MEDIUM): the cap is HARD, not soft. A concurrent BURST of
-	// Authorizes
-	// for ONE identity at cap L admits EXACTLY L — never more — because the
-	// per-identity
-	// advisory xact lock serializes count-then-acquire, so a shared/stolen
-	// credential
-	// can't overshoot the concurrent blast radius. This is the race the sequential
-	// tests
+	// The cap is HARD, not soft. A concurrent BURST of Authorizes for ONE identity
+	// at cap L admits EXACTLY L — never more — because the per-identity advisory
+	// xact lock serializes count-then-acquire, so a shared/stolen credential can't
+	// overshoot the concurrent blast radius. This is the race the sequential tests
 	// cannot exercise; without serialization the burst would overshoot.
 	@Test
 	void aConcurrentBurstForOneIdentityNeverOvershootsTheCap() throws Exception {
