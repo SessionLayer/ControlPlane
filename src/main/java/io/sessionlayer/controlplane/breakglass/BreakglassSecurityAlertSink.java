@@ -5,8 +5,8 @@ import java.util.UUID;
 import reactor.core.publisher.Mono;
 
 /**
- * The pluggable break-glass alert seam (§7 / FR-ACC-6). A break-glass
- * credential use MUST raise an alert. The
+ * The pluggable break-glass alert seam. A break-glass credential use MUST
+ * raise an alert. The
  * {@link AuditLogBreakglassSecurityAlertSink} default audits and logs loudly.
  * Additional transports plug in as sinks. Sinks receive only public ids — never
  * key material or secrets.

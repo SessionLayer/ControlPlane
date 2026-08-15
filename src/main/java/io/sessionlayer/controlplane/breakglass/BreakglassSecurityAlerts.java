@@ -10,8 +10,8 @@ import reactor.core.publisher.Mono;
 
 /**
  * Fans a break-glass alert out to every registered
- * {@link BreakglassSecurityAlertSink} (§7 / FR-ACC-6). A failing sink is logged
- * loudly — a dropped security alert must never be silent.
+ * {@link BreakglassSecurityAlertSink}. A failing sink is logged loudly — a
+ * dropped security alert must never be silent.
  */
 @Component
 public class BreakglassSecurityAlerts {

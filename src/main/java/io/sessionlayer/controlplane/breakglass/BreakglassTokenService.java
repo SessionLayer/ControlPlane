@@ -11,10 +11,10 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 /**
- * Mints and atomically consumes the single-use break-glass token (FR-ACC-6,
- * §15). Bound to {gatewayId, identity, nodeId, sourceAddress, exp}, carrying
- * the credential's scoped allowedPrincipals. Stores hash only. Fail closed on
- * any mismatch; never distinguishes reason (deny).
+ * Mints and atomically consumes the single-use break-glass token. Bound to
+ * {gatewayId, identity, nodeId, sourceAddress, exp}, carrying the credential's
+ * scoped allowedPrincipals. Stores hash only. Fail closed on any mismatch;
+ * never distinguishes reason (deny).
  */
 @Service
 public class BreakglassTokenService {
@@ -62,7 +62,7 @@ public class BreakglassTokenService {
 	}
 
 	private static boolean sourceMismatch(String tokenSource, String requestSource) {
-		// Source is a deny-only binding: a bound token requires the same source (§8.4).
+		// Source is a deny-only binding: a bound token requires the same source.
 		return tokenSource != null && !tokenSource.equals(requestSource);
 	}
 

@@ -18,7 +18,7 @@ import reactor.core.publisher.Mono;
 import tools.jackson.databind.JsonNode;
 
 /**
- * Manages the break-glass credential set (FR-ACC-6, breakglass:manage):
+ * Manages the break-glass credential set (breakglass:manage):
  * registers FIDO2 sk-ecdsa PUBLIC keys (primary) and issues batches of
  * single-use offline codes (fallback). Only PUBLIC key material and code HASHES
  * are stored. Raw offline codes are returned exactly once. Every mutation is
