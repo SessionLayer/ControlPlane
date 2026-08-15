@@ -14,13 +14,12 @@ import io.sessionlayer.controlplane.authz.ConnectDecision;
 import reactor.core.publisher.Mono;
 
 /**
- * The CP tracing seam (Design §14, OTEL-CONTRACT). Extracts the Gateway's W3C
- * trace context from gRPC metadata and wraps the two decision RPCs in the
- * contract spans so they become children of the Gateway root:
- * {@code cp.authorize} and {@code cp.cert_sign}.
+ * The CP tracing seam. Extracts the Gateway's W3C trace context from gRPC
+ * metadata and wraps the two decision RPCs in spans so they become children of
+ * the Gateway root: {@code cp.authorize} and {@code cp.cert_sign}.
  *
  * <p>
- * Spans carry <b>correlation, never content</b> (OTEL-CONTRACT §5): only IDs,
+ * Spans carry <b>correlation, never content</b>: only IDs,
  * enums, outcomes, and — on failure — the error <i>type</i>. No SSH plaintext,
  * key, OTP, token, or recording byte ever enters a span. The parent is passed
  * <b>explicitly</b> to each span builder (never via a thread-local), so the

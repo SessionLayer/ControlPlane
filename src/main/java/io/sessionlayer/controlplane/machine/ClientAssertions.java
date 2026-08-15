@@ -12,7 +12,7 @@ import java.util.List;
 
 /**
  * Parsing + signature verification for OAuth private_key_jwt client assertions
- * (RFC 7523, FR-AUTH-12).
+ * (RFC 7523).
  */
 final class ClientAssertions {
 

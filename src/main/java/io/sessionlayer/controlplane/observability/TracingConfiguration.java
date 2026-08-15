@@ -21,8 +21,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Hand-wires the OpenTelemetry SDK for the CP (OTEL-CONTRACT): only the two
- * contract spans are created.
+ * Hand-wires the OpenTelemetry SDK for the CP: only the two decision spans
+ * ({@code cp.authorize} and {@code cp.cert_sign}) are created.
  */
 @Configuration
 public class TracingConfiguration {

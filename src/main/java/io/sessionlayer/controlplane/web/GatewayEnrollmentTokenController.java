@@ -28,8 +28,8 @@ import reactor.core.publisher.Mono;
  * Gateway enrollment tokens (RBAC + audited). Replaces the raw {@code INSERT
  * INTO runtime.gateway_enrollment_token} the install guide required, so
  * installing a Gateway no longer needs a database credential the hardening
- * guide tells the operator to lock away (Design §4.B; FR-JOIN-3). The raw token
- * is returned once at issuance and never again.
+ * guide tells the operator to lock away. The raw token is returned once at
+ * issuance and never again.
  */
 @RestController
 public class GatewayEnrollmentTokenController implements GatewayEnrollmentTokensApi {

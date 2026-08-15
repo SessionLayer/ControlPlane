@@ -34,15 +34,14 @@ import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * The JIT access-model state machine (FR-ACC-2/3/4). Drives
- * {@code runtime.jit_request} through REQUESTED → PENDING_APPROVAL →
- * {APPROVED|DENIED|EXPIRED} → ACTIVE → {EXPIRED|REVOKED}, with two independent
- * clocks — the approval window ({@code approval_deadline}) and the grant TTL
- * ({@code grant_expires_at}, started at final approval and snapshotted from the
- * policy at submit). Every transition is audited. Self-approval is impossible
- * (FR-ACC-4): an approver can never be the requester and may act at most once,
- * enforced here over the snapshotted chain so no config or re-request can
- * bypass it.
+ * The JIT access-model state machine. Drives {@code runtime.jit_request}
+ * through REQUESTED → PENDING_APPROVAL → {APPROVED|DENIED|EXPIRED} → ACTIVE →
+ * {EXPIRED|REVOKED}, with two independent clocks — the approval window
+ * ({@code approval_deadline}) and the grant TTL ({@code grant_expires_at},
+ * started at final approval and snapshotted from the policy at submit). Every
+ * transition is audited. Self-approval is impossible: an approver can never be
+ * the requester and may act at most once, enforced here over the snapshotted
+ * chain so no config or re-request can bypass it.
  *
  * <p>
  * A usable grant (APPROVED/ACTIVE with an unelapsed grant clock) is consumed by
@@ -87,7 +86,7 @@ public class JitLifecycleService {
 		this.metrics = metrics;
 	}
 
-	// ----- submit (FR-ACC-2) -----
+	// ----- submit -----
 
 	public Mono<JitRequest> submit(String requester, UUID targetNodeId, String principal, List<String> capabilities,
 			String reason) {
@@ -169,7 +168,7 @@ public class JitLifecycleService {
 												.thenReturn(saved)));
 	}
 
-	// ----- approve / deny (FR-ACC-3/4) -----
+	// ----- approve / deny -----
 
 	public Mono<JitRequest> approve(UUID requestId, String approver, List<String> approverGroups, String reason) {
 		return act(requestId, approver, approverGroups, reason, true);
@@ -200,8 +199,8 @@ public class JitLifecycleService {
 						return lazilyExpire(request, now).then(Mono.error(
 								new JitException(JitException.Reason.NOT_PENDING, "the approval window has elapsed")));
 					}
-					// FR-ACC-4 hard invariant, checked BEFORE any level match: the requester can
-					// never approve/deny their own request, whatever the chain config says.
+					// Hard invariant, checked BEFORE any level match: the requester can never
+					// approve/deny their own request, whatever the chain config says.
 					if (request.requester().equals(approver)) {
 						return auditReject(request, "self_approval", approver)
 								.then(Mono.error(new JitException(JitException.Reason.SELF_APPROVAL,
@@ -424,12 +423,11 @@ public class JitLifecycleService {
 		return auditTransition(request, "jit.approve", "denied", detail("reason", reason, "approver", approver));
 	}
 
-	// The FR-AUD-9 correlation key for a JIT chain is the request id: the connect
-	// it
+	// The correlation key for a JIT chain is the request id: the connect it
 	// authorizes stamps the same value (its ssh_session.jit_request_id), so one
 	// correlation_id search returns requested → approved → connect → run → replay.
 	// The node-label snapshot is stamped too so a node-label-scoped auditor sees
-	// the approval events, not just the connect (FR-AUD-8).
+	// the approval events, not just the connect.
 	private Mono<Void> auditTransition(JitRequest request, String action, String outcome, Map<String, String> detail) {
 		Map<String, String> full = new HashMap<>(detail);
 		full.put("state", request.state());

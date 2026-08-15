@@ -4,7 +4,7 @@ import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Machine-identity token configuration (FR-AUTH-12).
+ * Machine-identity token configuration.
  */
 @ConfigurationProperties(prefix = "sessionlayer.machine")
 public class MachineTokenProperties {

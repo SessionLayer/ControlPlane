@@ -12,8 +12,8 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 /**
- * SLO instruments (NFR-3/NFR-4) and FR-SESS-3 limit/lease lifecycle meters;
- * tagged by outcome/kind only.
+ * SLO instruments and the session-limit/lease lifecycle meters; tagged by
+ * outcome/kind only.
  */
 @Component
 public class SloMetrics {
@@ -36,8 +36,9 @@ public class SloMetrics {
 	static final String TAG_ACCESS_MODEL = "access_model";
 	static final String TAG_KIND = "kind";
 	// The CA-availability SLI population: a real cert-sign REQUEST vs the periodic
-	// health PROBE. Kept distinct so the NFR-3 99.9% is computed over real requests
-	// (the ~6/min probe baseline would otherwise mask partial degradation).
+	// health PROBE. Kept distinct so the 99.9% target is computed over real
+	// requests (the ~6/min probe baseline would otherwise mask partial
+	// degradation).
 	static final String TAG_SOURCE = "source";
 	public static final String SOURCE_REQUEST = "request";
 	public static final String SOURCE_PROBE = "probe";
@@ -52,7 +53,7 @@ public class SloMetrics {
 	public SloMetrics(MeterRegistry registry) {
 		this.registry = registry;
 		Gauge.builder(LEASE_LIVE, liveLeases, AtomicLong::doubleValue)
-				.description("Live (unreleased, unexpired) FR-SESS-3 concurrency leases, fleet-wide")
+				.description("Live (unreleased, unexpired) concurrency leases, fleet-wide")
 				.register(registry);
 	}
 

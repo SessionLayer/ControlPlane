@@ -29,15 +29,15 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * Node lifecycle (Design §9/§12A; FR-NODE-1/2/3). Enrollment, quarantine
- * (expressed as a top-tier Lock on the node, deny wins), release, soft-remove,
+ * Node lifecycle. Enrollment, quarantine (expressed as a top-tier Lock on the
+ * node, deny wins), release, soft-remove,
  * and listing. Every mutation is one transaction (state + lock + audit) and any
  * lock delta is pushed to Gateways via {@link LockFeedHub} <b>after</b> commit
  * (mirrors {@code io.sessionlayer.controlplane.web.LockController}), so a
  * Gateway can never be pushed a lock a rolled-back transaction never stored.
  *
  * <p>
- * Enrollment is never TOFU (§9.3): the node must present at least one
+ * Enrollment is never TOFU: the node must present at least one
  * enrollment-anchored host identity — a host-CA-signed host certificate or an
  * explicitly pinned host key — whichever connector reaches it, because the
  * Gateway verifies the node's host identity on the inner leg either way.
@@ -327,7 +327,7 @@ public class NodeLifecycleService {
 		}
 		boolean agent = CONNECTOR_AGENT.equals(connector);
 		if (agent && !isBlank(address)) {
-			// §9.2: an agent node is reached through the Agent's own outbound channel, so a
+			// An agent node is reached through the Agent's own outbound channel, so a
 			// dial address on one is a claim the authorizer would hand the data plane —
 			// refuse it rather than store an address nothing will ever dial.
 			return invalid("an agent-connected node is reached through its Agent and must not carry an address");
@@ -338,7 +338,7 @@ public class NodeLifecycleService {
 		boolean hasCert = !isBlank(certLine);
 		boolean hasPin = !isBlank(pinLine);
 		if (!hasCert && !hasPin) {
-			// §9.3: never TOFU — the Gateway verifies the node's host identity on the inner
+			// Never TOFU — the Gateway verifies the node's host identity on the inner
 			// leg whichever connector reached it, so BOTH kinds need an enrollment-anchored
 			// identity (a host-CA cert or an explicitly pinned host key).
 			return invalid("a host certificate or a pinned host key is required (no TOFU)");

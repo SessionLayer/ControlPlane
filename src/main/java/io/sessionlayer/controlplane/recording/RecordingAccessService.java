@@ -174,7 +174,7 @@ public class RecordingAccessService {
 			detail.put("worm_mode", ref.wormMode());
 		}
 		// Replay/export inherit the session's access model, node-label snapshot and
-		// FR-AUD-9 correlation key, so a (node-label-scoped) correlation_id search
+		// correlation key, so a (node-label-scoped) correlation_id search
 		// reconstructs the chain through to the replay — not just the connect event.
 		return audit.record(AuditRecord.builder(subject.identity(), ref.id().toString(), action, "success")
 				.session(ref.sessionId()).node(session.nodeId()).detail(detail).accessModel(session.accessModel())
