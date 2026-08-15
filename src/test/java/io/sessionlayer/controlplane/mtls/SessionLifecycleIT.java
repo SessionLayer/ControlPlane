@@ -321,8 +321,7 @@ class SessionLifecycleIT extends AbstractMtlsIT {
 
 	private UUID seedProdNode() {
 		ObjectNode labels = JSON.objectNode().put("env", "prod");
-		return nodes.save(Node.create("node-" + unique(), null, labels, "agent", "active", "healthy", null, null))
-				.map(Node::id).block();
+		return nodes.save(Node.create("node-" + unique(), null, labels, "agent", "active", null)).map(Node::id).block();
 	}
 
 	private void seedAllow(String identity, UUID nodeId) {

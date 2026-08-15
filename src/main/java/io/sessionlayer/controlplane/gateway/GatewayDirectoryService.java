@@ -4,7 +4,7 @@ import io.r2dbc.spi.Row;
 import io.r2dbc.spi.RowMetadata;
 import io.sessionlayer.controlplane.audit.AuditEventStore;
 import io.sessionlayer.controlplane.data.runtime.GatewayIdentityRepository;
-import io.sessionlayer.controlplane.ha.HaProperties;
+import io.sessionlayer.controlplane.ha.PresenceFreshness;
 import io.sessionlayer.controlplane.web.ApiProblemException;
 import io.sessionlayer.controlplane.web.CursorPages;
 import java.time.Instant;
@@ -59,15 +59,15 @@ public class GatewayDirectoryService {
 
 	private final GatewayIdentityRepository gatewayIdentities;
 	private final DatabaseClient db;
-	private final HaProperties haProperties;
+	private final PresenceFreshness presenceFreshness;
 	private final AuditEventStore audit;
 	private final TransactionalOperator tx;
 
 	public GatewayDirectoryService(GatewayIdentityRepository gatewayIdentities, DatabaseClient db,
-			HaProperties haProperties, AuditEventStore audit, TransactionalOperator tx) {
+			PresenceFreshness presenceFreshness, AuditEventStore audit, TransactionalOperator tx) {
 		this.gatewayIdentities = gatewayIdentities;
 		this.db = db;
-		this.haProperties = haProperties;
+		this.presenceFreshness = presenceFreshness;
 		this.audit = audit;
 		this.tx = tx;
 	}
@@ -234,7 +234,7 @@ public class GatewayDirectoryService {
 	// owns anything a peer would not already take over, so it does not block a
 	// removal — the same window PresenceService uses to allow a takeover.
 	private Instant staleBefore() {
-		return Instant.now().minus(haProperties.getPresenceStaleness());
+		return presenceFreshness.staleBefore(Instant.now());
 	}
 
 	private static GatewayView view(Identity row, Map<String, PresenceSummary> presence) {

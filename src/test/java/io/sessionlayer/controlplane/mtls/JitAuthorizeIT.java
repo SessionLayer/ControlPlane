@@ -163,8 +163,7 @@ class JitAuthorizeIT extends AbstractMtlsIT {
 
 	private UUID seedNode(String zone) {
 		ObjectNode labels = JSON.objectNode().put("env", "prod").put("jitzone", zone);
-		return nodes.save(Node.create("node-" + unique(), null, labels, "agent", "active", "healthy", null, null))
-				.map(Node::id).block();
+		return nodes.save(Node.create("node-" + unique(), null, labels, "agent", "active", null)).map(Node::id).block();
 	}
 
 	private void seedZeroChainPolicy(String zone, int maxTtl) {

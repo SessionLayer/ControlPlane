@@ -17,6 +17,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.reactive.TransactionalOperator;
@@ -54,8 +55,11 @@ public class NodeLifecycleService {
 	private static final String STATUS_PENDING = "pending";
 	private static final String STATUS_QUARANTINED = "quarantined";
 	private static final String STATUS_REMOVED = "removed";
-	private static final String HEALTH_UNKNOWN = "unknown";
 	private static final String REVOKE_REASON = "node removed (credential revoked)";
+	// Names the two fields and what to look at, without echoing the column or
+	// constraint the database complained about.
+	private static final String UNSTORABLE_ANCHOR = "the hostCertificate / pinnedHostKey could not be recorded; "
+			+ "check its key type is one the platform accepts";
 
 	private final NodeRepository nodes;
 	private final NodeHostKeyRepository hostKeys;
@@ -90,8 +94,8 @@ public class NodeLifecycleService {
 		}
 		JsonNode resolvedLabels = (labels == null) ? objectMapper.createObjectNode() : labels;
 		String status = approvalRequired ? STATUS_PENDING : STATUS_ACTIVE;
-		Node node = Node.create(name, blankToNull(nodePolicyName), resolvedLabels, connector, status, HEALTH_UNKNOWN,
-				null, blankToNull(address));
+		Node node = Node.create(name, blankToNull(nodePolicyName), resolvedLabels, connector, status,
+				blankToNull(address));
 		Mono<Node> persisted = nodes.save(node)
 				.flatMap(
 						saved -> saveHostAnchors(saved.id(), hostCertificateLine, pinnedHostKeyLine)
@@ -99,15 +103,113 @@ public class NodeLifecycleService {
 										saved.id(), Map.of("name", name, "connector", connector, "status", status)))
 								.thenReturn(saved));
 		// The unique(name) constraint is the race-safe dedup — a concurrent duplicate
-		// insert surfaces as a CONFLICT rather than a pre-check TOCTOU.
-		return tx.transactional(persisted).onErrorMap(DuplicateKeyException.class,
-				dup -> conflict("a node named '" + name + "' is already registered"));
+		// insert surfaces as a CONFLICT rather than a pre-check TOCTOU. Any OTHER
+		// integrity failure on this path is an anchor the schema will not take (an
+		// unrecognised key type is the reachable one, since badHostLine checks the line
+		// SHAPE, not the type token) — 400 here because that is the status this
+		// published endpoint declares. Ordered after the DuplicateKey mapping, which it
+		// subsumes. Without it the failure reaches the client as a 500 carrying the
+		// column and constraint names.
+		return tx.transactional(persisted)
+				.onErrorMap(DuplicateKeyException.class,
+						dup -> conflict("a node named '" + name + "' is already registered"))
+				.onErrorMap(DataIntegrityViolationException.class, unstorable -> invalid(UNSTORABLE_ANCHOR));
+	}
+
+	/**
+	 * The node's current host anchors, ordered so the primary path reads first.
+	 * Empty is a real answer, and the diagnosis for a node whose every session
+	 * aborts.
+	 */
+	public Flux<NodeHostKey> hostAnchors(UUID nodeId) {
+		return nodes.findById(nodeId).switchIfEmpty(Mono.error(notFound(nodeId)))
+				.flatMapMany(node -> hostKeys.findByNodeId(node.id()).sort(BY_SOURCE_THEN_CREATED));
+	}
+
+	/**
+	 * Replace the node's whole anchor set in one transaction. This is the repair
+	 * path for a node that has none — {@code AgentEnrollmentService} auto-creates a
+	 * node when an Agent joins a name nobody registered, and that node is
+	 * permanently unusable until an anchor is written — and it is equally the
+	 * host-key rotation path, which had no API at all: a re-keyed node's stored
+	 * anchor stops matching what it presents, and the Gateway then aborts every
+	 * session to it.
+	 *
+	 * <p>
+	 * Delete-then-insert inside the transaction, so no reader ever observes the
+	 * node anchorless or still trusting the superseded key — a rotation is one
+	 * atomic swap, and a rollback leaves the old anchors exactly as they were. A
+	 * concurrent session that has already been authorized keeps the material it was
+	 * handed; the next Authorize reads the new set.
+	 */
+	public Mono<List<NodeHostKey>> replaceHostAnchors(UUID nodeId, String hostCertificateLine, String pinnedHostKeyLine,
+			String actor) {
+		NodeRequestException rejection = validateAnchors(hostCertificateLine, pinnedHostKeyLine);
+		if (rejection != null) {
+			return Mono.error(rejection);
+		}
+		return nodes.findById(nodeId).switchIfEmpty(Mono.error(notFound(nodeId))).flatMap(node -> {
+			if (STATUS_REMOVED.equals(node.status())) {
+				// Removal is terminal and carries a covering teardown Lock: repairing a
+				// removed node's anchors would only make it look repairable.
+				return Mono.error(conflict("node " + nodeId + " is removed and cannot be repaired"));
+			}
+			return tx
+					.transactional(
+							hostKeys.deleteByNodeId(nodeId)
+									.flatMap(
+											replaced -> saveHostAnchors(nodeId, hostCertificateLine, pinnedHostKeyLine)
+													.then(hostKeys.findByNodeId(nodeId).sort(BY_SOURCE_THEN_CREATED)
+															.collectList())
+													.flatMap(anchors -> audit.record(actor, nodeId.toString(),
+															"node.host_anchors.replace", "success", null, nodeId,
+															Map.of("replaced", Integer.toString(replaced), "sources",
+																	String.join(",", sourcesOf(anchors))))
+															.thenReturn(anchors))))
+					// Same guard as registration, at this endpoint's declared status: an anchor
+					// the schema will not take is unprocessable content, never a 500.
+					.onErrorMap(DataIntegrityViolationException.class, unstorable -> unprocessable(UNSTORABLE_ANCHOR));
+		});
+	}
+
+	private static List<String> sourcesOf(List<NodeHostKey> anchors) {
+		return anchors.stream().map(NodeHostKey::source).toList();
+	}
+
+	// The host-CA certificate is the primary path and the pinned key the fallback,
+	// so a reader sees them in that order; created_at breaks ties
+	// deterministically.
+	private static final java.util.Comparator<NodeHostKey> BY_SOURCE_THEN_CREATED = java.util.Comparator
+			.comparing((NodeHostKey key) -> "host_ca".equals(key.source()) ? 0 : 1)
+			.thenComparing(NodeHostKey::createdAt, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()));
+
+	// An empty anchor set is refused rather than accepted as "clear the anchors":
+	// a node with none does not fall back to trust-on-first-use, it stops working.
+	// Line validation reuses the registration validator so there is exactly one
+	// definition of a well-formed anchor; only the status differs, because the
+	// anchors contract states these as 422.
+	private static NodeRequestException validateAnchors(String certLine, String pinLine) {
+		boolean hasCert = !isBlank(certLine);
+		boolean hasPin = !isBlank(pinLine);
+		if (!hasCert && !hasPin) {
+			return unprocessable("a host certificate or a pinned host key is required (no TOFU)");
+		}
+		NodeRequestException certRejection = hasCert ? badHostLine(certLine, "hostCertificate") : null;
+		if (certRejection != null) {
+			return unprocessable(certRejection.getMessage());
+		}
+		NodeRequestException pinRejection = hasPin ? badHostLine(pinLine, "pinnedHostKey") : null;
+		return pinRejection == null ? null : unprocessable(pinRejection.getMessage());
 	}
 
 	private Mono<Void> saveHostAnchors(UUID nodeId, String hostCertificateLine, String pinnedHostKeyLine) {
 		Flux<NodeHostKey> rows = Flux.empty();
 		if (!isBlank(hostCertificateLine)) {
 			String line = hostCertificateLine.trim();
+			// A host-CA anchor carries no public key and no fingerprint by construction:
+			// its trust is the CA signature over the certificate, not a fingerprint
+			// comparison. Computing one would satisfy the column and mislead the operator
+			// who compared it against what the node reports.
 			rows = rows.concatWith(
 					Mono.just(NodeHostKey.create(nodeId, keyTypeOf(line), null, null, line, "host_ca", null)));
 		}
@@ -275,8 +377,7 @@ public class NodeLifecycleService {
 
 	private static Node withStatus(Node node, String status, String reason, String actor, Instant now) {
 		return new Node(node.id(), node.name(), node.nodePolicyName(), node.resolvedLabels(), node.connectorKind(),
-				status, node.health(), node.owningGateway(), node.address(), reason, actor, now, node.version(),
-				node.createdAt(), node.updatedAt());
+				status, node.address(), reason, actor, now, node.version(), node.createdAt(), node.updatedAt());
 	}
 
 	private ObjectNode nodeSelector(UUID nodeId) {
@@ -404,5 +505,9 @@ public class NodeLifecycleService {
 
 	private static NodeRequestException conflict(String message) {
 		return new NodeRequestException(NodeRequestException.Reason.CONFLICT, message);
+	}
+
+	private static NodeRequestException unprocessable(String message) {
+		return new NodeRequestException(NodeRequestException.Reason.UNPROCESSABLE, message);
 	}
 }

@@ -246,8 +246,7 @@ class NodeCrudIT extends AbstractAuthIT {
 	void removingAnAgentNodeRevokesItsCredential() {
 		String admin = "svc-node-revoke-" + unique();
 		String token = tokenWith(admin, PlatformPermissions.NODE_REMOVE);
-		Node node = nodes.save(
-				Node.create("agent-" + unique(), null, JSON.objectNode(), "agent", "active", "healthy", null, null))
+		Node node = nodes.save(Node.create("agent-" + unique(), null, JSON.objectNode(), "agent", "active", null))
 				.block();
 		agentIdentities.save(AgentIdentity.create(node.id(), "mtls:seed-" + unique(), "SHA256:seed", 0, "token",
 				"active", Instant.now(), Instant.now().plus(24, ChronoUnit.HOURS))).block();

@@ -42,11 +42,11 @@ protos) so regenerating never touches a consumer repo's build.
 
 ### Regenerating the golden
 
-`framegen` is a manual dev tool and does not run in CI, so **nothing detects a
-stale `frames.json`**: if a proto changes and the golden is not regenerated, both
-Rust repos vendor the old bytes and both conformance suites pass against it.
 Regenerate whenever you change a proto in this directory's inputs, and review the
-`frames.json` diff in the same commit as the proto change.
+`frames.json` diff in the same commit as the proto change. The `gate` job
+regenerates the golden itself and fails if the committed file differs, so a proto
+change that lands without a regeneration is caught here — rather than by both Rust
+repos vendoring the old bytes and both conformance suites passing against them.
 
 ### What each repo asserts (portable, no field-construction glue)
 

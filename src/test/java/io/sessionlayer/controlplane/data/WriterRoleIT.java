@@ -94,11 +94,13 @@ class WriterRoleIT extends AbstractDataIT {
 				null, null, null, null, null, null)).block();
 		assertThat(audits.findById(e.id()).block()).isNotNull();
 
-		var n = nodes.save(Node.create("writer-role-node", null, objectMapper.readTree("{}"), "agentless", "active",
-				"healthy", null, "10.9.9.9")).block();
-		var updated = nodes.save(new Node(n.id(), n.name(), n.nodePolicyName(), n.resolvedLabels(), n.connectorKind(),
-				"quarantined", n.health(), n.owningGateway(), n.address(), "manual", "admin@x", Instant.now(),
-				n.version(), n.createdAt(), n.updatedAt())).block();
+		var n = nodes.save(
+				Node.create("writer-role-node", null, objectMapper.readTree("{}"), "agentless", "active", "10.9.9.9"))
+				.block();
+		var updated = nodes.save(
+				new Node(n.id(), n.name(), n.nodePolicyName(), n.resolvedLabels(), n.connectorKind(), "quarantined",
+						n.address(), "manual", "admin@x", Instant.now(), n.version(), n.createdAt(), n.updatedAt()))
+				.block();
 		assertThat(updated.status()).isEqualTo("quarantined");
 	}
 }

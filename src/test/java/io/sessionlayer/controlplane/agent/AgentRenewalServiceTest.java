@@ -211,7 +211,7 @@ class AgentRenewalServiceTest {
 	}
 
 	private static Node node(String name) {
-		return new Node(NODE, name, null, JsonMapper.builder().build().createObjectNode(), "agent", "active", "unknown",
-				null, null, null, null, null, 0L, Instant.now(), Instant.now());
+		return new Node(NODE, name, null, JsonMapper.builder().build().createObjectNode(), "agent", "active", null,
+				null, null, null, 0L, Instant.now(), Instant.now());
 	}
 }

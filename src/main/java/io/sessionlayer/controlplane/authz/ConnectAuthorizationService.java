@@ -30,7 +30,7 @@ import io.sessionlayer.controlplane.data.runtime.SessionLeaseRepository;
 import io.sessionlayer.controlplane.data.runtime.SshSession;
 import io.sessionlayer.controlplane.data.runtime.SshSessionRepository;
 import io.sessionlayer.controlplane.gateway.SessionSigningTokenService;
-import io.sessionlayer.controlplane.ha.HaProperties;
+import io.sessionlayer.controlplane.ha.PresenceFreshness;
 import io.sessionlayer.controlplane.jit.JitLifecycleService;
 import io.sessionlayer.controlplane.observability.SloMetrics;
 import io.sessionlayer.controlplane.recording.RecordingTokenService;
@@ -93,7 +93,7 @@ public class ConnectAuthorizationService {
 	private final AuditEventStore audit;
 	private final AuthzProperties properties;
 	private final PresenceRepository presence;
-	private final HaProperties haProperties;
+	private final PresenceFreshness presenceFreshness;
 	private final SloMetrics metrics;
 	private final ObjectMapper objectMapper;
 	private final TransactionalOperator tx;
@@ -108,8 +108,8 @@ public class ConnectAuthorizationService {
 			RecordingTokenService recordingTokens, JitLifecycleService jit, BreakglassTokenService breakglassTokens,
 			BreakglassActivationRepository breakglassActivations, BreakglassPolicyRepository breakglassPolicies,
 			BreakglassProperties breakglassProperties, AuditEventStore audit, AuthzProperties properties,
-			PresenceRepository presence, HaProperties haProperties, SloMetrics metrics, ObjectMapper objectMapper,
-			TransactionalOperator tx, DatabaseClient db) {
+			PresenceRepository presence, PresenceFreshness presenceFreshness, SloMetrics metrics,
+			ObjectMapper objectMapper, TransactionalOperator tx, DatabaseClient db) {
 		this.nodes = nodes;
 		this.hostKeys = hostKeys;
 		this.caRotation = caRotation;
@@ -133,7 +133,7 @@ public class ConnectAuthorizationService {
 		this.audit = audit;
 		this.properties = properties;
 		this.presence = presence;
-		this.haProperties = haProperties;
+		this.presenceFreshness = presenceFreshness;
 		this.metrics = metrics;
 		this.objectMapper = objectMapper;
 		this.tx = tx;
@@ -142,7 +142,7 @@ public class ConnectAuthorizationService {
 
 	public Mono<ConnectDecision> authorize(UUID callerGatewayId, String presentedFingerprint, String identity,
 			List<String> groups, UUID nodeId, String nodeName, String requestedPrincipal, String sourceIp,
-			UUID sessionId, String breakglassToken) {
+			UUID sessionId, String breakglassToken, List<String> credentialPrincipals) {
 		boolean hasName = !isBlank(nodeName);
 		// The connect decision requires a concrete authenticated caller, target,
 		// session, resolved identity, and requested login — the target is resolvable by
@@ -168,7 +168,7 @@ public class ConnectAuthorizationService {
 				.flatMap(
 						gw -> resolved
 								.flatMap(node -> decide(callerGatewayId, identity, groups, node, requestedPrincipal,
-										sourceIp, sessionId, breakglassToken))
+										sourceIp, sessionId, breakglassToken, credentialPrincipals))
 								.switchIfEmpty(auditDeny(callerGatewayId, identity, nodeId, sourceIp,
 										DataPlaneDecision.deny(DataPlaneDecision.Reason.NO_MATCHING_ALLOW, null, null),
 										"node_unknown", null, null).thenReturn(ConnectDecision.denied())))
@@ -199,7 +199,8 @@ public class ConnectAuthorizationService {
 	}
 
 	private Mono<ConnectDecision> decide(UUID callerGatewayId, String identity, List<String> groups, Node node,
-			String requestedPrincipal, String sourceIp, UUID sessionId, String breakglassToken) {
+			String requestedPrincipal, String sourceIp, UUID sessionId, String breakglassToken,
+			List<String> credentialPrincipals) {
 		// Only an ACTIVE node is a valid target. A pending / quarantined / removed
 		// node is denied with the SAME generic deny as an unknown node
 		// (non-disclosure); the specific status is recorded server-side. This gate
@@ -209,6 +210,18 @@ public class ConnectAuthorizationService {
 			return auditDeny(callerGatewayId, identity, node.id(), sourceIp,
 					DataPlaneDecision.deny(DataPlaneDecision.Reason.NO_MATCHING_ALLOW, null, null),
 					"node_" + node.status(), null, null).thenReturn(ConnectDecision.denied());
+		}
+		// The outer-leg credential's own login scope, applied FIRST and deny-only: it
+		// can never widen a decision, so it costs nothing to evaluate before grants,
+		// JIT and break-glass — and a scoped credential stays scoped even on a
+		// break-glass connect. The Gateway applies the same reduction locally before
+		// it ever calls here; sending the scope is what makes the refusal reach the
+		// decision log, which is the whole point. The caller still sees only the
+		// generic deny.
+		if (outsideCredentialScope(credentialPrincipals, requestedPrincipal)) {
+			return auditDeny(callerGatewayId, identity, node.id(), sourceIp,
+					DataPlaneDecision.deny(DataPlaneDecision.Reason.PRINCIPAL_NOT_ALLOWED, null, null),
+					"credential_principal_scope", null, null).thenReturn(ConnectDecision.denied());
 		}
 		Mono<Long> epochMono = policyEpochs.findSingleton().map(e -> e.epoch()).defaultIfEmpty(0L);
 		Mono<String> gwNameMono = gatewayIdentities.findById(callerGatewayId).map(g -> g.name())
@@ -711,13 +724,16 @@ public class ConnectAuthorizationService {
 			List<byte[]> caKeys, List<String> principals, List<byte[]> pinned, List<byte[]> hostCerts) {
 		NodeConnectionInfo info = new NodeConnectionInfo(model, node.name(), dial, caKeys, principals, pinned,
 				hostCerts);
-		// An agentless node with no host-CA anchor and no pinned key has no
-		// enrollment-anchored trust — the Gateway aborts (no TOFU). The
-		// decision still ALLOWs; warn so the operator repairs the enrollment.
-		if (model == NodeConnectionInfo.ConnectorModel.AGENTLESS && !info.hasHostVerification()) {
-			LOG.warn("agentless node {} ({}) has no host-verification material (no host_ca keys, no pinned host "
-					+ "keys); the Gateway will abort the session (no TOFU) — enroll a host cert or pin a host key",
-					node.id(), node.name());
+		// A node with no host-CA anchor and no pinned key has no enrollment-anchored
+		// trust — the Gateway aborts (no TOFU) whichever connector reaches it, so the
+		// warning covers both kinds: an agent node auto-created by a join has no
+		// anchor at all until one is PUT. The decision still ALLOWs; warn so the
+		// operator repairs the enrollment.
+		if (!info.hasHostVerification()) {
+			LOG.warn(
+					"{} node {} ({}) has no host-verification material (no host_ca keys, no pinned host keys); "
+							+ "the Gateway will abort the session (no TOFU) — enroll a host cert or pin a host key",
+					node.connectorKind(), node.id(), node.name());
 		}
 		return info;
 	}
@@ -733,8 +749,8 @@ public class ConnectAuthorizationService {
 		if (info.connectorKind() != NodeConnectionInfo.ConnectorModel.OUTBOUND_AGENT) {
 			return Mono.just(info);
 		}
-		Instant staleBefore = Instant.now().minus(haProperties.getPresenceStaleness());
-		return presence.findById(node.id()).filter(owner -> owner.lastSeen().isAfter(staleBefore)).map(owner -> info
+		Instant now = Instant.now();
+		return presence.findById(node.id()).filter(owner -> presenceFreshness.isFresh(owner, now)).map(owner -> info
 				.withOwner(owner.owningGateway(), owner.gatewayAddr(), owner.nonce(), owner.nonceId().toString()))
 				.defaultIfEmpty(info);
 	}
@@ -853,6 +869,14 @@ public class ConnectAuthorizationService {
 
 	private static String actor(UUID callerGatewayId) {
 		return callerGatewayId == null ? "unknown" : callerGatewayId.toString();
+	}
+
+	// An EMPTY scope means the credential is unscoped, not that it permits
+	// nothing — the wire cannot distinguish "no scope" from "an empty scope", and
+	// reading absence as a total refusal would deny every unscoped connect.
+	private static boolean outsideCredentialScope(List<String> credentialPrincipals, String requestedPrincipal) {
+		return credentialPrincipals != null && !credentialPrincipals.isEmpty()
+				&& !credentialPrincipals.contains(requestedPrincipal);
 	}
 
 	private static boolean isBlank(String value) {

@@ -61,8 +61,8 @@ tags:
       because the device code is itself the authenticator.
   - name: nodes
     description: >-
-      Node lifecycle — agentless enrollment, listing, quarantine (a Lock),
-      and remove (deregister + agent-credential revoke).
+      Node lifecycle — agentless enrollment, listing, host-anchor repair,
+      quarantine (a Lock), and remove (deregister + agent-credential revoke).
       Platform-RBAC gated (`node:enroll`/`node:quarantine`/
       `node:remove`) and audited; provisioning is an API flow.
   - name: locks
@@ -395,6 +395,12 @@ paths:
     get:
       operationId: listPins
       summary: List pins for an identity (admin).
+      description: |
+        Lists one identity's ACTIVE pins — `identity` is required, so the surface is
+        never enumerable fleet-wide. This is what tells an operator which authN
+        shortcuts an identity still holds: a pin outlives the session it was created
+        for, so offboarding is incomplete until they are accounted for.
+        Platform-RBAC gated (`user:manage`).
       tags:
         - auth
       parameters:
@@ -420,7 +426,8 @@ paths:
       description: |
         Pins a public-key fingerprint to `{identity, source-cidr, principals}`
         with a TTL capped at the authorization TTL.
-        Source IP is a deny-only reducer. Platform-RBAC gated + audited.
+        Source IP is a deny-only reducer. Platform-RBAC gated (`user:manage`) +
+        audited.
       tags:
         - auth
       requestBody:
@@ -446,6 +453,12 @@ paths:
     delete:
       operationId: revokePin
       summary: Revoke a pin (admin / offboarding / lock).
+      description: |
+        Revokes one pin, so the shortcut it granted stops authenticating from the
+        next connect. The withdrawal half of the pin surface: because a pin
+        authenticates on its own, withdrawing an identity's access means withdrawing
+        its pins, not only its sessions. Platform-RBAC gated (`user:manage`) +
+        audited.
       tags:
         - auth
       parameters:
@@ -472,8 +485,8 @@ paths:
         Issues a rotatable, revocable credential for a service account:
         a `private_key_jwt` public-key/JWKS reference, an mTLS
         certificate fingerprint, or (discouraged) a generated `client_secret`
-        returned once. Stored hashed / by reference. Platform-RBAC gated +
-        audited.
+        returned once. Stored hashed / by reference. Platform-RBAC gated
+        (`user:manage`) + audited.
       tags:
         - auth
       parameters:
@@ -506,7 +519,11 @@ paths:
     delete:
       operationId: revokeServiceAccountCredential
       summary: Revoke a machine-consumer credential (admin).
-      description: Revocation takes effect immediately (new sessions denied).
+      description: |
+        Revocation takes effect immediately (new sessions denied). The service
+        account itself survives — this withdraws one credential, so a compromised
+        key is retired without deleting the consumer that holds the rest.
+        Platform-RBAC gated (`user:manage`) + audited.
       tags:
         - auth
       parameters:
@@ -931,6 +948,87 @@ paths:
           $ref: '#/components/responses/Problem'
         default:
           $ref: '#/components/responses/Problem'
+  /v1/nodes/{nodeId}/host-anchors:
+    parameters:
+      - name: nodeId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getNodeHostAnchors
+      summary: Get a node's host-identity anchors (admin).
+      description: |
+        Returns the node's current host-identity anchors — the host-CA-signed host
+        certificate and the pinned host keys the Gateway verifies the node's
+        presented host identity against before any inner-leg auth. Public material
+        only; an anchor is a certificate or a public key and has no private half to
+        withhold. An EMPTY anchor list is the diagnosis for a node whose every
+        session aborts: the Gateway never TOFUs, so a node it cannot verify is one
+        it refuses. Platform-RBAC gated (`node:enroll`), the permission that writes
+        the same anchors at registration.
+      tags:
+        - nodes
+      responses:
+        '200':
+          description: The node's current anchors.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodeHostAnchors'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+    put:
+      operationId: replaceNodeHostAnchors
+      summary: Replace a node's host-identity anchors (admin).
+      description: |
+        Replaces the node's anchor set atomically: what is sent becomes the node's
+        whole anchor set and whatever was recorded before is dropped in the same
+        transaction, so no window exists in which the node is anchorless or still
+        trusts a superseded key. This is the repair path for a node that has NO
+        anchor — an Agent joining under a name nobody registered has its node
+        auto-created without one, and every session to it then aborts on host
+        verification. At least one of `hostCertificate` / `pinnedHostKey` is
+        required; an empty anchor set is rejected (`422`), because a node with no
+        anchor does not fall back to trust-on-first-use, it stops working. A
+        malformed key or certificate line is likewise a `422`. A full replace, so it
+        is idempotent by desired state. Refused (`409`) for a `removed` node:
+        removal is terminal, and a removed node is not repaired but replaced by a
+        fresh registration under a new name. Platform-RBAC gated (`node:enroll`) — the
+        same permission that writes these anchors during registration, because this
+        writes exactly what registration writes — and audited.
+      tags:
+        - nodes
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NodeHostAnchorsRequest'
+      responses:
+        '200':
+          description: The node's anchors after the replace.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodeHostAnchors'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
   /v1/jit-requests:
     get:
       operationId: listJitRequests
@@ -996,6 +1094,11 @@ paths:
     get:
       operationId: getJitRequest
       summary: Get a JIT request (admin).
+      description: |
+        Returns one JIT request with its current state and the approval chain
+        snapshotted at submission — what an approver reads before deciding, and what
+        an auditor reads afterwards to see the chain as it stood, not as the policy
+        has since been edited. Platform-RBAC gated (`request:approve`).
       tags:
         - jit-requests
       parameters:
@@ -4909,6 +5012,21 @@ components:
             - healthy
             - unhealthy
             - unreachable
+          description: >-
+            Computed per request from `runtime.presence` and the node's host
+            anchors — not stored, and never set by a client. `unhealthy` wins over
+            everything below it and means the node has NO enrollment-anchored host
+            identity: neither a host certificate nor a pinned host key, so it is
+            enrolled but unusable, and the Gateway aborts every session to it rather
+            than trust a host it cannot verify. Repair it with
+            `PUT /v1/nodes/{nodeId}/host-anchors`. Otherwise, for an `agent` node:
+            `healthy` while a Gateway holds its control channel (a presence heartbeat
+            inside the staleness window), `unreachable` once a Gateway held it and
+            the heartbeat has gone stale, and `unknown` when no Gateway has ever
+            claimed it — the Agent has not joined yet. For an `agentless` node it is
+            ALWAYS `unknown`, which reports nothing wrong: the Control Plane holds no
+            continuous liveness signal for a node it dials on demand, and runs no
+            probe of its own.
         address:
           type: string
         labels:
@@ -4917,7 +5035,13 @@ components:
             type: string
         owningGateway:
           type: string
-          description: The Gateway currently owning the node's agent control channel (agent model); absent otherwise.
+          description: >-
+            The name of the Gateway currently holding the node's agent control
+            channel, computed per request from a FRESH `runtime.presence` heartbeat —
+            not stored. A heartbeat outside the staleness window means nobody owns the
+            node, and the field is then absent; it is absent for an `agentless` node
+            too, which has no owner because any Gateway dials it directly. Read-only
+            and derived: a client never sets it.
         statusReason:
           type: string
         statusChangedBy:
@@ -4942,6 +5066,74 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/NodeResource'
+      additionalProperties: false
+    NodeHostAnchorsRequest:
+      type: object
+      title: Node Host Anchors Request
+      description: |
+        A node's replacement host-identity anchor set. At least one of
+        `hostCertificate` / `pinnedHostKey` is required; an empty set is a `422`,
+        because a node with no anchor is one the Gateway can never verify and never
+        TOFUs. Both may be sent: the host-CA path is authoritative and the pinned key
+        is the fallback for a node that presents a plain host key.
+      minProperties: 1
+      properties:
+        hostCertificate:
+          type: string
+          description: The node's host-CA-signed OpenSSH host certificate line, `<type> <base64>` (the primary host-identity anchor).
+        pinnedHostKey:
+          type: string
+          description: An explicitly pinned OpenSSH host public-key line, `<type> <base64>` (the fallback anchor when the node presents a plain host key).
+      additionalProperties: false
+    NodeHostAnchors:
+      type: object
+      title: Node Host Anchors
+      description: >-
+        A node's current host-identity anchors. `anchors` is empty for a node that
+        has none — the state in which the Gateway aborts every session to it.
+      required:
+        - nodeId
+        - anchors
+      properties:
+        nodeId:
+          type: string
+          format: uuid
+        anchors:
+          type: array
+          items:
+            $ref: '#/components/schemas/NodeHostAnchor'
+      additionalProperties: false
+    NodeHostAnchor:
+      type: object
+      title: Node Host Anchor
+      description: One recorded host-identity anchor. Public material only — a certificate or a public key, never a private half.
+      required:
+        - source
+        - keyType
+      properties:
+        source:
+          type: string
+          enum:
+            - host_ca
+            - pinned_key
+          description: >-
+            Which verification path the anchor serves: `host_ca` is the node's
+            host-CA-signed certificate (primary), `pinned_key` an explicitly pinned
+            public key (the fallback when the node presents a plain host key).
+        keyType:
+          type: string
+          description: The anchor's OpenSSH key type (e.g. `ssh-ed25519`, `ecdsa-sha2-nistp256`).
+        fingerprint:
+          type: string
+          description: >-
+            The OpenSSH `SHA256:` fingerprint of the anchor's public key — what an
+            operator compares against the key the node reports. Absent for a
+            `host_ca` anchor recorded from a certificate line alone, whose trust
+            comes from the CA signature rather than from a fingerprint comparison.
+        recordedAt:
+          type: string
+          format: date-time
+          description: When the anchor was recorded — node registration, or the last replace.
       additionalProperties: false
     JitRequestSubmission:
       type: object

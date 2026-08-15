@@ -201,8 +201,9 @@ class AgentJoinLifecycleIT extends AbstractMtlsIT {
 
 	@Test
 	void aLockCoveringTheNodeRefusesEnroll() {
-		Node node = nodes.save(Node.create("node-locked", null, JsonNodeFactory.instance.objectNode(), "agent",
-				"active", "unknown", null, null)).block();
+		Node node = nodes
+				.save(Node.create("node-locked", null, JsonNodeFactory.instance.objectNode(), "agent", "active", null))
+				.block();
 		ObjectNode selector = JsonNodeFactory.instance.objectNode();
 		selector.putArray("node_ids").add(node.id().toString());
 		accessLocks.save(AccessLock.create(selector, "strict", null, null, "incident", "test-admin")).block();
@@ -218,7 +219,7 @@ class AgentJoinLifecycleIT extends AbstractMtlsIT {
 	@Test
 	void enrollRefusesANodeRegisteredForTheAgentlessConnector() {
 		Node node = nodes.save(Node.create("node-agentless-join", null, JsonNodeFactory.instance.objectNode(),
-				"agentless", "active", "unknown", null, "10.0.0.5:22")).block();
+				"agentless", "active", "10.0.0.5:22")).block();
 
 		StatusRuntimeException refused = catchThrowableOfType(StatusRuntimeException.class,
 				() -> submit(tokenRequest("node-agentless-join", mintToken("node-agentless-join"))));
@@ -237,8 +238,9 @@ class AgentJoinLifecycleIT extends AbstractMtlsIT {
 	// anchored, rather than creating a second, anchorless one.
 	@Test
 	void enrollAttachesToAPreRegisteredAgentNode() {
-		Node node = nodes.save(Node.create("node-preregistered", null, JsonNodeFactory.instance.objectNode(), "agent",
-				"active", "unknown", null, null)).block();
+		Node node = nodes.save(
+				Node.create("node-preregistered", null, JsonNodeFactory.instance.objectNode(), "agent", "active", null))
+				.block();
 
 		EnrolledAgent agent = enrollToken("node-preregistered");
 

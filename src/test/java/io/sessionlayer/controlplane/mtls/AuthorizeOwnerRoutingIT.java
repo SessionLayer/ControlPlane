@@ -131,15 +131,12 @@ class AuthorizeOwnerRoutingIT extends AbstractMtlsIT {
 
 	private Node seedAgentNode() {
 		ObjectNode labels = JSON.objectNode().put("env", "prod");
-		return nodes.save(Node.create("web-" + unique(), null, labels, "agent", "active", "healthy", null, null))
-				.block();
+		return nodes.save(Node.create("web-" + unique(), null, labels, "agent", "active", null)).block();
 	}
 
 	private Node seedAgentlessNode(String address) {
 		ObjectNode labels = JSON.objectNode().put("env", "prod");
-		return nodes
-				.save(Node.create("host-" + unique(), null, labels, "agentless", "active", "healthy", null, address))
-				.block();
+		return nodes.save(Node.create("host-" + unique(), null, labels, "agentless", "active", address)).block();
 	}
 
 	private void seedAllow(String identity, UUID nodeId) {

@@ -17,7 +17,13 @@ public class NodeRequestException extends RuntimeException {
 		/** The node id does not exist — 404. */
 		NOT_FOUND,
 		/** A node with that name is already registered — 409. */
-		CONFLICT
+		CONFLICT,
+		/**
+		 * Well-formed request, unusable content — an empty or malformed anchor set on a
+		 * host-anchor replace — 422. Distinct from INVALID_ARGUMENT because the anchors
+		 * contract states these as {@code 422}.
+		 */
+		UNPROCESSABLE
 	}
 
 	private final Reason reason;

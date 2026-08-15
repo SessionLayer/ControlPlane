@@ -124,8 +124,7 @@ class AuthorizeNodeIT extends AbstractMtlsIT {
 
 	private UUID seedProdNode(String jitZone) {
 		ObjectNode labels = JSON.objectNode().put("env", "prod").put("jitzone", jitZone);
-		return nodes.save(Node.create("node-" + unique(), null, labels, "agent", "active", "healthy", null, null))
-				.map(Node::id).block();
+		return nodes.save(Node.create("node-" + unique(), null, labels, "agent", "active", null)).map(Node::id).block();
 	}
 
 	private void seedAllow(String identity, String principal, List<String> capabilities) {

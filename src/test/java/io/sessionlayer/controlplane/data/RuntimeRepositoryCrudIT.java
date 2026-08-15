@@ -67,7 +67,7 @@ class RuntimeRepositoryCrudIT extends AbstractDataIT {
 
 	private Node newNode(String name) {
 		return nodes.save(Node.create(name, "policy-x", objectMapper.readTree("{\"env\":\"prod\"}"), "agent", "active",
-				"healthy", "gw-1", "10.0.0.5:22")).block();
+				"10.0.0.5:22")).block();
 	}
 
 	@Test
