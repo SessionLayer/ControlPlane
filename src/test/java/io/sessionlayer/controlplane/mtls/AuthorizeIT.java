@@ -140,6 +140,71 @@ class AuthorizeIT extends AbstractMtlsIT {
 		assertThat(deny.detail().get("source_ip").stringValue()).isEqualTo("16909060");
 	}
 
+	// The Gateway refuses an out-of-scope login locally before it ever calls
+	// Authorize, so this refusal was invisible to the decision log — the client
+	// could not tell the denials apart (intended) and neither could the auditor
+	// (not intended).
+	@Test
+	void aLoginOutsideTheCredentialsScopeIsDeniedAndTheRefusalIsAuditable() {
+		String identity = "credscope-" + unique();
+		UUID nodeId = seedProdNode();
+		seedAllow(identity, nodeId, List.of("deploy", "ops"), List.of("shell"));
+		EnrolledGateway gateway = enroll("gw-credscope-" + unique());
+
+		// Deny-only: a login inside the scope, and an empty scope (an unscoped
+		// credential), are both exactly as they were.
+		assertThat(authorize(gateway, scoped(identity, nodeId, "deploy", List.of("deploy"))).getDecision())
+				.isEqualTo(Decision.DECISION_ALLOW);
+		assertThat(authorize(gateway, scoped(identity, nodeId, "ops", List.of())).getDecision())
+				.isEqualTo(Decision.DECISION_ALLOW);
+
+		// RBAC allows 'ops', but the presented credential is scoped to 'deploy'.
+		AuthorizeResponse refused = authorize(gateway, scoped(identity, nodeId, "ops", List.of("deploy")));
+
+		// The client-facing answer is unchanged: the same generic deny every other
+		// refusal returns, with nothing else populated.
+		assertThat(refused.getDecision()).isEqualTo(Decision.DECISION_DENY);
+		assertThat(refused.hasContext()).isFalse();
+		assertThat(refused.hasNodeConnection()).isFalse();
+		assertThat(refused.getSessionToken()).isEmpty();
+		assertThat(refused.getRecordingToken()).isEmpty();
+
+		AuditEvent deny = lastDenial(identity);
+		assertThat(deny.detail().get("note").stringValue()).isEqualTo("credential_principal_scope");
+		assertThat(deny.detail().get("reason").stringValue()).isEqualTo("PRINCIPAL_NOT_ALLOWED");
+	}
+
+	// The reducer runs BEFORE the break-glass path: a scoped credential stays
+	// scoped even on a break-glass connect. Proven by the note — an unusable token
+	// reaching the break-glass branch would have recorded breakglass_token_invalid
+	// instead, so this pins the ORDER, not just the outcome.
+	@Test
+	void theCredentialScopeIsAppliedBeforeBreakglass() {
+		String identity = "credscope-bg-" + unique();
+		UUID nodeId = seedProdNode();
+		seedAllow(identity, nodeId, List.of("ops"), List.of("shell"));
+		EnrolledGateway gateway = enroll("gw-credscope-bg-" + unique());
+
+		AuthorizeResponse refused = authorize(gateway, scoped(identity, nodeId, "ops", List.of("deploy")).toBuilder()
+				.setBreakglassToken("bg-" + unique()).build());
+		assertThat(refused.getDecision()).isEqualTo(Decision.DECISION_DENY);
+
+		AuditEvent deny = lastDenial(identity);
+		assertThat(deny.detail().get("note").stringValue()).isEqualTo("credential_principal_scope");
+	}
+
+	private AuditEvent lastDenial(String identity) {
+		return auditStore.search(new AuditQuery(null, identity, "authz.decision", "denied", null, null, null, null, null,
+				null, null, Map.of(), null, List.of(), null, 50)).block().items().stream().findFirst().orElseThrow();
+	}
+
+	private static AuthorizeRequest scoped(String identity, UUID nodeId, String principal,
+			List<String> credentialPrincipals) {
+		return AuthorizeRequest.newBuilder().setIdentity(identity).setNodeId(nodeId.toString())
+				.setRequestedPrincipal(principal).setSourceIp("203.0.113.7")
+				.setSessionId(UUID.randomUUID().toString()).addAllCredentialPrincipals(credentialPrincipals).build();
+	}
+
 	private List<UUID> searchIds(AuditQuery query) {
 		return auditStore.search(query).block().items().stream().map(AuditEvent::id).toList();
 	}

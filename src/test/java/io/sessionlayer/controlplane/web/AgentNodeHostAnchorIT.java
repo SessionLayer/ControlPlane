@@ -95,7 +95,7 @@ class AgentNodeHostAnchorIT extends AbstractAuthIT {
 
 		ConnectDecision decision = connectAuthorization.authorize(gateway.id(), gateway.fingerprint(), identity,
 				List.of(), UUID.fromString(created.get("id").toString()), null, "deploy", "10.0.0.5", UUID.randomUUID(),
-				null).block();
+				null, List.of()).block();
 
 		assertThat(decision.allowed()).withFailMessage(() -> "authorize denied: " + denyDetail(identity)).isTrue();
 		NodeConnectionInfo connection = decision.nodeConnection();

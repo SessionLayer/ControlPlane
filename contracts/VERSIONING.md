@@ -402,6 +402,36 @@ channel and must not carry a dial address; a request that supplies one is
 rejected. Optional, defaulting to `agentless`, so every existing caller is
 unaffected.
 
+**Decisions that were being taken outside the Control Plane** (gRPC stays `1.1`,
+wire stays `1.0`, URI major stays `v1`, `info.version` stays `0.1.0`) come back
+to it, and the two node fields that only ever claimed to be answers start being
+derived from something.
+
+1. **`AuthorizeRequest.credential_principals` (field 10)** — the logins the
+   presented outer-leg credential is scoped to. The Gateway reduces on this
+   locally BEFORE it calls `Authorize`, so a credential used for a login outside
+   its scope was refused with no decision record written at all and the refusal
+   was invisible to an auditor. Carrying the scope in the request lets the sole
+   decision authority take the decision and log it. DENY-ONLY, like `source_ip`:
+   it can suppress an allow, never widen one, and empty means unscoped. The
+   Gateway keeps its local reduction as a backstop, so a Gateway that omits the
+   field — an N-1 one, or a compromised one — cannot obtain an out-of-scope
+   allow; it forfeits the audit record, which is today's behaviour anyway.
+2. **OpenAPI `/v1/nodes/{nodeId}/host-anchors`** (`GET` + `PUT`) — the repair
+   path for a node with no host-identity anchor. An Agent that joins under a name
+   nobody registered has its node auto-created with neither a host certificate nor
+   a pinned host key; the Gateway never TOFUs, so every session to that node
+   aborts, and no API call could fix it — the only escape was to abandon the name.
+   `PUT` replaces the anchor set atomically and refuses an empty one. Gated
+   `node:enroll`, the permission that writes the same anchors at registration.
+3. **`NodeResource.health` and `owningGateway` are derived at read time** from
+   `runtime.presence` and the node's anchors, rather than stamped once and never
+   updated. An anchorless node is `unhealthy` whatever else is true of it; an
+   agent node is `healthy` / `unreachable` / `unknown` by how fresh its owner's
+   heartbeat is; an agentless node is always `unknown`, because the Control Plane
+   holds no liveness signal for a node it dials on demand. Descriptions only —
+   no property, type or enum member moves.
+
 ---
 
 ## 7. CP ↔ Gateway mTLS trust model

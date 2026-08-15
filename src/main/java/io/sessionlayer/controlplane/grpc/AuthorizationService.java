@@ -80,10 +80,16 @@ public class AuthorizationService extends AuthorizationGrpc.AuthorizationImplBas
 		// field.
 		// node_name (field 9) is server-side authoritative when set: the CP resolves it
 		// via findByName and ignores node_id.
+		// credential_principals (field 10) is the outer-leg credential's login scope,
+		// applied by the CP as a deny-only reducer. The Gateway already refuses an
+		// out-of-scope login locally, so this can never be the only thing standing
+		// between a caller and an allow — carrying it is what puts the refusal in the
+		// decision log.
 		Mono<ConnectDecision> decision = authorization.authorize(caller, callerFingerprint, request.getIdentity(),
 				request.getIdentityGroupsList(), parseUuid(request.getNodeId()), blankToNull(request.getNodeName()),
 				blankToNull(request.getRequestedPrincipal()), blankToNull(request.getSourceIp()),
-				parseUuid(request.getSessionId()), blankToNull(request.getBreakglassToken()));
+				parseUuid(request.getSessionId()), blankToNull(request.getBreakglassToken()),
+				request.getCredentialPrincipalsList());
 		// The establishment SLO times the CP machine work; the span makes it a child
 		// of the Gateway root. Both carry correlation only — never content.
 		Mono<AuthorizeResponse> result = tracing.traceAuthorize(traceParent, blankToNull(request.getSessionId()),

@@ -142,7 +142,7 @@ public class ConnectAuthorizationService {
 
 	public Mono<ConnectDecision> authorize(UUID callerGatewayId, String presentedFingerprint, String identity,
 			List<String> groups, UUID nodeId, String nodeName, String requestedPrincipal, String sourceIp,
-			UUID sessionId, String breakglassToken) {
+			UUID sessionId, String breakglassToken, List<String> credentialPrincipals) {
 		boolean hasName = !isBlank(nodeName);
 		// The connect decision requires a concrete authenticated caller, target,
 		// session, resolved identity, and requested login — the target is resolvable by
@@ -168,7 +168,7 @@ public class ConnectAuthorizationService {
 				.flatMap(
 						gw -> resolved
 								.flatMap(node -> decide(callerGatewayId, identity, groups, node, requestedPrincipal,
-										sourceIp, sessionId, breakglassToken))
+										sourceIp, sessionId, breakglassToken, credentialPrincipals))
 								.switchIfEmpty(auditDeny(callerGatewayId, identity, nodeId, sourceIp,
 										DataPlaneDecision.deny(DataPlaneDecision.Reason.NO_MATCHING_ALLOW, null, null),
 										"node_unknown", null, null).thenReturn(ConnectDecision.denied())))
@@ -199,7 +199,8 @@ public class ConnectAuthorizationService {
 	}
 
 	private Mono<ConnectDecision> decide(UUID callerGatewayId, String identity, List<String> groups, Node node,
-			String requestedPrincipal, String sourceIp, UUID sessionId, String breakglassToken) {
+			String requestedPrincipal, String sourceIp, UUID sessionId, String breakglassToken,
+			List<String> credentialPrincipals) {
 		// Only an ACTIVE node is a valid target. A pending / quarantined / removed
 		// node is denied with the SAME generic deny as an unknown node
 		// (non-disclosure); the specific status is recorded server-side. This gate
@@ -209,6 +210,18 @@ public class ConnectAuthorizationService {
 			return auditDeny(callerGatewayId, identity, node.id(), sourceIp,
 					DataPlaneDecision.deny(DataPlaneDecision.Reason.NO_MATCHING_ALLOW, null, null),
 					"node_" + node.status(), null, null).thenReturn(ConnectDecision.denied());
+		}
+		// The outer-leg credential's own login scope, applied FIRST and deny-only: it
+		// can never widen a decision, so it costs nothing to evaluate before grants,
+		// JIT and break-glass — and a scoped credential stays scoped even on a
+		// break-glass connect. The Gateway applies the same reduction locally before
+		// it ever calls here; sending the scope is what makes the refusal reach the
+		// decision log, which is the whole point. The caller still sees only the
+		// generic deny.
+		if (outsideCredentialScope(credentialPrincipals, requestedPrincipal)) {
+			return auditDeny(callerGatewayId, identity, node.id(), sourceIp,
+					DataPlaneDecision.deny(DataPlaneDecision.Reason.PRINCIPAL_NOT_ALLOWED, null, null),
+					"credential_principal_scope", null, null).thenReturn(ConnectDecision.denied());
 		}
 		Mono<Long> epochMono = policyEpochs.findSingleton().map(e -> e.epoch()).defaultIfEmpty(0L);
 		Mono<String> gwNameMono = gatewayIdentities.findById(callerGatewayId).map(g -> g.name())
@@ -856,6 +869,14 @@ public class ConnectAuthorizationService {
 
 	private static String actor(UUID callerGatewayId) {
 		return callerGatewayId == null ? "unknown" : callerGatewayId.toString();
+	}
+
+	// An EMPTY scope means the credential is unscoped, not that it permits
+	// nothing — the wire cannot distinguish "no scope" from "an empty scope", and
+	// reading absence as a total refusal would deny every unscoped connect.
+	private static boolean outsideCredentialScope(List<String> credentialPrincipals, String requestedPrincipal) {
+		return credentialPrincipals != null && !credentialPrincipals.isEmpty()
+				&& !credentialPrincipals.contains(requestedPrincipal);
 	}
 
 	private static boolean isBlank(String value) {
