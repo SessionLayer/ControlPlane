@@ -231,7 +231,7 @@ class NodeCrudIT extends AbstractAuthIT {
 		// Soft-remove: the row survives (status 'removed') but is excluded from the
 		// list.
 		assertThat(nodes.findById(UUID.fromString(id)).block().status()).isEqualTo("removed");
-		// Remove tears down in-flight sessions on an AGENTLESS node too (F4): a bare
+		// Remove tears down in-flight sessions on an AGENTLESS node too: a bare
 		// node Lock is pushed (there is no agent identity to revoke here).
 		assertThat(nodeLock(UUID.fromString(id))).isNotNull()
 				.satisfies(lock -> assertThat(lock.mode()).isEqualTo("strict"));

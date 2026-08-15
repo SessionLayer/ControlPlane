@@ -76,7 +76,7 @@ class OpenSshCertSignerValidationTest {
 		ParsedCert parsed = parse(cert.blob());
 		assertThat(verifySignature(parsed, s.backend().publicKey())).isTrue();
 
-		// (2) ssh-keygen -L structural validation (FR-CA-5 fields).
+		// (2) ssh-keygen -L structural validation of the certificate fields.
 		assumeTrue(commandAvailable("ssh-keygen"), "ssh-keygen not available");
 		Path certFile = dir.resolve("inner-cert.pub");
 		Files.writeString(certFile, cert.certificateLine() + "\n");

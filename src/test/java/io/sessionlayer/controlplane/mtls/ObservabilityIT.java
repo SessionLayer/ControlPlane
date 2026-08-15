@@ -46,11 +46,11 @@ import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * (Design §14, OTEL-CONTRACT). A Gateway-injected {@code traceparent} makes the
- * CP's {@code cp.authorize} and {@code cp.cert_sign} spans children of the SAME
- * trace — one trace across the CP↔GW gRPC plane — and NO span attribute carries
- * plaintext / key / token / recording content (the no-content assertion). The
- * NFR-3/NFR-4 SLO meters are emitted for the same flow.
+ * Spans carry correlation, never content. A Gateway-injected {@code traceparent}
+ * makes the CP's {@code cp.authorize} and {@code cp.cert_sign} spans children of
+ * the SAME trace — one trace across the CP↔GW gRPC plane — and NO span attribute
+ * carries plaintext / key / token / recording content (the no-content
+ * assertion). The SLO meters are emitted for the same flow.
  */
 @Import(ObservabilityIT.SpanCapture.class)
 class ObservabilityIT extends AbstractMtlsIT {
@@ -113,14 +113,11 @@ class ObservabilityIT extends AbstractMtlsIT {
 		assertThat(attr(certSpan, "sessionlayer.cert_kind")).isEqualTo("session");
 		assertThat(attr(certSpan, "sessionlayer.outcome")).isEqualTo("success");
 
-		// No-content gate (OTEL-CONTRACT §5): NO telemetry string — a span name /
-		// attribute / EVENT (name + attrs) / status description, or a metric TAG —
-		// carries
-		// a token, key, source IP, or the cert. Scanning EVENTS is the point:
-		// recordException would write exception.message as an event (not an attribute)
-		// —
-		// the exact future regression this gate must catch. (Guard blanks: an empty
-		// secret
+		// No-content gate: NO telemetry string — a span name / attribute / EVENT
+		// (name + attrs) / status description, or a metric TAG — carries a token,
+		// key, source IP, or the cert. Scanning EVENTS is the point: recordException
+		// would write exception.message as an event (not an attribute) — the exact
+		// future regression this gate must catch. (Guard blanks: an empty secret
 		// would make doesNotContain("") vacuously fail.)
 		List<String> secrets = java.util.stream.Stream
 				.of(authorized.getSessionToken(), authorized.getRecordingToken(),
@@ -157,7 +154,7 @@ class ObservabilityIT extends AbstractMtlsIT {
 		signWithTrace(gateway, authorized.getSessionToken(),
 				MtlsTestSupport.opensshPublicKeyBlob((ECPublicKey) inner.getPublic()), null);
 
-		// NFR-4: the CP-side session-establishment timer, tagged by outcome/model enum.
+		// The CP-side session-establishment timer, tagged by outcome/model enum.
 		assertThat(meters.find("sessionlayer.session.establishment").tag("outcome", "allow")
 				.tag("access_model", "standing").timer()).isNotNull();
 		assertThat(meters.get("sessionlayer.session.establishment").tag("outcome", "allow").timer().count())
@@ -166,13 +163,13 @@ class ObservabilityIT extends AbstractMtlsIT {
 		assertThat(
 				meters.get("sessionlayer.cert.sign").tag("kind", "session").tag("outcome", "success").timer().count())
 				.isGreaterThan(0);
-		// NFR-3: an available session signer was measured under the REQUEST population
+		// An available session signer was measured under the REQUEST population
 		// (health-probe polls are tagged source=probe so they don't dilute the SLI;
 		// fail-closed unavailable is proven in CaSignerMetricsTest without Docker).
 		assertThat(meters.get("sessionlayer.ca.signer").tag("kind", "session").tag("source", "request")
 				.tag("outcome", "available").counter().count()).isGreaterThan(0);
 
-		// F1: the establishment + cert-sign timers publish Prometheus histogram BUCKETS
+		// The establishment + cert-sign timers publish Prometheus histogram BUCKETS
 		// (the _bucket series) so histogram_quantile() can compute p95 — a plain Timer
 		// exports only _count/_sum/_max and the primary p95 SLO would be
 		// unqueryable.

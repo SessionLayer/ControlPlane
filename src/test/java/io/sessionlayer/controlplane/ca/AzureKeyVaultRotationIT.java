@@ -176,8 +176,8 @@ class AzureKeyVaultRotationIT extends AbstractAuthIT {
 	 * occupies the version position without being a real Key Vault version (32
 	 * lowercase hex characters). Low severity on its own (a bogus version already
 	 * fails closed at adoption, since a real vault's {@code GET} would 404 and the
-	 * rotation would abort having written nothing regardless), closed here so D-1's
-	 * pinning claim is actually enforced at parse time.
+	 * rotation would abort having written nothing regardless), closed here so the
+	 * exact-version pinning rule is actually enforced at parse time.
 	 */
 	@Test
 	void aMalformedKeyVersionIsRefusedAtRotationAndWritesNothing() {

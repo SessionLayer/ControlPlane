@@ -142,8 +142,8 @@ class KeyVaultKeyReferenceTest {
 	 * fourth segment" check without ever being a real Key Vault version (32
 	 * lowercase hex characters) — low severity (a bogus version already fails
 	 * closed at adoption, since {@code fetchPublicKey} gets a real 404 and the
-	 * rotation aborts having written nothing), but it makes D-1's pinning claim
-	 * actually true at parse time rather than merely documented.
+	 * rotation aborts having written nothing), but it makes the exact-version
+	 * pinning rule actually true at parse time rather than merely documented.
 	 */
 	@Test
 	void rejectsAMalformedKeyVersion() {

@@ -92,7 +92,7 @@ class CaCrudIT extends AbstractConfigApiIT {
 	void azureKeyvaultWithEd25519RejectedPreCommit() {
 		String token = tokenWith("svc-ca-d6-" + UUID.randomUUID(), PlatformPermissions.CA_MANAGE);
 
-		// Design D6: Azure Key Vault has no Ed25519 key type -> 422. azure_keyvault
+		// Azure Key Vault has no Ed25519 key type -> 422. azure_keyvault
 		// itself is a real, signer-backed backend now, so this must fail on the
 		// algorithm, not on "no signer in this build" (that would mean the backend
 		// capability flip regressed).
@@ -187,7 +187,7 @@ class CaCrudIT extends AbstractConfigApiIT {
 	}
 
 	/**
-	 * D-1/D-3's write-path guarantee, over the real API: a version-less or
+	 * The write-path guarantee, over the real API: a version-less or
 	 * wrong-vault azure_keyvault keyReference is refused at create, before anything
 	 * is written — not left to fail only when a signature is attempted. This
 	 * targets CaConfigService.validate's KeyVaultKeyReference.parse call, the write

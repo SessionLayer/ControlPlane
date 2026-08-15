@@ -262,7 +262,7 @@ class ConcurrentSessionLimitIT extends AbstractMtlsIT {
 		assertThat(countLive(identity)).isEqualTo(2);
 	}
 
-	// F-CP-reauthorize: §6.3 has the Gateway re-Authorize a live
+	// F-CP-reauthorize: the Gateway re-Authorizes a live
 	// connection with the SAME session_id once decision_ttl elapses. Before the
 	// fix, the ssh_session write was a blind INSERT, so the second call's
 	// duplicate-key violation rolled back the whole allow tx and surfaced as a

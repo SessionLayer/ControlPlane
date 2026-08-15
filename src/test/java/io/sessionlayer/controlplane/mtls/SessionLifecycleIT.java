@@ -85,7 +85,7 @@ class SessionLifecycleIT extends AbstractMtlsIT {
 		SshSession session = sshSessions.findById(sessionId).block();
 		assertThat(session.endedAt()).isNotNull();
 		assertThat(session.endReason()).isEqualTo("closed");
-		// F3: the lifecycle outcome is observable — enum-only tags, no identity.
+		// The lifecycle outcome is observable — enum-only tags, no identity.
 		assertThat(lifecycleCount("notify_session_end", "released")).isEqualTo(releasedBefore + 1);
 
 		// The lifecycle end joined the session's correlation chain.
@@ -135,7 +135,7 @@ class SessionLifecycleIT extends AbstractMtlsIT {
 						e -> assertThat(e.getStatus().getCode()).isEqualTo(Status.Code.PERMISSION_DENIED));
 		assertThat(countLive(identity)).isEqualTo(1);
 		assertThat(sshSessions.findById(sessionId).block().endedAt()).isNull();
-		// F3: the refusal is counted (enum tags only).
+		// The refusal is counted (enum tags only).
 		assertThat(lifecycleCount("notify_session_end", "refused")).isEqualTo(refusedBefore + 1);
 
 		assertThatThrownBy(() -> extend(foreign, sessionId)).isInstanceOfSatisfying(StatusRuntimeException.class,
@@ -272,7 +272,7 @@ class SessionLifecycleIT extends AbstractMtlsIT {
 		assertThatThrownBy(() -> extend(gateway, released)).isInstanceOfSatisfying(StatusRuntimeException.class,
 				e -> assertThat(e.getStatus().getCode()).isEqualTo(Status.Code.FAILED_PRECONDITION));
 		assertThat(sessionLeases.findBySessionId(released).block().releasedAt()).isNotNull();
-		// F3: the reaped-a-live-session signature is LOUD — a refused extend for a
+		// The reaped-a-live-session signature is LOUD — a refused extend for a
 		// session that is NOT ended warns (silent under-count would otherwise be
 		// invisible) and the refusal is counted.
 		assertThat(lifecycleCount("extend_session_lease", "refused")).isEqualTo(refusedBefore + 1);

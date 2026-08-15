@@ -39,7 +39,7 @@ class DeviceFlowIT extends AbstractAuthIT {
 		DeviceFlowService.Begun begun = deviceFlowService.begin("198.51.100.7", null).block();
 		deviceFlowService.approve(begun.deviceFlowId(), "bob@example.com", "203.0.113.200").block();
 		DeviceFlowService.Status status = deviceFlowService.poll(begun.deviceCode()).block();
-		assertThat(status.status()).isEqualTo("authorized"); // flag-only default (deny-only reducer, FR-AUTH-15)
+		assertThat(status.status()).isEqualTo("authorized"); // flag-only default (deny-only reducer)
 		assertThat(status.sourceContextMatch()).isFalse();
 	}
 

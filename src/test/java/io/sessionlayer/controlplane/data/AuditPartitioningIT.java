@@ -19,7 +19,7 @@ import org.springframework.r2dbc.core.DatabaseClient;
 import reactor.test.StepVerifier;
 
 /**
- * Audit partitioning (§6.1, FR-AUD-6): monthly range partitions, pruning, and
+ * Audit partitioning: monthly range partitions, pruning, and
  * legal-hold compliance recording retention.
  */
 class AuditPartitioningIT extends AbstractDataIT {
