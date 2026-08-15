@@ -13,7 +13,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
- * Cold-start CA provisioning (FR-BOOT-1 / D31, §5.5). On first run against an
+ * Cold-start CA provisioning. On first run against an
  * empty DB it ensures the operator-settings singleton exists and provisions the
  * three CAs (user / internal session / host) exactly once, then is a no-op on
  * every subsequent start (idempotent, restart-safe). It is <b>race-safe</b>:
@@ -22,7 +22,7 @@ import reactor.core.publisher.Mono;
  * partial-unique active-per-kind index is a hard backstop.
  *
  * <p>
- * Local CAs are generated and KEK-wrapped (FR-CA-8) with a loud production
+ * Local CAs are generated and KEK-wrapped with a loud production
  * warning; cloud CAs (KMS/KeyVault/Vault) are <b>referenced</b> via an
  * operator-pre-created {@code ca_config} (their key lives in the cloud, not
  * generated here).

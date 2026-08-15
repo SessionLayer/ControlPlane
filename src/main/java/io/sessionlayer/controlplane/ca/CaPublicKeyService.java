@@ -13,7 +13,7 @@ import reactor.core.publisher.Mono;
 
 /**
  * Exports the active SSH CA's PUBLIC key — the material a node installs into
- * {@code TrustedUserCAKeys} (Design §2A; FR-CA-1). Public material only.
+ * {@code TrustedUserCAKeys}. Public material only.
  *
  * <p>
  * Like the mTLS trust-anchor export, this deliberately does NOT go through the

@@ -4,8 +4,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The injectable seam for the HashiCorp Vault SSH secrets engine (D2/D7, §3.3).
- * There is deliberately <b>only a sign operation</b>: production binds it to
+ * The injectable seam for the HashiCorp Vault SSH secrets engine. There is
+ * deliberately <b>only a sign operation</b>: production binds it to
  * {@code POST /v1/ssh/sign/:role}, which returns a <b>signed certificate</b>
  * for a presented public key. There is <b>no</b> {@code issue} method — Vault's
  * {@code /ssh/issue} (which mints and returns a private key) must never be
@@ -32,7 +32,7 @@ public interface VaultSshEngine {
 
 	/**
 	 * Sign the presented public key via {@code POST /ssh/sign/:role} and return the
-	 * signed certificate. MUST throw on failure (fail closed, FR-CA-9).
+	 * signed certificate. MUST throw on failure (fail closed).
 	 */
 	SignedCertificate sign(String role, String publicKeyOpenSshLine, SignRequest request);
 }

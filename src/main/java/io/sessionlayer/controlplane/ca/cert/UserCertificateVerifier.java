@@ -17,12 +17,12 @@ import java.util.List;
 
 /**
  * Validates a presented OpenSSH <b>user</b> certificate against the user-facing
- * CA (Design §3.1, the outer-leg Vault-user-cert path; FR-CA-2). A pure
+ * CA (the outer-leg Vault-user-cert path). A pure
  * function over the certificate bytes and the currently-trusted user-CA keys —
  * no I/O, no reactive context. The outcome is a single generic
  * {@link Verdict#fail} for ANY reason (untrusted CA / expired / wrong type /
- * malformed / wrong source), so the outer-leg auth surface leaks no existence
- * (§7.1, FR-AUTH-16); the reason is for the server-side decision log only.
+ * malformed / wrong source), so the outer-leg auth surface leaks no existence;
+ * the reason is for the server-side decision log only.
  *
  * <p>
  * Trust follows OpenSSH semantics: the certificate's embedded signature-key

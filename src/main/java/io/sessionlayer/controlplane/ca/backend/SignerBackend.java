@@ -6,7 +6,7 @@ import io.sessionlayer.controlplane.ca.sign.EcdsaSignatures;
 import java.security.interfaces.ECPublicKey;
 
 /**
- * The injectable raw-signer seam (FR-SIGN-1/2). A backend holds (or references)
+ * The injectable raw-signer seam. A backend holds (or references)
  * a CA key and turns to-be-signed bytes into a <b>normalized</b> ECDSA
  * {@code (r, s)} — each backend converts its native signature shape (Java/KMS
  * DER, Azure P1363) to {@code (r, s)} so the shared assembler is
@@ -14,7 +14,7 @@ import java.security.interfaces.ECPublicKey;
  *
  * <p>
  * Implementations MUST fail closed (throw) if they cannot sign — never return a
- * wrong or empty signature (FR-CA-9). The Vault SSH-engine path does not use
+ * wrong or empty signature. The Vault SSH-engine path does not use
  * this seam (it returns a signed cert directly).
  */
 public interface SignerBackend {
@@ -25,7 +25,7 @@ public interface SignerBackend {
 	/** The CA public key (public material only; never a private key). */
 	ECPublicKey publicKey();
 
-	/** What algorithms this backend can produce (FR-CA-4). */
+	/** What algorithms this backend can produce. */
 	SignerCapabilities capabilities();
 
 	/**

@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * Creates and loads local (KEK-encrypted) CA keys (FR-CA-8) — shared by
+ * Creates and loads local (KEK-encrypted) CA keys — shared by
  * cold-start provisioning and CA rotation. Generation KEK-wraps a fresh ECDSA
  * key with a loud production warning; loading unwraps it transiently into a
  * signer.
@@ -125,6 +125,6 @@ public class LocalCaFactory implements CaKeyProvisioner {
 					+ "(sessionlayer.ca.local.kek-base64 / env). This is dev/test ONLY.");
 		}
 		LOG.warn("local CA backend in use for the {} CA; production SHOULD use KMS/KeyVault/Vault so the CA "
-				+ "private key is never in-process (FR-CA-8, Design §14).", kind);
+				+ "private key is never in-process.", kind);
 	}
 }

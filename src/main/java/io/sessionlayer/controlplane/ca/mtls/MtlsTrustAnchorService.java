@@ -13,7 +13,7 @@ import reactor.core.publisher.Mono;
 
 /**
  * Exports the active internal mTLS CA certificate — the trust anchor a Gateway
- * pins (Design §2A, §15; FR-CA-3). Public material only.
+ * pins. Public material only.
  *
  * <p>
  * This deliberately does NOT go through {@link InternalMtlsCaService}: loading

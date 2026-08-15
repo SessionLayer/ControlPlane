@@ -8,11 +8,11 @@ import java.security.MessageDigest;
 import java.security.interfaces.ECPublicKey;
 
 /**
- * AWS KMS CA backend (D7): the CA private key never leaves KMS. It hashes the
+ * AWS KMS CA backend: the CA private key never leaves KMS. It hashes the
  * to-be-signed certificate bytes to a SHA-256 digest, has KMS sign the digest,
  * and normalizes the returned <b>DER</b> signature to OpenSSH {@code (r, s)}
- * (FR-SIGN-2) via the same {@link EcdsaSignatures#fromDer} path the local
- * backend uses. The signing itself is delegated to the injectable
+ * via the same {@link EcdsaSignatures#fromDer} path the local backend uses. The
+ * signing itself is delegated to the injectable
  * {@link KmsSigner} seam.
  */
 public final class KmsCaBackend implements SignerBackend {

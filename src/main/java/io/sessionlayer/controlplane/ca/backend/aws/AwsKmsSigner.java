@@ -102,7 +102,7 @@ public final class AwsKmsSigner implements KmsSigner {
 	}
 
 	/**
-	 * Fail-closed signing failure (FR-CA-9). {@code getMessage()} never carries KMS
+	 * Fail-closed signing failure. {@code getMessage()} never carries KMS
 	 * response content — only the <b>account-redacted</b> key reference and the
 	 * failure's class name — so it is safe wherever a message alone is surfaced.
 	 * That matters more here than it reads: {@code GrpcErrors} logs this message at

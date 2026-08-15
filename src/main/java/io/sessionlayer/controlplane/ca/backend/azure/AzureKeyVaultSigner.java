@@ -83,7 +83,7 @@ public final class AzureKeyVaultSigner implements KeyVaultSigner {
 	}
 
 	/**
-	 * Fail-closed signing failure (FR-CA-9). {@code getMessage()} never carries
+	 * Fail-closed signing failure. {@code getMessage()} never carries
 	 * vault response content — only the key reference and the failure's class name
 	 * — so it is safe wherever a message alone is surfaced (an API error, a span).
 	 * The cause, when present, is the real SDK exception and is kept on purpose for

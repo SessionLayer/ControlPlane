@@ -45,7 +45,7 @@ public class CaConfiguration {
 	public ApplicationRunner caColdStartRunner(CaProvisioningService provisioningService,
 			@Value("${sessionlayer.coldstart.timeout-seconds:60}") long timeoutSeconds) {
 		return args -> {
-			LOG.info("cold start: ensuring operator settings + the three CAs (FR-BOOT-1)");
+			LOG.info("cold start: ensuring operator settings + the three CAs");
 			provisioningService.provisionAll().block(java.time.Duration.ofSeconds(timeoutSeconds));
 			LOG.info("cold start: CA provisioning complete");
 		};

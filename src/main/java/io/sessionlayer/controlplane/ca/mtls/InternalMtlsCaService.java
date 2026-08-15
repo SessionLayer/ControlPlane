@@ -15,7 +15,7 @@ import reactor.core.publisher.Mono;
  * server startup via {@link #loadOrProvision} (which takes the same lock), so
  * the mTLS plane comes up even if it is the first thing to touch the CA.
  * Loading is fail-closed: if there is no active mTLS CA it errors rather than
- * falling back (NFR-2).
+ * falling back.
  */
 @Service
 public class InternalMtlsCaService {

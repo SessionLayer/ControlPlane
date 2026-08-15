@@ -14,7 +14,7 @@ import java.security.cert.X509Certificate;
  * Only {@link LocalX509CaBackend} (KEK-wrapped local key) is implemented for
  * real; the cloud seam is unit-tested with a double. Whatever the backend, the
  * CP only ever <b>signs a presented public key</b> and returns a certificate —
- * it never receives or stores a leaf private key (D2/FR-CA-3).
+ * it never receives or stores a leaf private key.
  */
 public interface X509CaBackend {
 

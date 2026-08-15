@@ -9,7 +9,7 @@ import java.security.Signature;
 import java.security.interfaces.ECPublicKey;
 
 /**
- * The local (in-process) CA backend (FR-CA-8): it signs with an in-memory ECDSA
+ * The local (in-process) CA backend: it signs with an in-memory ECDSA
  * private key that was decrypted transiently from its KEK-wrapped form. Java's
  * {@code SHA*withECDSA} produces a DER signature, which is normalized to
  * {@code (r, s)} — the same normalization path as AWS KMS, so the shared code
@@ -57,7 +57,7 @@ public final class LocalCaBackend implements SignerBackend {
 			signature.update(toBeSigned);
 			return EcdsaSignatures.fromDer(signature.sign());
 		} catch (Exception e) {
-			// Fail closed (FR-CA-9): never return a wrong/empty signature.
+			// Fail closed: never return a wrong/empty signature.
 			throw new IllegalStateException("local CA signing failed", e);
 		}
 	}

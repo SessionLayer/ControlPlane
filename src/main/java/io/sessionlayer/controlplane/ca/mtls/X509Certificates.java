@@ -41,16 +41,16 @@ import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
  */
 public final class X509Certificates {
 
-	/** ECDSA P-256 signature algorithm for the internal mTLS CA (D6). */
+	/** ECDSA P-256 signature algorithm for the internal mTLS CA. */
 	public static final String SIGNATURE_ALGORITHM = "SHA256withECDSA";
 
 	private X509Certificates() {
 	}
 
 	/**
-	 * Build a {@code CN=<value>} subject via {@link X500NameBuilder} (L1): the
-	 * builder RDN-escapes the value, so a name is never string-concatenated into
-	 * the DN. Callers additionally allowlist-validate the value (gateway names,
+	 * Build a {@code CN=<value>} subject via {@link X500NameBuilder}: the builder
+	 * RDN-escapes the value, so a name is never string-concatenated into the DN.
+	 * Callers additionally allowlist-validate the value (gateway names,
 	 * configured server hostnames).
 	 */
 	private static X500Name cn(String commonName) {
