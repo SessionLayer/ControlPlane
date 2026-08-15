@@ -356,7 +356,7 @@ class JitMergeAuthorizeIT extends AbstractMtlsIT {
 		// it blocks EVERY connect for this identity (standing included) until it
 		// expires, exactly as it would for a pure-standing or pure-JIT session. This
 		// is accessModel-blind by construction (LockMatching never reads accessModel),
-		// proving provenance doesn't matter to the lock re-check (§ doctrine).
+		// proving provenance doesn't matter to the lock re-check.
 		AuthorizeResponse after = authorize(gateway, identity, nodeId, "deploy", UUID.randomUUID());
 		assertThat(after.getDecision()).isEqualTo(Decision.DECISION_DENY);
 	}
