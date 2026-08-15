@@ -189,9 +189,9 @@ publish-authz is the first line.
 
 **On the reference client:** the bundled NATS backend is a minimal **core** pub/sub
 client that connects in **plaintext with an unauthenticated CONNECT** — it targets a
-**trusted internal network** and is deliberately dependency-free (no TLS stack; see
-the supply-chain rationale for hand-rolling it). It therefore **cannot itself meet the
-TLS/auth mandate above**: a production deployment provides TLS + authentication via a
+**trusted internal network** and is deliberately dependency-free: hand-rolling it
+keeps an entire TLS stack out of the dependency graph. It therefore **cannot itself
+meet the TLS/auth mandate above**: a production deployment provides TLS + authentication via a
 **co-located sidecar** (a localhost TLS-terminating proxy / the NATS leaf-node TLS
 boundary), or by substituting a TLS-capable `CoordinationBackend`. The client parses
 the server `INFO` line and **fails loudly** (not a silent reconnect loop) if the broker
