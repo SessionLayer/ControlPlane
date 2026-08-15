@@ -5,8 +5,8 @@ import java.security.MessageDigest;
 import java.security.SecureRandom;
 
 /**
- * Small secret-handling primitives shared by the authentication surface (Design
- * §2.5): SHA-256 hashing (what we store instead of raw OTP/token/jti values),
+ * Small secret-handling primitives shared by the authentication surface:
+ * SHA-256 hashing (what we store instead of raw OTP/token/jti values),
  * constant-time comparison, and high-entropy token/code generation. No raw
  * secret is ever persisted — callers store {@link #sha256Hex} outputs.
  */

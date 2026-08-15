@@ -14,8 +14,8 @@ import java.net.InetAddress;
  * {@code null}: a value {@code ::inet} would reject must never reach the
  * column, or the INSERT's CHECK violation would roll back the enclosing
  * transaction — on the allow path that turns a successful connect into a
- * fail-closed deny, and on the deny path it silently loses the decision-log row
- * (FR-AUD-7). {@link Cidrs} (the FR-AUTH-15 reducer) is intentionally NOT
+ * fail-closed deny, and on the deny path it silently loses the decision-log
+ * row. {@link Cidrs} (the source-IP deny-only reducer) is intentionally NOT
  * tightened here — its leniency is a separate concern with its own fail-closed
  * semantics.
  */

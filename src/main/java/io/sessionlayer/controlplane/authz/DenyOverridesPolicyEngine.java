@@ -65,10 +65,9 @@ public class DenyOverridesPolicyEngine implements PolicyEngine {
 			return DataPlaneDecision.deny(DataPlaneDecision.Reason.PRINCIPAL_NOT_ALLOWED, null, null);
 		}
 
-		// Capabilities/TTL are gated per grant (FR-AUTHZ-6): scope them to the allows
-		// that grant the CHOSEN login, so capabilities from a different login's grant
-		// never bleed onto this connect. The null-principal ("what may I do") case
-		// keeps
+		// Capabilities/TTL are gated per grant: scope them to the allows that grant
+		// the CHOSEN login, so capabilities from a different login's grant never
+		// bleed onto this connect. The null-principal ("what may I do") case keeps
 		// the union across all allows.
 		List<DpRule> contributing = requested == null
 				? allows

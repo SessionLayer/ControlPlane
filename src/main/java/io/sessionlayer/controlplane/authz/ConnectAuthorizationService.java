@@ -152,21 +152,18 @@ public class ConnectAuthorizationService {
 				|| (!hasName && nodeId == null)) {
 			return denyMissingInput(callerGatewayId, identity, nodeId, sourceIp);
 		}
-		// §2.6/§11 (FR-ADDR-1): name resolution is server-side AUTHORITATIVE — when a
-		// name is present the CP resolves it via findByName and IGNORES any
-		// client-asserted node_id, so a client can never smuggle an id past the
-		// resolved
-		// name. An unknown name yields the SAME generic node_unknown deny as any other
-		// no-match (no existence disclosure, §7.1).
+		// Name resolution is server-side AUTHORITATIVE — when a name is present the CP
+		// resolves it via findByName and IGNORES any client-asserted node_id, so a
+		// client can never smuggle an id past the resolved name. An unknown name
+		// yields the SAME generic node_unknown deny as any other no-match (no
+		// existence disclosure).
 		Mono<Node> resolved = hasName ? nodes.findByName(nodeName) : nodes.findById(nodeId);
-		// FR-BOOT-3 / §8.4 / FR-LOCK-2: the caller Gateway is a first-class lockable
-		// principal, so EVERY connect decision is gated on the same active-status +
-		// fingerprint pin the sign path enforces (requireActiveGateway), BEFORE any
-		// RBAC
-		// eval, break-glass/JIT consumption, or state write. A locked or
-		// superseded-cert Gateway is refused on Authorize too (else its still-valid
-		// cert
-		// stays an RBAC oracle and can consume break-glass tokens / flip JIT grants).
+		// The caller Gateway is a first-class lockable principal, so EVERY connect
+		// decision is gated on the same active-status + fingerprint pin the sign path
+		// enforces (requireActiveGateway), BEFORE any RBAC eval, break-glass/JIT
+		// consumption, or state write. A locked or superseded-cert Gateway is refused
+		// on Authorize too (else its still-valid cert stays an RBAC oracle and can
+		// consume break-glass tokens / flip JIT grants).
 		return requireActiveGateway(callerGatewayId, presentedFingerprint)
 				.flatMap(
 						gw -> resolved
@@ -178,17 +175,15 @@ public class ConnectAuthorizationService {
 				.switchIfEmpty(auditDeny(callerGatewayId, identity, nodeId, sourceIp,
 						DataPlaneDecision.deny(DataPlaneDecision.Reason.NO_MATCHING_ALLOW, null, null),
 						"gateway_not_authorized", null, null).thenReturn(ConnectDecision.denied()))
-				// Any datastore/unexpected failure denies (fail closed, §8.4) — never leaks.
+				// Any datastore/unexpected failure denies (fail closed) — never leaks.
 				.onErrorResume(failure -> {
 					LOG.warn("connect authorization failed closed: {}", failure.toString());
 					return auditError(callerGatewayId, identity, nodeId, sourceIp).thenReturn(ConnectDecision.denied());
 				});
 	}
 
-	// FR-BOOT-3 / §8.4: the caller Gateway must be an ACTIVE identity whose
-	// presented
-	// client-cert fingerprint pins to its current or previous fingerprint (a locked
-	// or
+	// The caller Gateway must be an ACTIVE identity whose presented client-cert
+	// fingerprint pins to its current or previous fingerprint (a locked or
 	// superseded/stolen cert is refused). The same gate the sign path enforces
 	// (SessionCertificateService.requireAuthorizedGateway); empty ⇒ generic deny.
 	private Mono<GatewayIdentity> requireActiveGateway(UUID callerGatewayId, String presentedFingerprint) {
@@ -205,12 +200,10 @@ public class ConnectAuthorizationService {
 
 	private Mono<ConnectDecision> decide(UUID callerGatewayId, String identity, List<String> groups, Node node,
 			String requestedPrincipal, String sourceIp, UUID sessionId, String breakglassToken) {
-		// (FR-NODE-3): only an ACTIVE node is a valid target. A pending /
-		// quarantined / removed node is denied with the SAME generic deny as an unknown
-		// node (non-disclosure, §7.1); the specific status is recorded server-side.
-		// This
-		// gate precedes the break-glass path too — a non-active node is unreachable
-		// even
+		// Only an ACTIVE node is a valid target. A pending / quarantined / removed
+		// node is denied with the SAME generic deny as an unknown node
+		// (non-disclosure); the specific status is recorded server-side. This gate
+		// precedes the break-glass path too — a non-active node is unreachable even
 		// via break-glass (belt; a quarantine Lock is the suspenders).
 		if (!"active".equals(node.status())) {
 			return auditDeny(callerGatewayId, identity, node.id(), sourceIp,
@@ -222,8 +215,8 @@ public class ConnectAuthorizationService {
 				.defaultIfEmpty("unknown");
 
 		// Read grants first, THEN locks, so the lock set is observed at a snapshot no
-		// earlier than the grant set (§8.4: a concurrently-added deny/lock is never
-		// missed while an allow from the same edit is honored — deny stays dominant).
+		// earlier than the grant set: a concurrently-added deny/lock is never missed
+		// while an allow from the same edit is honored — deny stays dominant.
 		return dpRules.findAll().collectList().flatMap(grants -> accessLocks.findAll().collectList()
 				.flatMap(locks -> Mono.zip(epochMono, gwNameMono).flatMap(meta -> {
 					long epoch = meta.getT1();
@@ -240,7 +233,7 @@ public class ConnectAuthorizationService {
 								locks, epoch, now);
 					}
 
-					// §1.1-A: the JIT lookup is UNCONDITIONAL — not gated on a prior
+					// The JIT lookup is UNCONDITIONAL — not gated on a prior
 					// standing-only failure — so an approved, in-window grant is always folded
 					// into the SAME evaluation as standing access (a true union), whether
 					// standing matches nothing, matches a different principal, or already
@@ -258,11 +251,11 @@ public class ConnectAuthorizationService {
 			JitRequest grant, long epoch, Instant now) {
 		DpRule jitRule = grant == null ? null : syntheticJitRule(grant, request.identity(), now);
 		List<DpRule> augmented = jitRule == null ? grants : withJitRule(grants, jitRule);
-		// THE security decision (§1.1-A): one evaluate() over standing ∪ JIT (or over
+		// THE security decision: one evaluate() over standing ∪ JIT (or over
 		// standing alone when no usable grant exists). Lock-wins/deny-overrides are
 		// checked before the principal/allow logic inside the engine, so they are
 		// terminal regardless of whether the JIT rule is present — deny/Lock beat JIT
-		// unconditionally, by construction (§8.4), not by a guard here.
+		// unconditionally, by construction, not by a guard here.
 		DataPlaneDecision union = engine.evaluate(request, augmented, locks, now);
 		if (!union.allowed()) {
 			// A usable grant that didn't matter (blocked by Lock/explicit-deny, or simply
@@ -280,7 +273,7 @@ public class ConnectAuthorizationService {
 					null, union.grantTtlSeconds(), epoch, now);
 		}
 
-		// §1.1-B: attribution ONLY — this never gates the security decision above,
+		// Attribution ONLY — this never gates the security decision above,
 		// which is already final. A second, pure, in-memory evaluate() over standing
 		// alone (cheap — no I/O) tells us whether the grant actually changed THIS
 		// connect's outcome. allowedLogins can't differ between the two calls here:
@@ -294,9 +287,8 @@ public class ConnectAuthorizationService {
 				|| !standingAlone.sortedCapabilities().equals(union.sortedCapabilities());
 		if (!loadBearing) {
 			// The grant contributed nothing beyond what standing already grants: leave it
-			// APPROVED, unconsumed, for a connect that actually needs it later (doctrine
-			// §2.3) — record accessModel = standing exactly as a pure-standing connect
-			// would.
+			// APPROVED, unconsumed, for a connect that actually needs it later — record
+			// accessModel = standing exactly as a pure-standing connect would.
 			return emitAllow(callerGatewayId, node, gatewayName, request, sessionId, standingAlone.sortedLogins(),
 					standingAlone.sortedCapabilities(), standingAlone.matchedRuleId(), standingAlone.matchedRuleName(),
 					MODEL_STANDING, null, null, standingAlone.grantTtlSeconds(), epoch, now);
@@ -344,7 +336,7 @@ public class ConnectAuthorizationService {
 				.flatMap(token -> onValidBreakglass(callerGatewayId, node, gatewayName, request, sessionId, token,
 						locks, epoch, now))
 				// An invalid/replayed/cross-gateway token is not a genuine break-glass event:
-				// no activation, no alert — just a generic fail-closed deny (§7.1).
+				// no activation, no alert — just a generic fail-closed deny.
 				.switchIfEmpty(auditDeny(callerGatewayId, request.identity(), node.id(), request.sourceIp(),
 						DataPlaneDecision.deny(DataPlaneDecision.Reason.EVALUATION_ERROR, null, null),
 						"breakglass_token_invalid", MODEL_BREAKGLASS, null).thenReturn(ConnectDecision.denied()));
@@ -354,10 +346,8 @@ public class ConnectAuthorizationService {
 			AuthorizationRequest request, UUID sessionId, BreakglassToken token, Collection<AccessLock> locks,
 			long epoch, Instant now) {
 		// A valid token is a genuine break-glass event: create the activation + raise
-		// the
-		// high-priority alert UNCONDITIONALLY, BEFORE the allow/deny decision, so a
-		// locked
-		// target still leaves a durable, reviewable record (FR-ACC-6, FR-AUD-7).
+		// the high-priority alert UNCONDITIONALLY, BEFORE the allow/deny decision, so
+		// a locked target still leaves a durable, reviewable record.
 		return firstBreakglassPolicy().flatMap(policyOpt -> {
 			BreakglassPolicy policy = policyOpt.orElse(null);
 			BreakglassActivation activation = BreakglassActivation.activate(request.identity(),
@@ -411,11 +401,11 @@ public class ConnectAuthorizationService {
 			AuthorizationRequest request, UUID sessionId, List<String> logins, List<String> capabilities,
 			UUID matchedRuleId, String matchedRuleName, String accessModel, UUID jitRequestId,
 			UUID breakglassActivationId, int grantTtlSeconds, long epoch, Instant now) {
-		// FR-SESS-3: resolve the per-identity duration/idle ceilings for
-		// STANDING/JIT before building the signed context. Break-glass is EXEMPT
-		// (keeps its own break-glass TTL, carries no per-identity idle) — emergency
-		// access is never throttled by per-identity policy, consistent with its
-		// concurrency-cap exemption.
+		// Resolve the per-identity duration/idle ceilings for STANDING/JIT before
+		// building the signed context. Break-glass is EXEMPT (keeps its own
+		// break-glass TTL, carries no per-identity idle) — emergency access is never
+		// throttled by per-identity policy, consistent with its concurrency-cap
+		// exemption.
 		Mono<SessionCeilings> ceilings = MODEL_BREAKGLASS.equals(accessModel)
 				? Mono.just(SessionCeilings.NONE)
 				: resolveSessionCeilings(request.identity(), request.groups());
@@ -433,17 +423,15 @@ public class ConnectAuthorizationService {
 		String sourceIp = request.sourceIp();
 		int ttlSeconds = effectiveGrantTtl(grantTtlSeconds);
 		// grant_expiry = now + min(grant TTL, per-identity max duration); the
-		// Gateway's existing FR-ACC-8 expiry machinery then enforces it — no wire
-		// change.
+		// Gateway's existing expiry machinery then enforces it — no wire change.
 		if (ceilings.maxSessionSeconds() != null) {
 			ttlSeconds = Math.min(ttlSeconds, ceilings.maxSessionSeconds());
 		}
 		Instant grantExpiry = now.plusSeconds(ttlSeconds);
 		// identity/groups/node-labels are signed into the context so the Gateway
-		// matches
-		// identity/group/label locks against trusted data; the access model is
+		// matches identity/group/label locks against trusted data; the access model is
 		// signed too, so the Gateway forces strict recording for break-glass and picks
-		// the per-model mid-session-expiry behaviour (FR-ACC-8).
+		// the per-model mid-session-expiry behaviour.
 		List<String> identityGroups = request.groups() == null ? List.of() : List.copyOf(request.groups());
 		List<String> nodeLabels = sortedLabelStrings(node.resolvedLabels());
 		DecisionContext context = new DecisionContext(node.id(), node.name(), logins, capabilities, requestedPrincipal,
@@ -467,7 +455,7 @@ public class ConnectAuthorizationService {
 						detail.put("principal", requestedPrincipal);
 						detail.put("access_model", accessModel);
 						detail.put("policy_epoch", Long.toString(epoch));
-						// FR-AUD-8/9: the connect decision is the origin of the SSH audit chain —
+						// The connect decision is the origin of the SSH audit chain —
 						// stamp every searchable dimension (source IP, access model, capabilities,
 						// node-label snapshot) and the correlation key so approve → connect → run →
 						// replay all join by one correlation_id.
@@ -479,12 +467,11 @@ public class ConnectAuthorizationService {
 								.build();
 						// ssh_session snapshot + the two single-use tokens + the allow audit are one
 						// transaction: a failure rolls all back, so a token is never minted without
-						// its session row (Design §12/§15). Audit last (it serializes on the chain
-						// lock).
+						// its session row. Audit last (it serializes on the chain lock).
 						ConnectDecision.TraceInfo trace = new ConnectDecision.TraceInfo(accessModel, node.id(),
 								session.correlationId());
 						boolean leased = !MODEL_BREAKGLASS.equals(accessModel);
-						// FR-SESS-3 / §6.3: try to refresh THIS session_id's own live lease in
+						// Try to refresh THIS session_id's own live lease in
 						// place FIRST — a plain UPDATE, a harmless no-op for a fresh session or a
 						// break-glass one (which never holds a lease). A hit means this is a
 						// mid-session re-Authorize of an already-counted session: skip the cap gate
@@ -523,7 +510,7 @@ public class ConnectAuthorizationService {
 		});
 	}
 
-	// §6.3: idempotent per session_id. An existing row (a mid-session re-Authorize)
+	// Idempotent per session_id. An existing row (a mid-session re-Authorize)
 	// is refreshed via SshSession.reauthorized — an UPDATE, since findById's row
 	// carries the current @Version, so it can never PK-collide with the original
 	// INSERT. No existing row (the first Authorize for the session) is a fresh
@@ -542,27 +529,20 @@ public class ConnectAuthorizationService {
 								breakglassActivationId, epoch, grantExpiry, now, null, null, null, null, null))));
 	}
 
-	// FR-SESS-3: the per-identity concurrency primitive is runtime.session_lease
-	// (one
-	// live lease per session; count of unreleased+unexpired leases = current
+	// The per-identity concurrency primitive is runtime.session_lease (one live
+	// lease per session; count of unreleased+unexpired leases = current
 	// concurrency, fleet-wide over the shared datastore). On a STANDING/JIT allow
-	// with
-	// a finite cap, we take a per-identity Postgres advisory xact lock BEFORE
-	// counting,
-	// so count-then-acquire is atomic per identity and the cap is HARD (exact) — a
-	// concurrent burst from a shared/stolen credential can never overshoot it. The
-	// lock
-	// contends ONLY between same-identity connects (hashtext(identity)); different
-	// identities never block each other, and it auto-releases at commit/rollback.
-	// An
-	// over-cap count mints nothing and denies (deny wins). Break-glass is EXEMPT —
-	// it
-	// neither counts nor consumes a lease nor takes the lock, so emergency access
-	// is
-	// never throttled by the cap nor eats into a user's normal budget (it is gated
-	// instead by single-use token issuance + Lock supremacy + a mandatory-review
-	// activation). Unlimited identities skip the lock entirely (no needless
-	// serialization).
+	// with a finite cap, we take a per-identity Postgres advisory xact lock BEFORE
+	// counting, so count-then-acquire is atomic per identity and the cap is HARD
+	// (exact) — a concurrent burst from a shared/stolen credential can never
+	// overshoot it. The lock contends ONLY between same-identity connects
+	// (hashtext(identity)); different identities never block each other, and it
+	// auto-releases at commit/rollback. An over-cap count mints nothing and denies
+	// (deny wins). Break-glass is EXEMPT — it neither counts nor consumes a lease
+	// nor takes the lock, so emergency access is never throttled by the cap nor
+	// eats into a user's normal budget (it is gated instead by single-use token
+	// issuance + Lock supremacy + a mandatory-review activation). Unlimited
+	// identities skip the lock entirely (no needless serialization).
 	private Mono<ConnectDecision> enforceConcurrencyLimit(UUID callerGatewayId, AuthorizationRequest request, Node node,
 			String accessModel, Instant now, Mono<ConnectDecision> mint) {
 		if (MODEL_BREAKGLASS.equals(accessModel)) {
@@ -591,12 +571,10 @@ public class ConnectAuthorizationService {
 				.rowsUpdated().then();
 	}
 
-	// Resolve the identity's concurrent-session cap (FR-SESS-3): a matching
+	// Resolve the identity's concurrent-session cap: a matching
 	// config.session_limit_policy override wins (most-restrictive of any that match
-	// by
-	// identity/group selector), else the operator_settings cluster default, else
-	// empty
-	// ⇒ no limit (unlimited). NULL/≤0 at any level means no enforcement.
+	// by identity/group selector), else the operator_settings cluster default, else
+	// empty ⇒ no limit (unlimited). NULL/≤0 at any level means no enforcement.
 	private Mono<Integer> resolveConcurrencyLimit(String identity, List<String> groups) {
 		List<String> safeGroups = groups == null ? List.of() : groups;
 		return sessionLimitPolicies.findAll()
@@ -607,8 +585,8 @@ public class ConnectAuthorizationService {
 						.flatMap(settings -> Mono.justOrEmpty(settings.defaultMaxConcurrentSessions())));
 	}
 
-	// FR-SESS-3: the identity's max-duration + idle ceilings, resolved in
-	// one pass with the same semantics as resolveConcurrencyLimit — per knob, the
+	// The identity's max-duration + idle ceilings, resolved in one pass with the
+	// same semantics as resolveConcurrencyLimit — per knob, the
 	// most restrictive matching session_limit_policy value wins, else the
 	// operator_settings cluster default, else none (NULL/≤0 at any level means no
 	// enforcement of that knob).
@@ -645,8 +623,7 @@ public class ConnectAuthorizationService {
 	}
 
 	// Mint nothing; record the specific reason server-side (the caller sees the
-	// same
-	// generic deny, §8.4) with the observed count vs the limit for the operator.
+	// same generic deny) with the observed count vs the limit for the operator.
 	private Mono<ConnectDecision> denyConcurrencyLimit(UUID callerGatewayId, AuthorizationRequest request, UUID nodeId,
 			String accessModel, long active, int limit) {
 		metrics.recordSessionLimitDenied(accessModel);
@@ -692,10 +669,10 @@ public class ConnectAuthorizationService {
 		return detail;
 	}
 
-	// The node's connectivity + host-identity answer from inventory (Design §9;
-	// FR-CONN-1/2/5). Reuses the already-loaded node and adds only the
-	// node_host_key read (plus the trusted host-CA set when a row anchors to it) —
-	// public material only, never a private key (§9.3).
+	// The node's connectivity + host-identity answer from inventory. Reuses the
+	// already-loaded node and adds only the node_host_key read (plus the trusted
+	// host-CA set when a row anchors to it) — public material only, never a private
+	// key.
 	private Mono<NodeConnectionInfo> resolveNodeConnection(Node node) {
 		NodeConnectionInfo.ConnectorModel model = NodeConnectionInfo.ConnectorModel.fromInventory(node.connectorKind());
 		String dial = dialAddress(node);
@@ -733,8 +710,8 @@ public class ConnectAuthorizationService {
 			List<byte[]> caKeys, List<String> principals, List<byte[]> pinned, List<byte[]> hostCerts) {
 		NodeConnectionInfo info = new NodeConnectionInfo(model, node.name(), dial, caKeys, principals, pinned,
 				hostCerts);
-		// FR-CONN-5/7 (§9.3): an agentless node with no host-CA anchor and no pinned
-		// key has no enrollment-anchored trust — the Gateway aborts (no TOFU). The
+		// An agentless node with no host-CA anchor and no pinned key has no
+		// enrollment-anchored trust — the Gateway aborts (no TOFU). The
 		// decision still ALLOWs; warn so the operator repairs the enrollment.
 		if (model == NodeConnectionInfo.ConnectorModel.AGENTLESS && !info.hasHostVerification()) {
 			LOG.warn("agentless node {} ({}) has no host-verification material (no host_ca keys, no pinned host "
@@ -744,18 +721,13 @@ public class ConnectAuthorizationService {
 		return info;
 	}
 
-	// HA routing (Design §10.2/§10.3; FR-HA-2/5): fold the FRESH presence owner
-	// into
-	// the connection for an outbound-agent node so the ingress Gateway routes to
-	// the
-	// owner (self ⇒ local path; other ⇒ relay). Only a fresh owner counts — an
-	// absent/stale owner means no live Gateway holds the agent channel, so the
-	// fields
-	// stay empty and the ingress fails closed to "node offline". Agentless nodes
-	// have
-	// no ownership (any Gateway dials directly), so they never carry owner fields.
-	// The
-	// nonce is the anti-stale fencing token the ingress binds into the relay token.
+	// HA routing: fold the FRESH presence owner into the connection for an
+	// outbound-agent node so the ingress Gateway routes to the owner (self ⇒ local
+	// path; other ⇒ relay). Only a fresh owner counts — an absent/stale owner means
+	// no live Gateway holds the agent channel, so the fields stay empty and the
+	// ingress fails closed to "node offline". Agentless nodes have no ownership
+	// (any Gateway dials directly), so they never carry owner fields. The nonce is
+	// the anti-stale fencing token the ingress binds into the relay token.
 	private Mono<NodeConnectionInfo> attachFreshOwner(Node node, NodeConnectionInfo info) {
 		if (info.connectorKind() != NodeConnectionInfo.ConnectorModel.OUTBOUND_AGENT) {
 			return Mono.just(info);
@@ -766,7 +738,7 @@ public class ConnectAuthorizationService {
 				.defaultIfEmpty(info);
 	}
 
-	// §9.2: the agentless dial address is "host:port". Inventory stores a reachable
+	// The agentless dial address is "host:port". Inventory stores a reachable
 	// address; if it carries no explicit port, default to SSH 22 (a bare IPv6
 	// literal is bracketed first so the result is a valid host:port).
 	private static String dialAddress(Node node) {
@@ -826,10 +798,10 @@ public class ConnectAuthorizationService {
 				null).thenReturn(ConnectDecision.denied());
 	}
 
-	// The deny path has no session (sessionId stays null, §8.4), but it still
-	// populates source_ip/access_model/correlation_id where the caller knows them —
-	// so a denied JIT/break-glass attempt is searchable by the same dimensions and
-	// joins its correlation chain (FR-AUD-8).
+	// The deny path has no session (sessionId stays null), but it still populates
+	// source_ip/access_model/correlation_id where the caller knows them — so a
+	// denied JIT/break-glass attempt is searchable by the same dimensions and joins
+	// its correlation chain.
 	private Mono<Void> auditDeny(UUID callerGatewayId, String identity, UUID nodeId, String sourceIp,
 			DataPlaneDecision decision, String note, String accessModel, UUID correlationId) {
 		Map<String, String> detail = new HashMap<>();
@@ -859,8 +831,8 @@ public class ConnectAuthorizationService {
 	}
 
 	// A lost decision-log write must not fail the (already fail-closed) deny, but
-	// it
-	// MUST be observable — a silent audit gap on the deny path defeats FR-AUD-7.
+	// it MUST be observable — a silent audit gap on the deny path erases the only
+	// durable record that the attempt was made.
 	private Mono<Void> bestEffortAudit(AuditRecord record) {
 		return audit.record(record).onErrorResume(auditFailure -> {
 			LOG.error("authz decision-log write failed (decision still denied): {}", auditFailure.toString());

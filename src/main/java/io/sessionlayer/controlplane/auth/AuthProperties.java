@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * Tunables for the authentication surface: OTP entropy and fixed-window rate
- * limits (FR-AUTH-9).
+ * limits.
  */
 @ConfigurationProperties(prefix = "sessionlayer.auth")
 public class AuthProperties {
