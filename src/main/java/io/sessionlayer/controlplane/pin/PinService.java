@@ -74,9 +74,19 @@ public class PinService {
 				Map.of("reason", "evaluation_error", "source_ip", ip)).then(Mono.empty()));
 	}
 
+	/**
+	 * Live pins — one identity's when a name is given, every one when it is not.
+	 * The unfiltered form is what offboarding and incident review need: a pin
+	 * authenticates on its own and outlives the session it was created for, so one
+	 * nobody has accounted for is standing access. Withholding the enumeration
+	 * protected nothing, because {@code user:manage} — the permission gating this
+	 * read — also MINTS pins, so its holder could always reach the same information
+	 * by a route it already had.
+	 */
 	public Flux<Pin> listActive(String identity) {
 		Instant now = Instant.now();
-		return pins.findByIdentity(identity).filter(p -> p.active(now));
+		Flux<Pin> matching = (identity == null || identity.isBlank()) ? pins.findAll() : pins.findByIdentity(identity);
+		return matching.filter(p -> p.active(now));
 	}
 
 	public Mono<Pin> revoke(UUID pinId, String actor, String reason) {

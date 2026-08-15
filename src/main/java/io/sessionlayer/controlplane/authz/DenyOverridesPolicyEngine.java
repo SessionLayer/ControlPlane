@@ -74,7 +74,12 @@ public class DenyOverridesPolicyEngine implements PolicyEngine {
 				: allows.stream().filter(r -> principals(r).contains(requested)).toList();
 		Set<String> capabilities = new TreeSet<>();
 		contributing.forEach(r -> capabilities.addAll(Capabilities.effective(setOf(r.capabilities()))));
-		int grantTtl = contributing.stream().mapToInt(DpRule::ttlSeconds).filter(t -> t > 0).min().orElse(0);
+		// ttlSeconds is nullable now (a deny carries none), so filter BEFORE unboxing.
+		// Every element here is an allow, which the write path still requires a TTL
+		// for — but that is an invariant enforced in the database, and mapToInt on a
+		// null would be an NPE on the decision path the first time it stopped holding.
+		int grantTtl = contributing.stream().map(DpRule::ttlSeconds).filter(java.util.Objects::nonNull)
+				.mapToInt(Integer::intValue).filter(t -> t > 0).min().orElse(0);
 		DpRule representative = contributing.get(0); // applicable is id-sorted → lowest id
 		return DataPlaneDecision.allow(allowedLogins, capabilities, grantTtl, representative.id(),
 				representative.name());

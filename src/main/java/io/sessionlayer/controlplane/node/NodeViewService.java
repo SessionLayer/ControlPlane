@@ -85,14 +85,25 @@ public class NodeViewService {
 	}
 
 	private NodeView derive(Node node, boolean anchored, Presence owner, Instant now) {
+		// The owner is resolved FIRST and independently of the anchor, because the two
+		// fields answer different questions: owningGateway is "which Gateway holds
+		// this node's agent control channel", which is true or false regardless of
+		// whether anyone ever anchored the node, and health is the field that says the
+		// node is unusable. Suppressing the owner on the anchorless branch conflated
+		// them — and disagreed with routing, which attaches the same fresh owner with
+		// no anchor precondition. It also threw away the most useful thing an operator
+		// can be told about a node an Agent join created: `unhealthy` WITH an owner
+		// reads "the Agent is connected and you never anchored it", which names the
+		// repair.
+		String freshOwner = isAgent(node) && freshness.isFresh(owner, now) ? owner.owningGateway() : null;
 		if (!anchored) {
-			return new NodeView(node, NodeView.HEALTH_UNHEALTHY, null);
+			return new NodeView(node, NodeView.HEALTH_UNHEALTHY, freshOwner);
 		}
 		if (!isAgent(node) || owner == null) {
 			return new NodeView(node, NodeView.HEALTH_UNKNOWN, null);
 		}
-		return freshness.isFresh(owner, now)
-				? new NodeView(node, NodeView.HEALTH_HEALTHY, owner.owningGateway())
+		return freshOwner != null
+				? new NodeView(node, NodeView.HEALTH_HEALTHY, freshOwner)
 				: new NodeView(node, NodeView.HEALTH_UNREACHABLE, null);
 	}
 

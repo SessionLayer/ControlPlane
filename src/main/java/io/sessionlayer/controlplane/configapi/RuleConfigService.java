@@ -20,6 +20,7 @@ import tools.jackson.databind.JsonNode;
 public class RuleConfigService {
 
 	private static final String ORIGIN_API = "api";
+	private static final String EFFECT_ALLOW = "allow";
 
 	private final DpRuleRepository rules;
 	private final CursorPages cursorPages;
@@ -43,18 +44,18 @@ public class RuleConfigService {
 	}
 
 	public Mono<DpRule> create(String actor, String name, JsonNode identitySelector, JsonNode nodeLabelSelector,
-			JsonNode sourceIpCondition, List<String> principals, int ttlSeconds, List<String> capabilities,
+			JsonNode sourceIpCondition, List<String> principals, Integer ttlSeconds, List<String> capabilities,
 			String effect) {
-		validate(ttlSeconds, principals, identitySelector, nodeLabelSelector, sourceIpCondition);
+		validate(ttlSeconds, effect, principals, identitySelector, nodeLabelSelector, sourceIpCondition);
 		DpRule rule = DpRule.create(name, identitySelector, nodeLabelSelector, sourceIpCondition, principals,
 				ttlSeconds, capabilities, effect, ORIGIN_API);
 		return persist(null, rule, actor, "rule.create", name);
 	}
 
 	public Mono<DpRule> update(UUID id, String actor, Long expectedVersion, JsonNode identitySelector,
-			JsonNode nodeLabelSelector, JsonNode sourceIpCondition, List<String> principals, int ttlSeconds,
+			JsonNode nodeLabelSelector, JsonNode sourceIpCondition, List<String> principals, Integer ttlSeconds,
 			List<String> capabilities, String effect) {
-		validate(ttlSeconds, principals, identitySelector, nodeLabelSelector, sourceIpCondition);
+		validate(ttlSeconds, effect, principals, identitySelector, nodeLabelSelector, sourceIpCondition);
 		return get(id).flatMap(existing -> {
 			requireVersion(expectedVersion, existing.version());
 			DpRule updated = new DpRule(existing.id(), existing.name(), identitySelector, nodeLabelSelector,
@@ -88,9 +89,27 @@ public class RuleConfigService {
 						e -> ApiProblemException.conflict("a rule named '" + name + "' already exists"));
 	}
 
-	private static void validate(int ttlSeconds, List<String> principals, JsonNode identitySelector,
+	/**
+	 * An allow's grant has a lifetime and must carry one; a deny grants nothing, so
+	 * it has none to bound and may omit it. A value sent on a deny is STORED as
+	 * given rather than nulled: "ignored" describes what the evaluator does with it
+	 * — {@code DenyOverridesPolicyEngine} reads a TTL only from allows — and
+	 * rewriting a caller's field on their behalf would change what a published
+	 * endpoint echoes, and silently drop the value on the next update of any deny
+	 * rule that already carries one.
+	 */
+	private static void validate(Integer ttlSeconds, String effect, List<String> principals, JsonNode identitySelector,
 			JsonNode nodeLabelSelector, JsonNode sourceIpCondition) {
-		if (ttlSeconds <= 0) {
+		if (EFFECT_ALLOW.equals(effect) && ttlSeconds == null) {
+			// Named, because the failure this replaces was a framework 400 that named
+			// nothing and left the operator guessing which field was wrong.
+			throw ApiProblemException.validation("ttlSeconds is required when effect is 'allow'");
+		}
+		// Positivity is checked whenever a value is PRESENT, whatever the effect: the
+		// column's CHECK (ttl_seconds > 0) still applies to a deny that carries one,
+		// and reaching it would surface as an unmapped integrity failure rather than
+		// as this 422.
+		if (ttlSeconds != null && ttlSeconds <= 0) {
 			throw ApiProblemException.validation("ttlSeconds must be > 0");
 		}
 		if (principals == null || principals.isEmpty()) {

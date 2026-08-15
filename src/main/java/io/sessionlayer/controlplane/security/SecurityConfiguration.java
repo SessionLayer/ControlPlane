@@ -47,6 +47,16 @@ public class SecurityConfiguration {
 	static final String[] PUBLIC_PATHS = {"/v1/healthz", "/v1/version", "/actuator/health", "/actuator/health/**",
 			"/actuator/info", "/v1/auth/verify", "/v1/auth/callback"};
 
+	// Authenticated was never enough here: these carry fleet-wide operational
+	// counts, and every machine identity the platform has issued could read them,
+	// including a service account with no role binding at all. Both shapes are
+	// listed because management.endpoints.web.exposure.include exposes metrics AND
+	// prometheus — the same meters by two routes, so gating one alone closes
+	// nothing. The health and info endpoints stay public above, so Kubernetes
+	// probes are untouched.
+	static final String[] METRICS_PATHS = {"/actuator/prometheus", "/actuator/prometheus/**", "/actuator/metrics",
+			"/actuator/metrics/**"};
+
 	@Bean
 	PasswordEncoder passwordEncoder() {
 		return new BCryptPasswordEncoder();
@@ -55,13 +65,14 @@ public class SecurityConfiguration {
 	@Bean
 	SecurityWebFilterChain restSecurityFilterChain(ServerHttpSecurity http, MtlsAuthenticationConverter mtlsConverter,
 			ReactiveAuthenticationManagerResolver<ServerWebExchange> jwtManagerResolver, SecurityProperties security,
-			PasswordEncoder passwordEncoder) {
+			PasswordEncoder passwordEncoder, MetricsAuthorizationManager metricsAuthorization) {
 		http.csrf(ServerHttpSecurity.CsrfSpec::disable).formLogin(ServerHttpSecurity.FormLoginSpec::disable)
 				.logout(ServerHttpSecurity.LogoutSpec::disable).httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
 				.authorizeExchange(ex -> ex.pathMatchers(PUBLIC_PATHS).permitAll()
 						.pathMatchers(HttpMethod.POST, "/v1/oauth2/token", "/v1/auth/backchannel-logout",
 								"/v1/bootstrap/claim", "/v1/auth/device/poll")
-						.permitAll().anyExchange().authenticated())
+						.permitAll().pathMatchers(METRICS_PATHS).access(metricsAuthorization).anyExchange()
+						.authenticated())
 				.oauth2ResourceServer(oauth2 -> oauth2.authenticationManagerResolver(jwtManagerResolver))
 				.addFilterAt(mtlsAuthenticationFilter(mtlsConverter), SecurityWebFiltersOrder.AUTHENTICATION);
 

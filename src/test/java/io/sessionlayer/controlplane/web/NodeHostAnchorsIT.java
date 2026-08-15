@@ -122,8 +122,11 @@ class NodeHostAnchorsIT extends AbstractAuthIT {
 				// what the node reports.
 				assertThat(anchor).doesNotContainKey("fingerprint");
 			});
-			// A certificate-only node is anchored, so it is not the unusable one.
-			assertThat(health(token, id)).isNotEqualTo("unhealthy");
+			// A certificate-only node is anchored, so it is not the unusable one. Asserted
+			// as the exact value rather than "not unhealthy", which would also pass for
+			// healthy, unreachable, or any nonsense a bug produced: neither node here has
+			// a presence claim, so unknown is the one right answer.
+			assertThat(health(token, id)).isEqualTo("unknown");
 		}
 	}
 
@@ -196,11 +199,18 @@ class NodeHostAnchorsIT extends AbstractAuthIT {
 		UUID id = registerAgentless(token, Map.of("pinnedHostKey", pinnedHostKeyLine()));
 
 		// An empty set is not "clear the anchors": a node with none does not fall back
-		// to trust-on-first-use, it stops working.
-		putAnchors(token, id, Map.of()).expectStatus().isEqualTo(422);
-		putAnchors(token, id, Map.of("pinnedHostKey", "not-an-openssh-line")).expectStatus().isEqualTo(422);
+		// to trust-on-first-use, it stops working. The body is pinned, not just the
+		// status: the useful half of a problem document is the detail naming what was
+		// wrong, and a bare status integer holds none of it.
+		putAnchors(token, id, Map.of()).expectStatus().isEqualTo(422).expectHeader()
+				.contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON).expectBody().jsonPath("$.title")
+				.isEqualTo("Node request rejected").jsonPath("$.detail")
+				.isEqualTo("a host certificate or a pinned host key is required (no TOFU)");
+		putAnchors(token, id, Map.of("pinnedHostKey", "not-an-openssh-line")).expectStatus().isEqualTo(422).expectBody()
+				.jsonPath("$.detail").isEqualTo("a pinnedHostKey must be an OpenSSH \"<type> <base64>\" line");
 		putAnchors(token, id, Map.of("hostCertificate", "ssh-ed25519-cert-v01@openssh.com !!!not-base64!!!"))
-				.expectStatus().isEqualTo(422);
+				.expectStatus().isEqualTo(422).expectBody().jsonPath("$.detail")
+				.isEqualTo("a hostCertificate must carry a base64 key/cert blob");
 
 		// A refused replace changed nothing.
 		assertThat(anchors(token, id)).hasSize(1);
@@ -212,7 +222,10 @@ class NodeHostAnchorsIT extends AbstractAuthIT {
 				PlatformPermissions.NODE_REMOVE);
 		Map<String, Object> anchor = Map.of("pinnedHostKey", pinnedHostKeyLine());
 
-		putAnchors(token, UUID.randomUUID(), anchor).expectStatus().isNotFound();
+		putAnchors(token, UUID.randomUUID(), anchor).expectStatus().isNotFound().expectHeader()
+				.contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON).expectBody().jsonPath("$.title")
+				.isEqualTo("Node request rejected").jsonPath("$.detail")
+				.value(detail -> assertThat((String) detail).contains("not found"));
 		client.get().uri("/v1/nodes/" + UUID.randomUUID() + "/host-anchors").header("Authorization", "Bearer " + token)
 				.exchange().expectStatus().isNotFound();
 
@@ -221,7 +234,9 @@ class NodeHostAnchorsIT extends AbstractAuthIT {
 				.isNoContent();
 		// Removal is terminal: a removed node is replaced by a fresh registration, not
 		// repaired.
-		putAnchors(token, id, anchor).expectStatus().isEqualTo(409);
+		putAnchors(token, id, anchor).expectStatus().isEqualTo(409).expectHeader()
+				.contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON).expectBody().jsonPath("$.detail")
+				.value(detail -> assertThat((String) detail).contains("removed"));
 	}
 
 	@Test

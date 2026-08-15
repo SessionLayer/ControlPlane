@@ -14,10 +14,12 @@ import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 /**
- * V29's back-fill, proven against the real migration text rather than a
- * restatement of it.
+ * The vocabulary back-fill, proven against the real migration text rather than
+ * a restatement of it.
  *
  * <p>
  * The defect it repairs is invisible on a fresh install, which is why four
@@ -27,6 +29,16 @@ import org.junit.jupiter.api.Test;
  * These tests seed exactly that stale row and re-run the shipped script over it
  * — it is written to be idempotent, so re-running is the honest way to exercise
  * it.
+ *
+ * <p>
+ * It replays the <b>newest</b> migration that rewrites
+ * {@code platform_role_permissions_check}, discovered rather than named. Naming
+ * one froze the test to the vocabulary of the day it was written: replaying V29
+ * verbatim re-added a CHECK listing twenty permissions, which the first
+ * twenty-first permission then violated on rows that legitimately carry it. The
+ * guarantee under test is not "V29 worked once", it is "the current vocabulary
+ * migration reconciles a stale seeded role against the WHOLE vocabulary" — and
+ * that is the behaviour every future one has to inherit.
  */
 class PlatformAdminBackfillIT extends AbstractAuthIT {
 
@@ -48,7 +60,7 @@ class PlatformAdminBackfillIT extends AbstractAuthIT {
 	void aStaleSeededRoleGainsEveryMissingPermission() throws Exception {
 		seedAdminRole(STALE_VOCABULARY, "default");
 
-		runMigrationV29();
+		runVocabularyMigration();
 
 		assertThat(adminPermissions()).containsAll(PlatformPermissions.ALL)
 				.contains("gateway:enroll", "gateway:remove", "recording:key-manage", "lock:read", "lock:write",
@@ -61,9 +73,9 @@ class PlatformAdminBackfillIT extends AbstractAuthIT {
 	void theBackfillIsIdempotent() throws Exception {
 		seedAdminRole(STALE_VOCABULARY, "default");
 
-		runMigrationV29();
+		runVocabularyMigration();
 		List<String> once = adminPermissions();
-		runMigrationV29();
+		runVocabularyMigration();
 		List<String> twice = adminPermissions();
 
 		assertThat(twice).containsExactlyElementsOf(once);
@@ -76,7 +88,7 @@ class PlatformAdminBackfillIT extends AbstractAuthIT {
 	void anOperatorCuratedRoleIsLeftAlone() throws Exception {
 		seedAdminRole(STALE_VOCABULARY, "api");
 
-		runMigrationV29();
+		runVocabularyMigration();
 
 		assertThat(adminPermissions()).containsExactlyInAnyOrderElementsOf(STALE_VOCABULARY)
 				.doesNotContain("gateway:enroll", "recording:key-manage");
@@ -89,12 +101,30 @@ class PlatformAdminBackfillIT extends AbstractAuthIT {
 				+ origin + "')");
 	}
 
-	private void runMigrationV29() throws Exception {
-		try (var stream = PlatformAdminBackfillIT.class.getClassLoader()
-				.getResourceAsStream("db/migration/V29__operator_settings_api_permissions.sql")) {
-			assertThat(stream).as("the V29 migration is on the classpath").isNotNull();
-			execute(new String(stream.readAllBytes(), StandardCharsets.UTF_8));
+	private void runVocabularyMigration() throws Exception {
+		execute(newestVocabularyMigration());
+	}
+
+	// The newest migration whose text rewrites the permission CHECK. Discovered so
+	// the test keeps testing today's migration instead of a frozen one.
+	private static String newestVocabularyMigration() throws Exception {
+		Resource[] migrations = new PathMatchingResourcePatternResolver()
+				.getResources("classpath*:db/migration/V*.sql");
+		String newest = null;
+		int newestVersion = -1;
+		for (Resource migration : migrations) {
+			String body = new String(migration.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+			if (!body.contains("platform_role_permissions_check")) {
+				continue;
+			}
+			int version = Integer.parseInt(migration.getFilename().substring(1).split("__")[0]);
+			if (version > newestVersion) {
+				newestVersion = version;
+				newest = body;
+			}
 		}
+		assertThat(newest).as("a migration defining platform_role_permissions_check is on the classpath").isNotNull();
+		return newest;
 	}
 
 	private List<String> adminPermissions() throws Exception {
