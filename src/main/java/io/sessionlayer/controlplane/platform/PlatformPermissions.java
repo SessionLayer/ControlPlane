@@ -23,6 +23,7 @@ public final class PlatformPermissions {
 	public static final String RECORDING_DELETE = "recording:delete";
 	public static final String RECORDING_KEY_MANAGE = "recording:key-manage";
 	public static final String AUDIT_READ = "audit:read";
+	public static final String METRICS_READ = "metrics:read";
 	public static final String USER_MANAGE = "user:manage";
 	public static final String SETTINGS_WRITE = "settings:write";
 	public static final String LOCK_READ = "lock:read";
@@ -31,12 +32,19 @@ public final class PlatformPermissions {
 
 	public static final Set<String> ALL = Set.of(RBAC_READ, RBAC_WRITE, NODE_ENROLL, GATEWAY_ENROLL, GATEWAY_REMOVE,
 			NODE_QUARANTINE, NODE_REMOVE, CA_MANAGE, CA_ROTATE, REQUEST_APPROVE, RECORDING_REPLAY, RECORDING_EXPORT,
-			RECORDING_DELETE, RECORDING_KEY_MANAGE, AUDIT_READ, USER_MANAGE, SETTINGS_WRITE, LOCK_READ, LOCK_WRITE,
-			BREAKGLASS_MANAGE);
+			RECORDING_DELETE, RECORDING_KEY_MANAGE, AUDIT_READ, METRICS_READ, USER_MANAGE, SETTINGS_WRITE, LOCK_READ,
+			LOCK_WRITE, BREAKGLASS_MANAGE);
 
 	/**
 	 * Permissions whose scope narrows access (fail-closed for unscoped action on
 	 * scoped binding).
+	 *
+	 * <p>
+	 * {@link #METRICS_READ} is deliberately absent. The meter set is a fleet-wide
+	 * aggregate with no per-node or per-user dimension to narrow, so a scope could
+	 * only be a no-op or serve a silently PARTIAL meter set — and a scraper that
+	 * receives incomplete metrics without knowing it builds confident wrong
+	 * dashboards, which is worse than the clean 403 it gets without the permission.
 	 */
 	public static final Set<String> SCOPABLE = Set.of(RECORDING_REPLAY, RECORDING_EXPORT, AUDIT_READ);
 

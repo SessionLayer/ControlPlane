@@ -54,7 +54,7 @@ public class RuleController implements RulesApi {
 					.create(subject.identity(), req.getName(), ApiConversions.toJson(mapper, req.getIdentitySelector()),
 							ApiConversions.toJson(mapper, req.getNodeLabelSelector()),
 							ApiConversions.toJsonOrNull(mapper, req.getSourceIpCondition()), req.getPrincipals(),
-							ttl(req.getTtlSeconds()), ApiConversions.capabilityValues(req.getCapabilities()),
+							req.getTtlSeconds(), ApiConversions.capabilityValues(req.getCapabilities()),
 							req.getEffect().getValue())
 					.map(rule -> ResponseEntity.status(HttpStatus.CREATED).body(toResource(rule)));
 			return idempotency.execute(idempotencyKey, subject.identity(), ApiConversions.method(exchange),
@@ -76,7 +76,7 @@ public class RuleController implements RulesApi {
 						ApiConversions.toJson(mapper, req.getIdentitySelector()),
 						ApiConversions.toJson(mapper, req.getNodeLabelSelector()),
 						ApiConversions.toJsonOrNull(mapper, req.getSourceIpCondition()), req.getPrincipals(),
-						ttl(req.getTtlSeconds()), ApiConversions.capabilityValues(req.getCapabilities()),
+						req.getTtlSeconds(), ApiConversions.capabilityValues(req.getCapabilities()),
 						req.getEffect().getValue()).map(rule -> ResponseEntity.ok(toResource(rule)))));
 	}
 
@@ -99,9 +99,4 @@ public class RuleController implements RulesApi {
 		return resource;
 	}
 
-	// A required ttl absent at the bean-validation layer would already be a 400; -1
-	// funnels any residual null to the service's pre-commit 422 rather than an NPE.
-	private static int ttl(Integer ttlSeconds) {
-		return ttlSeconds == null ? -1 : ttlSeconds;
-	}
 }

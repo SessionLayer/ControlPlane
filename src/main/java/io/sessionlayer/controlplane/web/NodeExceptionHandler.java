@@ -1,6 +1,7 @@
 package io.sessionlayer.controlplane.web;
 
 import io.sessionlayer.controlplane.node.NodeRequestException;
+import java.net.URI;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -24,7 +25,22 @@ class NodeExceptionHandler {
 			case UNPROCESSABLE -> HttpStatus.UNPROCESSABLE_CONTENT;
 		};
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, failure.getMessage());
+		// The RFC 9457 `type` member was absent, so these documents were a problem
+		// shape without the one field that makes a problem machine-classifiable. The
+		// title stays as published — the vocabulary is shared, the wording is this
+		// controller's, and changing a response body the contract did not change would
+		// be a breaking change for a cosmetic gain.
+		problem.setType(URI.create(problemType(failure.reason()).typeUri()));
 		problem.setTitle("Node request rejected");
 		return ResponseEntity.status(status).contentType(MediaType.APPLICATION_PROBLEM_JSON).body(problem);
+	}
+
+	private static ApiProblemType problemType(NodeRequestException.Reason reason) {
+		return switch (reason) {
+			case INVALID_ARGUMENT -> ApiProblemType.MALFORMED;
+			case NOT_FOUND -> ApiProblemType.NOT_FOUND;
+			case CONFLICT -> ApiProblemType.CONFLICT;
+			case UNPROCESSABLE -> ApiProblemType.VALIDATION;
+		};
 	}
 }

@@ -13,11 +13,12 @@ import tools.jackson.databind.JsonNode;
 
 @Table(schema = "config", name = "dp_rule")
 public record DpRule(@Id UUID id, String name, JsonNode identitySelector, JsonNode nodeLabelSelector,
-		JsonNode sourceIpCondition, List<String> principals, int ttlSeconds, List<String> capabilities, String effect,
-		String origin, @Version Long version, @CreatedDate Instant createdAt, @LastModifiedDate Instant updatedAt) {
+		JsonNode sourceIpCondition, List<String> principals, Integer ttlSeconds, List<String> capabilities,
+		String effect, String origin, @Version Long version, @CreatedDate Instant createdAt,
+		@LastModifiedDate Instant updatedAt) {
 
 	public static DpRule create(String name, JsonNode identitySelector, JsonNode nodeLabelSelector,
-			JsonNode sourceIpCondition, List<String> principals, int ttlSeconds, List<String> capabilities,
+			JsonNode sourceIpCondition, List<String> principals, Integer ttlSeconds, List<String> capabilities,
 			String effect, String origin) {
 		return new DpRule(Uuids.v7(), name, identitySelector, nodeLabelSelector, sourceIpCondition, principals,
 				ttlSeconds, capabilities, effect, origin, null, null, null);

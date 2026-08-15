@@ -394,19 +394,22 @@ paths:
   /v1/pins:
     get:
       operationId: listPins
-      summary: List pins for an identity (admin).
+      summary: List live pins (admin).
       description: |
-        Lists one identity's ACTIVE pins — `identity` is required, so the surface is
-        never enumerable fleet-wide. This is what tells an operator which authN
-        shortcuts an identity still holds: a pin outlives the session it was created
-        for, so offboarding is incomplete until they are accounted for.
+        Lists ACTIVE pins — every one by default, or a single identity's when
+        `identity` is given. The unfiltered form is the one offboarding and incident
+        review need, where the questions are "which pins exist right now" and "who
+        still holds one"; requiring the identity up front assumed the caller already
+        knew the answer. A pin authenticates on its own and outlives the session it
+        was created for, so one nobody has accounted for is standing access.
         Platform-RBAC gated (`user:manage`).
       tags:
         - auth
       parameters:
         - name: identity
           in: query
-          required: true
+          required: false
+          description: Filter to one identity's pins; omit for every live pin.
           schema:
             type: string
       responses:
@@ -5537,7 +5540,15 @@ components:
     PlatformPermission:
       type: string
       title: Platform Permission
-      description: A granular platform-RBAC permission from the closed vocabulary.
+      description: |
+        A granular platform-RBAC permission from the closed vocabulary.
+
+        `metrics:read` gates exactly one thing — reading the Control Plane's metrics
+        endpoint — and is a member of its own rather than a reuse of `audit:read` on
+        purpose: the meters carry fleet-wide operational counts (live sessions,
+        authorization error rates, CA-signer activity, session-limit denials), and
+        granting a scraper `audit:read` to reach them would hand it the entire audit
+        trail to read a gauge.
       enum:
         - rbac:read
         - rbac:write
@@ -5554,6 +5565,7 @@ components:
         - recording:delete
         - recording:key-manage
         - audit:read
+        - metrics:read
         - user:manage
         - settings:write
         - lock:read
@@ -5768,7 +5780,6 @@ components:
         - identitySelector
         - nodeLabelSelector
         - principals
-        - ttlSeconds
         - effect
       properties:
         name:
@@ -5787,6 +5798,13 @@ components:
         ttlSeconds:
           type: integer
           format: int32
+          description: >-
+            The granted access's lifetime in seconds. REQUIRED when `effect` is
+            `allow`, where it bounds the grant; omitting it there is a `422` naming
+            this field, and there is no default — an unbounded grant is never
+            inferred from silence. IGNORED when `effect` is `deny`, which grants
+            nothing and so has no lifetime to bound; a deny is in force until the
+            rule is changed.
         capabilities:
           type: array
           items:
@@ -5801,7 +5819,6 @@ components:
         - identitySelector
         - nodeLabelSelector
         - principals
-        - ttlSeconds
         - effect
         - version
       properties:
@@ -5818,6 +5835,13 @@ components:
         ttlSeconds:
           type: integer
           format: int32
+          description: >-
+            The granted access's lifetime in seconds. REQUIRED when `effect` is
+            `allow`, where it bounds the grant; omitting it there is a `422` naming
+            this field, and there is no default — an unbounded grant is never
+            inferred from silence. IGNORED when `effect` is `deny`, which grants
+            nothing and so has no lifetime to bound; a deny is in force until the
+            rule is changed.
         capabilities:
           type: array
           items:
