@@ -318,7 +318,7 @@ public class RecordingRegistrationService {
 	}
 
 	// Best-effort, OUT-OF-BAND failure record: recording is mandatory, so a failed
-	// Begin/RequestUpload must reach the audit stream, not just app logs (FR-AUD).
+	// Begin/RequestUpload must reach the audit stream, not just app logs.
 	// Its own transaction (the main one rolled back); a lost audit write must not
 	// mask the original error.
 	private Mono<Void> failureAudit(String action, UUID caller, Throwable error) {
