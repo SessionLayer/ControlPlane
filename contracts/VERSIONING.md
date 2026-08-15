@@ -395,8 +395,8 @@ URI major stays `v1`, `info.version` stays `0.1.0`) lets an operator register an
 **agent**-connected node, with its host anchor, before the Agent joins.
 `hostCertificate`/`pinnedHostKey` govern both kinds: the Gateway runs the same
 no-TOFU verification on the inner leg however it reached the node, so an
-anchorless agent node aborts every session — the anchor was previously
-unreachable except by writing `runtime.node_host_key` directly. `address` moves
+anchorless agent node aborts every session, and this request is what supplies
+that anchor without a direct write to `runtime.node_host_key`. `address` moves
 out of `required` because an agent node is reached through the Agent's outbound
 channel and must not carry a dial address; a request that supplies one is
 rejected. Optional, defaulting to `agentless`, so every existing caller is

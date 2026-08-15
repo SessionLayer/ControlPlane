@@ -149,11 +149,8 @@ not legal is a protocol error.
 appear on an Agent↔Gateway connection. Reserved types MUST be rejected as
 protocol errors until they are defined.
 
-Two assignments carry a rationale worth stating. `0x21` is a **result**, not a
-readiness signal, because it must also carry *failure* — a fast-fail, so the
-Gateway need not wait out the dial-back deadline to learn the node's `sshd` is
-down. `0x30 STREAM_OPEN` is **Agent→GW**, because only the Agent knows when the
-loopback connection actually came up.
+`0x30 STREAM_OPEN` travels **Agent→Gateway only, never the reverse** — the Agent
+is the only party that knows when the loopback connection came up.
 
 ## 5. The dial-back state machine
 
