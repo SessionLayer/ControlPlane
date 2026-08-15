@@ -62,21 +62,21 @@ public class SessionCertificateService {
 		return requireAuthorizedGateway(callerGatewayId, presentedFingerprint)
 				.then(tokenService.consume(rawToken, callerGatewayId, context))
 				.flatMap(token -> caSigner.activeSigner("session")
-						// M7: OpenSSH cert assembly + ECDSA sign is CPU-bound — off the event loop.
+						// OpenSSH cert assembly + ECDSA sign is CPU-bound — off the event loop.
 						.flatMap(signer -> Mono.fromCallable(() -> mint(signer, subjectKey, token))
 								.subscribeOn(Schedulers.boundedElastic()))
 						.flatMap(signed -> audit
 								.record(callerGatewayId.toString(), token.principal(), "session.sign", "success",
 										token.sessionId(), token.nodeId(), Map.of("key_id", signed.keyId()))
 								.thenReturn(signed)))
-				// M4 / FR-AUD-7: every fail-closed denial on the signing path is audited
+				// Every fail-closed denial on the signing path is audited
 				// (generic to the client; the category reason + caller id stay server-side).
 				.onErrorResume(GatewayRequestException.class,
 						denial -> audit
 								.record(callerGatewayId == null ? "unknown" : callerGatewayId.toString(), null,
 										"session.sign", "denied", null, null, Map.of("reason", denial.reason().name()))
 								.then(Mono.error(denial)))
-				// A signer-unavailable (NFR-3 fail-closed) is not a GatewayRequestException;
+				// A fail-closed signer-unavailable is not a GatewayRequestException;
 				// audit it distinctly so a CA-availability incident is forensically visible.
 				.onErrorResume(CaSignerService.NoSignerAvailable.class,
 						unavailable -> audit
@@ -95,10 +95,9 @@ public class SessionCertificateService {
 								.then(Mono.error(failed)));
 	}
 
-	// M6: the caller's identity must be active AND the presented client cert must
-	// pin to
-	// the identity's current or previous fingerprint (a superseded/stolen cert is
-	// refused).
+	// The caller's identity must be active AND the presented client cert must pin
+	// to the identity's current or previous fingerprint (a superseded/stolen cert
+	// is refused).
 	private Mono<GatewayIdentity> requireAuthorizedGateway(UUID callerGatewayId, String presentedFingerprint) {
 		if (callerGatewayId == null || presentedFingerprint == null) {
 			return Mono.error(denied());
@@ -116,16 +115,14 @@ public class SessionCertificateService {
 	private static SignedInnerCert mint(SshCertSigner signer, ECPublicKey subjectKey, SessionSigningToken token) {
 		// Minimal CP-internal path: the human "identity" component of the key id is the
 		// principal (the real human identity distinct from the Linux login is supplied
-		// elsewhere). key_id = session_id + identity (Design §12.2 / FR-CA-5).
+		// elsewhere). key_id = session_id + identity.
 		String principal = token.principal();
 		Set<String> capabilities = new HashSet<>(token.capabilities());
 		// The node-facing inner cert carries NO source-address. The node validates a
 		// cert's source-address against the GATEWAY's peer IP (the inner leg's TCP
 		// source), not the SSH client's, so pinning the client IP here rejects the
-		// valid
-		// cert in any multi-host / NAT / bridged deployment. Source-IP enforcement
-		// lives
-		// on the OUTER leg + the Authorize decision (FR-AUTHZ-1, §5.6), which see the
+		// valid cert in any multi-host / NAT / bridged deployment. Source-IP
+		// enforcement lives on the OUTER leg + the Authorize decision, which see the
 		// real client IP.
 		CertificateParameters params = CertificateProfiles.innerLegSessionCert(token.sessionId().toString(), principal,
 				principal, null, capabilities, serial(token.id()), Instant.now());

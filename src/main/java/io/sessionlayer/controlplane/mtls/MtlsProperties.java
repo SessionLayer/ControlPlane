@@ -23,7 +23,7 @@ public class MtlsProperties {
 	private Duration certBackdate = Duration.ofMinutes(2);
 
 	/**
-	 * Server-side deadline applied to every mTLS RPC handler (M3): a hung DB /
+	 * Server-side deadline applied to every mTLS RPC handler: a hung DB /
 	 * saturated R2DBC pool surfaces as {@code DEADLINE_EXCEEDED} rather than a hung
 	 * call.
 	 */

@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Maps service exceptions to fail-closed gRPC statuses with <b>generic,
- * non-leaking</b> descriptions (§15/NFR-2). The specific cause is logged
+ * non-leaking</b> descriptions. The specific cause is logged
  * server-side and never returned to the caller, so a client cannot distinguish
  * (say) "expired token" from "wrong gateway". A CA/signer that is unavailable
  * is a transient server condition ({@code UNAVAILABLE}); anything unexpected is
@@ -47,7 +47,7 @@ final class GrpcErrors {
 			return status.withDescription(request.getMessage()).asRuntimeException();
 		}
 		if (error instanceof DeviceFlowService.RateLimited) {
-			// A throttled device-flow poll (§5.2, FR-AUTH-4) — the Gateway backs off and
+			// A throttled device-flow poll — the Gateway backs off and
 			// keeps its num-prompts=0 heartbeat alive.
 			return Status.RESOURCE_EXHAUSTED.withDescription("rate limited").asRuntimeException();
 		}
@@ -66,8 +66,7 @@ final class GrpcErrors {
 					.asRuntimeException();
 		}
 		if (error instanceof TimeoutException) {
-			// Server-side deadline hit (M3) — a saturated DB / R2DBC pool, not a client
-			// fault.
+			// Server-side deadline hit — a saturated DB / R2DBC pool, not a client fault.
 			LOG.warn("gRPC {} exceeded the server deadline", operation);
 			return Status.DEADLINE_EXCEEDED.withDescription("request deadline exceeded").asRuntimeException();
 		}

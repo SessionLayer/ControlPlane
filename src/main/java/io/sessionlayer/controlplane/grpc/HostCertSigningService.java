@@ -16,8 +16,8 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 /**
- * gRPC server for {@code HostCertSigning} (Design §9.3/§11): signs the
- * Gateway's OUTER host certificate for the ProxyJump host-cert MITM path and
+ * gRPC server for {@code HostCertSigning}: signs the Gateway's OUTER host
+ * certificate for the ProxyJump host-cert MITM path and
  * returns the <b>certificate only</b>. mTLS-required tier — the
  * {@link AuthInterceptor} resolves the caller; this RPC is NOT session-bound,
  * so the caller's Gateway mTLS identity (active + unlocked) is the sole

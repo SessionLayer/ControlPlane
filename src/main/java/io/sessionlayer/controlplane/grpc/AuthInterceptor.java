@@ -28,8 +28,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The per-RPC authorization interceptor for the mTLS plane (VERSIONING.md §7,
- * Design §15). mTLS authenticates the channel; this interceptor decides, per
+ * The per-RPC authorization interceptor for the mTLS plane (VERSIONING.md §7).
+ * mTLS authenticates the channel; this interceptor decides, per
  * method, whether a valid client certificate is required and — independently of
  * the TLS-layer {@code clientAuth} toggle — re-validates the presented client
  * chain against the internal CA trust anchor, checks validity, and resolves the
@@ -81,7 +81,7 @@ public final class AuthInterceptor implements ServerInterceptor {
 			return new ServerCall.Listener<>() {
 			};
 		}
-		// Attach the Gateway's W3C trace context (§14) so the handler's cp.* span is a
+		// Attach the Gateway's W3C trace context so the handler's cp.* span is a
 		// child of the Gateway root — one trace across the CP<->GW gRPC plane.
 		Context context = Context.current().withValue(MtlsContext.PEER, peer).withValue(CpTracing.OTEL_PARENT,
 				tracing.extractParent(headers));

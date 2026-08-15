@@ -42,7 +42,7 @@ public class GatewayServerCertificateService {
 	 * Issue a serverAuth leaf over the public key in {@code csrDer} for the caller
 	 * resolved from its mTLS client certificate. Returns the certificate only — the
 	 * Gateway generated this keypair itself and its private half never reaches the
-	 * CP (D2/§15).
+	 * CP.
 	 */
 	public Mono<IssuedServerCertificate> issue(UUID callerGatewayId, byte[] csrDer) {
 		if (callerGatewayId == null) {
@@ -62,8 +62,8 @@ public class GatewayServerCertificateService {
 			Instant now = Instant.now();
 			Instant notBefore = now.minus(properties.getCertBackdate());
 			Instant notAfter = now.plus(properties.getIdentityCertTtl());
-			// M7: CSR proof-of-possession verify + ECDSA issuance are CPU-bound — off the
-			// reactive event loop. L3: a fresh random serial.
+			// CSR proof-of-possession verify + ECDSA issuance are CPU-bound — off the
+			// reactive event loop. The serial is freshly random.
 			return Mono
 					.fromCallable(() -> backend.issueLeaf(new LeafCertificateSpec(publicKeyOf(csrDer), identity.name(),
 							List.of(identity.name()), List.of(GatewayIdentityUri.of(identity.id())), LeafPurpose.SERVER,
