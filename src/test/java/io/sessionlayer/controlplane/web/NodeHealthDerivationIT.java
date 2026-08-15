@@ -98,9 +98,21 @@ class NodeHealthDerivationIT extends AbstractAuthIT {
 				.doesNotExist();
 
 		// Unusable outranks unreachable: a fresh owner does not make an anchorless node
-		// connectable.
-		claim(node.id(), "gw-anchorless-" + unique(), Instant.now());
-		getNode(token, node.id()).jsonPath("$.health").isEqualTo("unhealthy");
+		// connectable. But the owner is still REPORTED, because the two fields answer
+		// different questions and routing attaches that same owner with no anchor
+		// precondition — an API that said nobody owned the node would contradict the
+		// Gateway the session is actually routed to. `unhealthy` with an owner is also
+		// the most useful thing an operator can be told here: the Agent is connected,
+		// and nobody ever anchored the node.
+		String owner = "gw-anchorless-" + unique();
+		claim(node.id(), owner, Instant.now());
+		getNode(token, node.id()).jsonPath("$.health").isEqualTo("unhealthy").jsonPath("$.owningGateway")
+				.isEqualTo(owner);
+
+		// And it drops away with the claim, exactly as on the anchored path.
+		ageClaimPastTheWindow(node.id());
+		getNode(token, node.id()).jsonPath("$.health").isEqualTo("unhealthy").jsonPath("$.owningGateway")
+				.doesNotExist();
 	}
 
 	@Test
