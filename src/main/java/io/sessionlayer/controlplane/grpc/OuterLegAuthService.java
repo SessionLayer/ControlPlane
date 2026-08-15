@@ -37,10 +37,9 @@ import reactor.core.publisher.Mono;
 /**
  * The outer-leg AUTHENTICATION gRPC service, implemented over the OTP, pins,
  * device flow, and user-facing CA services. mTLS-required tier: the
- * {@link AuthInterceptor}
- * authenticates the calling Gateway; these RPCs are not bootstrap methods, so
- * an unauthenticated call is refused {@code UNAUTHENTICATED} before it reaches
- * here.
+ * {@link AuthInterceptor} authenticates the calling Gateway; these RPCs are not
+ * bootstrap methods, so an unauthenticated call is refused
+ * {@code UNAUTHENTICATED} before it reaches here.
  *
  * <p>
  * AUTHENTICATION ONLY: every RPC answers "who is this?" and never grants

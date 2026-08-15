@@ -220,10 +220,9 @@ public class RecordingRegistrationService {
 	// session_lease, freeing the identity's concurrency slot (Authorize counts
 	// unreleased leases). Idempotent — an already-ended row is left untouched and
 	// the lease release is a no-op if already released. end_reason is derived from
-	// the
-	// recording's terminal status: it marks HOW the recording completed, not the
-	// authoritative teardown cause (a Lock teardown's "why" lives in the lock/audit
-	// trail).
+	// the recording's terminal status: it marks HOW the recording completed, not
+	// the authoritative teardown cause (a Lock teardown's "why" lives in the
+	// lock/audit trail).
 	private Mono<Void> endSession(SshSession session, String status) {
 		Instant now = Instant.now();
 		Mono<Void> stampEnd = session.endedAt() == null
