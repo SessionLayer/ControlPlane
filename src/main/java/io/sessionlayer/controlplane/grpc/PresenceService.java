@@ -12,7 +12,7 @@ import io.sessionlayer.controlplane.grpc.v1.PresenceHeartbeatRequest;
 import io.sessionlayer.controlplane.grpc.v1.PresenceHeartbeatResponse;
 import io.sessionlayer.controlplane.grpc.v1.PresenceReleaseRequest;
 import io.sessionlayer.controlplane.grpc.v1.PresenceReleaseResponse;
-import io.sessionlayer.controlplane.ha.HaProperties;
+import io.sessionlayer.controlplane.ha.PresenceFreshness;
 import io.sessionlayer.controlplane.mtls.MtlsContext;
 import io.sessionlayer.controlplane.mtls.MtlsProperties;
 import java.time.Instant;
@@ -62,17 +62,17 @@ public class PresenceService extends PresenceGrpc.PresenceImplBase {
 	private final PresenceRepository presence;
 	private final NodeRepository nodes;
 	private final GatewayIdentityRepository gatewayIdentities;
-	private final HaProperties haProperties;
+	private final PresenceFreshness presenceFreshness;
 	private final MtlsProperties mtlsProperties;
 	private final TransactionalOperator tx;
 
 	public PresenceService(PresenceRepository presence, NodeRepository nodes,
-			GatewayIdentityRepository gatewayIdentities, HaProperties haProperties, MtlsProperties mtlsProperties,
-			TransactionalOperator tx) {
+			GatewayIdentityRepository gatewayIdentities, PresenceFreshness presenceFreshness,
+			MtlsProperties mtlsProperties, TransactionalOperator tx) {
 		this.presence = presence;
 		this.nodes = nodes;
 		this.gatewayIdentities = gatewayIdentities;
-		this.haProperties = haProperties;
+		this.presenceFreshness = presenceFreshness;
 		this.mtlsProperties = mtlsProperties;
 		this.tx = tx;
 	}
@@ -111,7 +111,7 @@ public class PresenceService extends PresenceGrpc.PresenceImplBase {
 		}
 		return ownerName(caller).flatMap(owner -> resolveNodeId(nodeName).flatMap(nodeId -> {
 			Instant now = Instant.now();
-			Instant staleBefore = now.minus(haProperties.getPresenceStaleness());
+			Instant staleBefore = presenceFreshness.staleBefore(now);
 
 			Mono<Presence> applied = presence.findById(nodeId).flatMap(existing -> {
 				if (owner.equals(existing.owningGateway())) {

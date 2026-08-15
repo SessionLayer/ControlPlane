@@ -54,7 +54,6 @@ public class NodeLifecycleService {
 	private static final String STATUS_PENDING = "pending";
 	private static final String STATUS_QUARANTINED = "quarantined";
 	private static final String STATUS_REMOVED = "removed";
-	private static final String HEALTH_UNKNOWN = "unknown";
 	private static final String REVOKE_REASON = "node removed (credential revoked)";
 
 	private final NodeRepository nodes;
@@ -90,8 +89,8 @@ public class NodeLifecycleService {
 		}
 		JsonNode resolvedLabels = (labels == null) ? objectMapper.createObjectNode() : labels;
 		String status = approvalRequired ? STATUS_PENDING : STATUS_ACTIVE;
-		Node node = Node.create(name, blankToNull(nodePolicyName), resolvedLabels, connector, status, HEALTH_UNKNOWN,
-				null, blankToNull(address));
+		Node node = Node.create(name, blankToNull(nodePolicyName), resolvedLabels, connector, status,
+				blankToNull(address));
 		Mono<Node> persisted = nodes.save(node)
 				.flatMap(
 						saved -> saveHostAnchors(saved.id(), hostCertificateLine, pinnedHostKeyLine)
@@ -275,8 +274,7 @@ public class NodeLifecycleService {
 
 	private static Node withStatus(Node node, String status, String reason, String actor, Instant now) {
 		return new Node(node.id(), node.name(), node.nodePolicyName(), node.resolvedLabels(), node.connectorKind(),
-				status, node.health(), node.owningGateway(), node.address(), reason, actor, now, node.version(),
-				node.createdAt(), node.updatedAt());
+				status, node.address(), reason, actor, now, node.version(), node.createdAt(), node.updatedAt());
 	}
 
 	private ObjectNode nodeSelector(UUID nodeId) {

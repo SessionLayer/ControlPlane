@@ -577,14 +577,12 @@ class AuthorizeIT extends AbstractMtlsIT {
 
 	private UUID seedNodeWithStatus(String status) {
 		ObjectNode labels = JSON.objectNode().put("env", "prod");
-		return nodes.save(Node.create("node-" + unique(), null, labels, "agent", status, "unknown", null, null))
-				.map(Node::id).block();
+		return nodes.save(Node.create("node-" + unique(), null, labels, "agent", status, null)).map(Node::id).block();
 	}
 
 	private UUID seedProdNode() {
 		ObjectNode labels = JSON.objectNode().put("env", "prod");
-		return nodes.save(Node.create("node-" + unique(), null, labels, "agent", "active", "healthy", null, null))
-				.map(Node::id).block();
+		return nodes.save(Node.create("node-" + unique(), null, labels, "agent", "active", null)).map(Node::id).block();
 	}
 
 	private void seedAllow(String identity, UUID nodeId, List<String> principals, List<String> capabilities) {
@@ -598,9 +596,8 @@ class AuthorizeIT extends AbstractMtlsIT {
 
 	private UUID seedAgentlessNode(String address) {
 		ObjectNode labels = JSON.objectNode().put("env", "prod");
-		return nodes
-				.save(Node.create("node-" + unique(), null, labels, "agentless", "active", "healthy", null, address))
-				.map(Node::id).block();
+		return nodes.save(Node.create("node-" + unique(), null, labels, "agentless", "active", address)).map(Node::id)
+				.block();
 	}
 
 	private void seedHostCaAnchor(UUID nodeId, String hostCertLine) {

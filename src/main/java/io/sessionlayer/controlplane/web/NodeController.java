@@ -5,10 +5,11 @@ import io.sessionlayer.controlplane.api.model.NodeList;
 import io.sessionlayer.controlplane.api.model.NodeResource;
 import io.sessionlayer.controlplane.api.model.QuarantineNodeRequest;
 import io.sessionlayer.controlplane.api.model.RegisterNodeRequest;
-import io.sessionlayer.controlplane.data.runtime.Node;
 import io.sessionlayer.controlplane.node.NodeLifecycleProperties;
 import io.sessionlayer.controlplane.node.NodeLifecycleService;
 import io.sessionlayer.controlplane.node.NodeRequestException;
+import io.sessionlayer.controlplane.node.NodeView;
+import io.sessionlayer.controlplane.node.NodeViewService;
 import io.sessionlayer.controlplane.platform.PlatformAuthorization;
 import io.sessionlayer.controlplane.platform.PlatformPermissions;
 import io.sessionlayer.controlplane.platform.PlatformSubject;
@@ -35,15 +36,17 @@ import tools.jackson.databind.node.ObjectNode;
 public class NodeController implements NodesApi {
 
 	private final NodeLifecycleService nodeLifecycle;
+	private final NodeViewService nodeViews;
 	private final NodeLifecycleProperties properties;
 	private final PlatformAuthorization platformAuthorization;
 	private final CurrentAuthentication currentAuthentication;
 	private final ObjectMapper objectMapper;
 
-	public NodeController(NodeLifecycleService nodeLifecycle, NodeLifecycleProperties properties,
-			PlatformAuthorization platformAuthorization, CurrentAuthentication currentAuthentication,
-			ObjectMapper objectMapper) {
+	public NodeController(NodeLifecycleService nodeLifecycle, NodeViewService nodeViews,
+			NodeLifecycleProperties properties, PlatformAuthorization platformAuthorization,
+			CurrentAuthentication currentAuthentication, ObjectMapper objectMapper) {
 		this.nodeLifecycle = nodeLifecycle;
+		this.nodeViews = nodeViews;
 		this.properties = properties;
 		this.platformAuthorization = platformAuthorization;
 		this.currentAuthentication = currentAuthentication;
@@ -53,40 +56,45 @@ public class NodeController implements NodesApi {
 	@Override
 	public Mono<ResponseEntity<NodeResource>> registerNode(Mono<RegisterNodeRequest> registerNodeRequest,
 			ServerWebExchange exchange) {
-		return registerNodeRequest
-				.flatMap(req -> withPermission(PlatformPermissions.NODE_ENROLL,
-						subject -> nodeLifecycle.register(req.getName(), connectorKind(req), req.getAddress(),
-								toLabels(req.getLabels()), req.getHostCertificate(), req.getPinnedHostKey(),
-								req.getNodePolicyName(), properties.isEnrollmentApprovalRequired(), subject.identity())
-								.map(node -> ResponseEntity.status(HttpStatus.CREATED).body(toResource(node)))));
+		return registerNodeRequest.flatMap(req -> withPermission(PlatformPermissions.NODE_ENROLL,
+				subject -> nodeLifecycle
+						.register(req.getName(), connectorKind(req), req.getAddress(), toLabels(req.getLabels()),
+								req.getHostCertificate(), req.getPinnedHostKey(), req.getNodePolicyName(),
+								properties.isEnrollmentApprovalRequired(), subject.identity())
+						.flatMap(nodeViews::of)
+						.map(view -> ResponseEntity.status(HttpStatus.CREATED).body(toResource(view)))));
 	}
 
 	@Override
 	public Mono<ResponseEntity<NodeList>> listNodes(ServerWebExchange exchange) {
-		return withPermission(PlatformPermissions.NODE_ENROLL, subject -> nodeLifecycle.list(false)
-				.map(NodeController::toResource).collectList().map(nodes -> ResponseEntity.ok(new NodeList(nodes))));
+		return withPermission(PlatformPermissions.NODE_ENROLL,
+				subject -> nodeLifecycle.list(false).collectList().flatMapMany(nodeViews::ofAll)
+						.map(NodeController::toResource).collectList()
+						.map(nodes -> ResponseEntity.ok(new NodeList(nodes))));
 	}
 
 	@Override
 	public Mono<ResponseEntity<NodeResource>> getNode(UUID nodeId, ServerWebExchange exchange) {
-		return withPermission(PlatformPermissions.NODE_ENROLL, subject -> nodeLifecycle.get(nodeId)
-				.map(node -> ResponseEntity.ok(toResource(node))).switchIfEmpty(Mono.error(notFound(nodeId))));
+		return withPermission(PlatformPermissions.NODE_ENROLL,
+				subject -> nodeLifecycle.get(nodeId).flatMap(nodeViews::of)
+						.map(view -> ResponseEntity.ok(toResource(view))).switchIfEmpty(Mono.error(notFound(nodeId))));
 	}
 
 	@Override
 	public Mono<ResponseEntity<NodeResource>> quarantineNode(UUID nodeId,
 			Mono<QuarantineNodeRequest> quarantineNodeRequest, ServerWebExchange exchange) {
-		return quarantineNodeRequest
-				.flatMap(req -> withPermission(PlatformPermissions.NODE_QUARANTINE,
-						subject -> nodeLifecycle.quarantine(nodeId, req.getReason(), existingSessions(req),
-								req.getTtlSeconds(), subject.identity())
-								.map(node -> ResponseEntity.ok(toResource(node)))));
+		return quarantineNodeRequest.flatMap(req -> withPermission(PlatformPermissions.NODE_QUARANTINE,
+				subject -> nodeLifecycle
+						.quarantine(nodeId, req.getReason(), existingSessions(req), req.getTtlSeconds(),
+								subject.identity())
+						.flatMap(nodeViews::of).map(view -> ResponseEntity.ok(toResource(view)))));
 	}
 
 	@Override
 	public Mono<ResponseEntity<NodeResource>> releaseQuarantine(UUID nodeId, ServerWebExchange exchange) {
-		return withPermission(PlatformPermissions.NODE_QUARANTINE, subject -> nodeLifecycle
-				.releaseQuarantine(nodeId, subject.identity()).map(node -> ResponseEntity.ok(toResource(node))));
+		return withPermission(PlatformPermissions.NODE_QUARANTINE,
+				subject -> nodeLifecycle.releaseQuarantine(nodeId, subject.identity()).flatMap(nodeViews::of)
+						.map(view -> ResponseEntity.ok(toResource(view))));
 	}
 
 	@Override
@@ -121,13 +129,14 @@ public class NodeController implements NodesApi {
 		return node;
 	}
 
-	private static NodeResource toResource(Node node) {
+	private static NodeResource toResource(NodeView view) {
+		var node = view.node();
 		NodeResource resource = new NodeResource(node.id(), node.name(),
 				NodeResource.ConnectorKindEnum.fromValue(node.connectorKind()),
-				NodeResource.StatusEnum.fromValue(node.status()), NodeResource.HealthEnum.fromValue(node.health()));
+				NodeResource.StatusEnum.fromValue(node.status()), NodeResource.HealthEnum.fromValue(view.health()));
 		resource.setAddress(node.address());
 		resource.setLabels(labelsMap(node.resolvedLabels()));
-		resource.setOwningGateway(node.owningGateway());
+		resource.setOwningGateway(view.owningGateway());
 		resource.setStatusReason(node.statusReason());
 		resource.setStatusChangedBy(node.statusChangedBy());
 		resource.setStatusChangedAt(toOffset(node.statusChangedAt()));

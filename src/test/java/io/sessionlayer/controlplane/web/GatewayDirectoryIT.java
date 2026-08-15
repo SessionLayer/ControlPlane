@@ -322,8 +322,9 @@ class GatewayDirectoryIT extends AbstractConfigApiIT {
 	}
 
 	private void seedPresence(String owningGateway, Instant lastSeen) {
-		Node node = nodes.save(Node.create("node-" + suffix(), null, objectMapper.createObjectNode(), "agent", "active",
-				"healthy", owningGateway, "10.0.0.5")).block();
+		Node node = nodes.save(
+				Node.create("node-" + suffix(), null, objectMapper.createObjectNode(), "agent", "active", "10.0.0.5"))
+				.block();
 		seededNodes.add(node.id());
 		presence.save(Presence.create(node.id(), owningGateway, "10.0.0.5:9443", 1L, UUID.randomUUID(), lastSeen))
 				.block();

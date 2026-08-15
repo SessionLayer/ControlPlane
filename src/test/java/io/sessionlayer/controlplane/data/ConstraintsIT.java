@@ -107,8 +107,7 @@ class ConstraintsIT extends AbstractDataIT {
 
 	@Test
 	void agentlessNodeWithoutAddressRejected() {
-		expectRejected(nodes
-				.save(Node.create("agentless-noaddr", null, obj(), "agentless", "pending", "unknown", null, null)));
+		expectRejected(nodes.save(Node.create("agentless-noaddr", null, obj(), "agentless", "pending", null)));
 	}
 
 	@Test
@@ -133,7 +132,7 @@ class ConstraintsIT extends AbstractDataIT {
 
 	@Test
 	void recordingRefIsOneToOne() {
-		var node = nodes.save(Node.create("node-1to1", null, obj(), "agent", "active", "healthy", null, null)).block();
+		var node = nodes.save(Node.create("node-1to1", null, obj(), "agent", "active", null)).block();
 		var session = sessions.save(SshSession.create("u", node.id(), node.name(), "deploy", null, null, "standing",
 				List.of("shell"), null, null, null, null, 1L, null, Instant.now())).block();
 		recordings.save(RecordingRef.create(session.id(), "k1", "ref1", null, null, null)).block();
@@ -142,8 +141,7 @@ class ConstraintsIT extends AbstractDataIT {
 
 	@Test
 	void recordingProvenanceIsWriteOnce() {
-		var node = nodes.save(Node.create("node-woproven", null, obj(), "agent", "active", "healthy", null, null))
-				.block();
+		var node = nodes.save(Node.create("node-woproven", null, obj(), "agent", "active", null)).block();
 		var session = sessions.save(SshSession.create("u", node.id(), node.name(), "deploy", null, null, "standing",
 				List.of("shell"), null, null, null, null, 1L, null, Instant.now())).block();
 		var rec = recordings.save(RecordingRef.create(session.id(), "k1", "kms://ref1", null, null, null)).block();
@@ -157,8 +155,7 @@ class ConstraintsIT extends AbstractDataIT {
 
 	@Test
 	void sessionDeleteBlockedWhileRecordingExists() {
-		var node = nodes.save(Node.create("node-restrict", null, obj(), "agent", "active", "healthy", null, null))
-				.block();
+		var node = nodes.save(Node.create("node-restrict", null, obj(), "agent", "active", null)).block();
 		var session = sessions.save(SshSession.create("u", node.id(), node.name(), "deploy", null, null, "standing",
 				List.of("shell"), null, null, null, null, 1L, null, Instant.now())).block();
 		recordings.save(RecordingRef.create(session.id(), "k1", "kms://ref1", null, null, null)).block();
@@ -167,8 +164,7 @@ class ConstraintsIT extends AbstractDataIT {
 
 	@Test
 	void onlyOneActiveAgentIdentityPerNode() {
-		var node = nodes.save(Node.create("node-active", null, obj(), "agent", "active", "healthy", null, null))
-				.block();
+		var node = nodes.save(Node.create("node-active", null, obj(), "agent", "active", null)).block();
 		agentIdentities.save(AgentIdentity.create(node.id(), "ref1", null, 0, "token", "active", null, null)).block();
 		expectRejected(
 				agentIdentities.save(AgentIdentity.create(node.id(), "ref2", null, 0, "token", "active", null, null)));
@@ -176,8 +172,7 @@ class ConstraintsIT extends AbstractDataIT {
 
 	@Test
 	void revokedSecondIdentityAllowed() {
-		var node = nodes.save(Node.create("node-revoked", null, obj(), "agent", "active", "healthy", null, null))
-				.block();
+		var node = nodes.save(Node.create("node-revoked", null, obj(), "agent", "active", null)).block();
 		agentIdentities.save(AgentIdentity.create(node.id(), "ref1", null, 0, "token", "active", null, null)).block();
 		var revoked = agentIdentities
 				.save(AgentIdentity.create(node.id(), "ref2", null, 0, "token", "revoked", null, null)).block();

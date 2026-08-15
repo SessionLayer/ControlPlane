@@ -102,8 +102,8 @@ public abstract class AbstractRecordingIT extends AbstractConfigApiIT {
 	protected UUID seedNode(Map<String, String> labels) {
 		ObjectNode labelNode = json.createObjectNode();
 		labels.forEach(labelNode::put);
-		return nodes.save(Node.create("node-" + unique(), null, labelNode, "agent", "active", "healthy", null, null))
-				.map(Node::id).block();
+		return nodes.save(Node.create("node-" + unique(), null, labelNode, "agent", "active", null)).map(Node::id)
+				.block();
 	}
 
 	protected UUID seedSession(String identity, UUID nodeId) {

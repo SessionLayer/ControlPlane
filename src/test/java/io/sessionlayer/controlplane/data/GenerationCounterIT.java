@@ -48,8 +48,8 @@ class GenerationCounterIT extends AbstractDataIT {
 
 	@Test
 	void staleRenewalFailsOptimisticLock() {
-		var node = nodes.save(Node.create("node-optlock", null, objectMapper.readTree("{}"), "agent", "active",
-				"healthy", null, null)).block();
+		var node = nodes.save(Node.create("node-optlock", null, objectMapper.readTree("{}"), "agent", "active", null))
+				.block();
 		var saved = agentIdentities.save(AgentIdentity.create(node.id(), "ref", null, 0, "token", "active", null, null))
 				.block();
 
@@ -65,8 +65,8 @@ class GenerationCounterIT extends AbstractDataIT {
 
 	@Test
 	void decreasingGenerationRejectedByTrigger() {
-		var node = nodes.save(Node.create("node-monotonic", null, objectMapper.readTree("{}"), "agent", "active",
-				"healthy", null, null)).block();
+		var node = nodes.save(Node.create("node-monotonic", null, objectMapper.readTree("{}"), "agent", "active", null))
+				.block();
 		var saved = agentIdentities.save(AgentIdentity.create(node.id(), "ref", null, 5, "token", "active", null, null))
 				.block();
 
@@ -76,8 +76,8 @@ class GenerationCounterIT extends AbstractDataIT {
 
 	@Test
 	void increasingGenerationAllowed() {
-		var node = nodes.save(Node.create("node-increase", null, objectMapper.readTree("{}"), "agent", "active",
-				"healthy", null, null)).block();
+		var node = nodes.save(Node.create("node-increase", null, objectMapper.readTree("{}"), "agent", "active", null))
+				.block();
 		var saved = agentIdentities.save(AgentIdentity.create(node.id(), "ref", null, 5, "token", "active", null, null))
 				.block();
 		var renewed = agentIdentities.save(withGeneration(saved, 6)).block();
@@ -97,8 +97,7 @@ class GenerationCounterIT extends AbstractDataIT {
 
 	@Test
 	void presenceNonceIsMonotonic() {
-		var node = nodes.save(
-				Node.create("node-nonce", null, objectMapper.readTree("{}"), "agent", "active", "healthy", null, null))
+		var node = nodes.save(Node.create("node-nonce", null, objectMapper.readTree("{}"), "agent", "active", null))
 				.block();
 		var p = presences
 				.save(Presence.create(node.id(), "gw-1", "10.0.0.1:7000", 5L, UUID.randomUUID(), Instant.now()))

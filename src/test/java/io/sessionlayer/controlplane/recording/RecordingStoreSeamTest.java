@@ -79,7 +79,7 @@ class RecordingStoreSeamTest {
 
 	private Node nodeWithLabels(String key, String value) {
 		return Node.create("node-" + UUID.randomUUID(), null, JsonNodeFactory.instance.objectNode().put(key, value),
-				"agent", "active", "healthy", null, null);
+				"agent", "active", null);
 	}
 
 	@Test

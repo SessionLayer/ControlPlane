@@ -11,6 +11,8 @@ import io.netty.handler.ssl.SslContext;
 import io.sessionlayer.controlplane.ca.mtls.LeafCertificateSpec;
 import io.sessionlayer.controlplane.ca.mtls.LeafPurpose;
 import io.sessionlayer.controlplane.data.runtime.Node;
+import io.sessionlayer.controlplane.data.runtime.NodeHostKey;
+import io.sessionlayer.controlplane.data.runtime.NodeHostKeyRepository;
 import io.sessionlayer.controlplane.data.runtime.NodeRepository;
 import io.sessionlayer.controlplane.data.runtime.Presence;
 import io.sessionlayer.controlplane.data.runtime.PresenceRepository;
@@ -18,6 +20,8 @@ import io.sessionlayer.controlplane.grpc.v1.PresenceGrpc;
 import io.sessionlayer.controlplane.grpc.v1.PresenceHeartbeatRequest;
 import io.sessionlayer.controlplane.grpc.v1.PresenceHeartbeatResponse;
 import io.sessionlayer.controlplane.grpc.v1.PresenceReleaseResponse;
+import io.sessionlayer.controlplane.node.NodeView;
+import io.sessionlayer.controlplane.node.NodeViewService;
 import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.PrivateKey;
@@ -41,7 +45,11 @@ class PresenceServiceIT extends AbstractMtlsIT {
 	@Autowired
 	private NodeRepository nodes;
 	@Autowired
+	private NodeHostKeyRepository hostKeys;
+	@Autowired
 	private PresenceRepository presences;
+	@Autowired
+	private NodeViewService nodeViews;
 
 	@Test
 	void heartbeatByNameClaimsAndWritesARowKeyedByTheNodeUuid() {
@@ -255,6 +263,36 @@ class PresenceServiceIT extends AbstractMtlsIT {
 		assertThat(persisted.nonceId().toString()).isEqualTo(claim.getNonceId());
 	}
 
+	@Test
+	void aRealHeartbeatIsWhatTheNodeApiReportsAsHealthAndOwner() {
+		String nameA = "gw-pres-view-" + unique();
+		EnrolledGateway gwA = enroll(nameA);
+		Node node = seedAnchoredAgentNode();
+
+		// Anchored but unclaimed: no Gateway has ever held this node's control channel.
+		assertThat(view(node).health()).isEqualTo("unknown");
+
+		presenceHeartbeat(gwA, node.name(), ADDR_A);
+
+		// The read side is fed by the real write path, not a hand-built row: the
+		// derived answer must be the claim this heartbeat just made.
+		NodeView claimed = view(node);
+		assertThat(claimed.health()).isEqualTo("healthy");
+		// The owner is the gateway NAME (the HA routing key the rest of the plane
+		// speaks), never its uuid.
+		assertThat(claimed.owningGateway()).isEqualTo(nameA);
+
+		ageOwnerStale(node.id());
+
+		NodeView stale = view(node);
+		assertThat(stale.health()).isEqualTo("unreachable");
+		assertThat(stale.owningGateway()).isNull();
+	}
+
+	private NodeView view(Node node) {
+		return nodeViews.of(nodes.findById(node.id()).block()).block();
+	}
+
 	private void ageOwnerStale(UUID nodeId) {
 		Long updated = db.sql("UPDATE runtime.presence SET last_seen = now() - interval '1 hour' WHERE node_id = :id")
 				.bind("id", nodeId).fetch().rowsUpdated().block();
@@ -291,8 +329,19 @@ class PresenceServiceIT extends AbstractMtlsIT {
 
 	private Node seedAgentNode() {
 		ObjectNode labels = JSON.objectNode().put("env", "prod");
-		return nodes.save(Node.create("web-" + unique(), null, labels, "agent", "active", "healthy", null, null))
-				.block();
+		return nodes.save(Node.create("web-" + unique(), null, labels, "agent", "active", null)).block();
+	}
+
+	// Health is layered: an anchorless node is unusable whatever presence says, so
+	// a
+	// test about presence has to give the node the enrollment anchor a registered
+	// one
+	// would have.
+	private Node seedAnchoredAgentNode() {
+		Node node = seedAgentNode();
+		hostKeys.save(NodeHostKey.create(node.id(), "ecdsa-sha2-nistp256", "ecdsa-sha2-nistp256 AAAA" + unique(),
+				"SHA256:" + unique(), null, "pinned_key", null)).block();
+		return node;
 	}
 
 	private static String unique() {

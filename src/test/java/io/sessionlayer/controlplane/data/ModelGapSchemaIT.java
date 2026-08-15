@@ -134,8 +134,7 @@ class ModelGapSchemaIT extends AbstractDataIT {
 
 	@Test
 	void nodeHostKeyRoundTripsAndRejectsPrivateKey() {
-		var node = nodes.save(Node.create("hk-node", null, obj(), "agentless", "active", "healthy", null, "10.0.0.5"))
-				.block();
+		var node = nodes.save(Node.create("hk-node", null, obj(), "agentless", "active", "10.0.0.5")).block();
 		var reread = hostKeys.save(NodeHostKey.create(node.id(), "ssh-ed25519", "ssh-ed25519 AAAAC3Nz...", "SHA256:hk",
 				null, "pinned_key", Instant.now())).flatMap(k -> hostKeys.findByNodeId(node.id()).next()).block();
 		assertThat(reread.source()).isEqualTo("pinned_key");

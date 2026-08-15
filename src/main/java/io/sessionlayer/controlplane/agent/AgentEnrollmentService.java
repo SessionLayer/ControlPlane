@@ -90,12 +90,10 @@ public class AgentEnrollmentService {
 
 	private Mono<Node> resolveNode(String nodeName) {
 		return nodes.findByName(nodeName).flatMap(this::requireAgentConnector)
-				.switchIfEmpty(
-						Mono.defer(() -> nodes
-								.save(Node.create(nodeName, null, objectMapper.createObjectNode(), "agent", "active",
-										"unknown", null, null))
-								.onErrorResume(DataIntegrityViolationException.class,
-										race -> nodes.findByName(nodeName).flatMap(this::requireAgentConnector))));
+				.switchIfEmpty(Mono.defer(() -> nodes
+						.save(Node.create(nodeName, null, objectMapper.createObjectNode(), "agent", "active", null))
+						.onErrorResume(DataIntegrityViolationException.class,
+								race -> nodes.findByName(nodeName).flatMap(this::requireAgentConnector))));
 	}
 
 	// An Agent attached to an agentless-registered node leaves the authorizer
