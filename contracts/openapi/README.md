@@ -1,7 +1,7 @@
 # OpenAPI contract
 
 `openapi.yaml` is the **contract-first source of truth** for the SessionLayer
-Control Plane REST surface (Design §13, FR-API-1). It is OpenAPI **3.1.0**.
+Control Plane REST surface. It is OpenAPI **3.1.0**.
 
 ## Contract-first, enforced
 
@@ -57,15 +57,15 @@ operation and is documented in `openapi.yaml` like any other.
 
 ## Security schemes (declared now, used later)
 
-Three first-class schemes (Design §5.7, §13; FR-AUTH-17) are declared so later
-operations reference them without changing the contract shape:
+Three first-class schemes are declared so later operations reference them
+without changing the contract shape:
 
 - `oidcBearer` — OIDC/JWT bearer (the ID token is the auth proof).
 - `clientCredentials` — OAuth 2.0 client-credentials for machine consumers.
 - `mtls` — mutual-TLS client certificate (`type: mutualTLS`).
 
-HTTP Basic is intentionally **absent** — it is not a first-class scheme
-(FR-AUTH-17).
+HTTP Basic is intentionally **absent** — it is not a first-class scheme on this
+surface, and no operation may declare it.
 
 ### `mutualTLS` codegen note
 
@@ -78,9 +78,9 @@ so `mtls`-secured operations (e.g. `POST /v1/oauth2/token`, `POST /v1/auth/devic
 already generate compiling interfaces; mTLS is enforced by the Spring Security
 client-cert filter, not by generated annotations. The contract keeps the correct
 `type: mutualTLS`, and `.mvn/jvm.config` silences the redundant `DefaultCodegen`
-logger so the build log stays clean. The FR-API-1 drift gate is **compile-based**,
-so silencing that logger cannot mask a real contract/model drift — that always
-surfaces as a compile failure.
+logger so the build log stays clean. The contract-first drift gate is
+**compile-based**, so silencing that logger cannot mask a real contract/model
+drift — that always surfaces as a compile failure.
 
 ## Linting
 

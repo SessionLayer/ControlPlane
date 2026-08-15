@@ -24,11 +24,12 @@ in their `gate` job. No peer binary is needed — that is the point.
 Golden frames, **generated from a known-correct codec, never hand-authored** (a
 subtly wrong golden frame is a worse oracle than none). Framing is the frozen
 `VER(1) | TYPE(1) | LENGTH(u32 BE) | PAYLOAD`; payloads are the prost
-serialization of the message named in the catalogue (§4), except `STREAM_DATA`
-whose payload is raw opaque bytes. The prost encoding is deterministic over the
-same frozen proto both repos generate from, so the bytes are authoritative; the
-generator additionally decodes every frame it emits (self-check) and asserts a
-hand-computable anchor (`Ping{nonce=42}` → `011000000002082a`).
+serialization of the message named in the `agent-gateway-v1.md` catalogue (§4),
+except `STREAM_DATA` whose payload is raw opaque bytes. The prost encoding is
+deterministic over the same frozen proto both repos generate from, so the bytes
+are authoritative; the generator additionally decodes every frame it emits
+(self-check) and asserts a hand-computable anchor
+(`Ping{nonce=42}` → `011000000002082a`).
 
 Regenerate **only when the contract changes**:
 
@@ -80,10 +81,11 @@ A **partial-party** consumer — the **Agent** is not a party to the
 Gateway↔Gateway relay — MUST NOT decode a protocol it does not speak. Its portable
 obligation is instead:
 
-- **byte-pin** the §2 framing + payload for *all* frames (re-encode the types it
-  owns byte-exact; assert the frozen layout formula for the rest), so the shared
-  bytes stay the oracle and the type-number registry is pinned — `0x24`–`0x26`
-  cannot be reused for one of its own types without this test failing;
+- **byte-pin** the `agent-gateway-v1.md` §2 framing + payload for *all* frames
+  (re-encode the types it owns byte-exact; assert the frozen layout formula for
+  the rest), so the shared bytes stay the oracle and the type-number registry is
+  pinned — `0x24`–`0x26` cannot be reused for one of its own types without this
+  test failing;
 - **accept** every frame it may legitimately receive;
 - **refuse** every frame it must not — its own *outbound* types with an
   illegal-direction error, and any *non-party* / reserved type (RELAY) with an

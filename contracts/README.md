@@ -1,10 +1,9 @@
 # SessionLayer — Canonical Cross-Repo Contracts
 
 This directory is the **single source of truth** for every contract that crosses
-a component boundary in SessionLayer. It is **contract-first** (Design §13,
-FR-API-1): the contracts here are authored and frozen *before* any consumer
-generates code, and every repo derives its types from these files — no repo
-hand-writes a divergent copy.
+a component boundary in SessionLayer. It is **contract-first**: the contracts
+here are authored and frozen *before* any consumer generates code, and every
+repo derives its types from these files — no repo hand-writes a divergent copy.
 
 It lives in the `SessionLayer/Contracts` repo, independently versioned and
 tagged, and is vendored by every consumer — including `ControlPlane`.
@@ -28,7 +27,7 @@ contracts/
 │   └── conformance/         # golden frames + provenance, and the generator
 ├── redocly.yaml             # OpenAPI linter config (Redocly CLI)
 ├── lint.sh                  # single entrypoint: buf lint + buf breaking + redocly lint
-├── VERSIONING.md            # the N-1 compatibility policy (D33/§16A, FR-HA-9)
+├── VERSIONING.md            # the N-1 compatibility policy
 └── README.md                # this file
 ```
 

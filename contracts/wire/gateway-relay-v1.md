@@ -6,8 +6,6 @@ negotiation verbatim; it is a distinct *profile* of the same framed binary
 transport, exchanged **Gateway-to-Gateway**.
 
 **Payload encodings:** `contracts/proto/sessionlayer/gateway/v1/coordination.proto`.
-**Implements:** Design §10.2 (three mechanisms, no overlap), §10.3 (routing,
-failure, migration); FR-HA-3/4/5/8, NFR-1, NFR-2.
 
 > **The Control Plane is not a party to this protocol.** The CP owns presence
 > (the READ folds into `Authorization.Authorize`; the WRITE is
@@ -16,7 +14,7 @@ failure, migration); FR-HA-3/4/5/8, NFR-1, NFR-2.
 
 ---
 
-## 0. The three mechanisms (no overlap — Design §10.2)
+## 0. The three mechanisms (no overlap)
 
 | Mechanism | Carries | Transport |
 |---|---|---|
@@ -73,7 +71,7 @@ internal mTLS CA is the trust anchor). One connection **role**:
 
 ## 3. Framing and negotiation
 
-Identical to Agent↔Gateway v1 §2–§3: `VER(1)|TYPE(1)|LENGTH(u32 BE)|PAYLOAD`, one
+Identical to `agent-gateway-v1.md` §2–§3: `VER(1)|TYPE(1)|LENGTH(u32 BE)|PAYLOAD`, one
 frame per WebSocket binary message, `STREAM_DATA` payload is raw opaque bytes.
 The preface is the same `HELLO`/`HELLO_ACK`/`VERSION_REJECT` exchange resolving a
 common `ProtocolVersion` (this profile is **1.0**), fail-closed on no common
@@ -113,9 +111,9 @@ owner (client)                                   ingress (server, /peer/v1/relay
 On any binding failure the ingress sends `0x26 RELAY_REJECT(code)` and closes; the
 owner tears down its local splice. A relay that is not accepted within the
 ingress's bounded `relay_timeout` is abandoned and the SSH handshake fails closed
-(a hung peer never hangs the handshake — FR-HA-5).
+(a hung peer never hangs the handshake).
 
-## 6. The relay token — SLGW1 (FR-HA-8, normative)
+## 6. The relay token — SLGW1 (normative)
 
 `SLGW1.<b64url(payload)>.<b64url(sig)>`, ECDSA **P-256 / SHA-256** over
 `"sessionlayer-gw-relay-v1\0" || payload_bytes`. **Verify-then-decode**: the
@@ -136,19 +134,19 @@ signature is checked over the transmitted payload bytes *before* the protobuf
   note the **ingress** cannot use it as an anti-stale check — the ingress minted both
   the token and the pending entry from the same `Authorize`, so an ingress-side
   comparison is self-referential. The anti-stale enforcement is the **owner's**
-  obligation (§7.6), not this ingress-side compare.
+  obligation (security invariant 6), not this ingress-side compare.
 - **`RELAY_REJECT` carries a single coarse code** for every binding failure (reason
   string operator-log-only), with no error→code 1:1 mapping or timing gap that would
-  make it an oracle (§7.1 SSH-taxonomy ethos).
+  make it an oracle.
 - **Never logged, persisted, or echoed.**
 
 ## 7. Security invariants (normative)
 
-1. **Bytes never on the bus** (§0). The relay is direct; the bus is signalling only.
+1. **Bytes never on the bus.** The relay is direct; the bus is signalling only.
 2. **The ingress owns the session and the recording.** gw-B relays raw bytes; all
    recording, host-verify, inner-leg and lock enforcement happen at gw-A exactly as
    in the single-instance path (unchanged).
-3. **Fail closed on routing ambiguity** (FR-HA-5): no fresh owner / stale nonce /
+3. **Fail closed on routing ambiguity**: no fresh owner / stale nonce /
    unreachable owner / relay not established within `relay_timeout` → deny within
    the bound. The monotonic nonce is the anti-stale-ownership primitive.
 4. **The owner authenticates as a Gateway** (internal-CA cert with a
@@ -157,7 +155,7 @@ signature is checked over the transmitted payload bytes *before* the protobuf
    is the NAME throughout (presence, the coordination subject, the token) — the URI
    SAN UUID is only the CP's internal resolver key. A compromised or superseded peer
    cannot serve a relay for a node it does not own.
-5. **No live migration** (FR-HA-7): a relay is per-session; a lost owner fails the
+5. **No live migration**: a relay is per-session; a lost owner fails the
    session fast (client reconnects, cheap via pinned-key silent reconnect).
 6. **The owner MUST re-verify current ownership before serving** (the anti-stale
    obligation). On receiving a `DialBackSignal`, the owner serves the relay only if
@@ -167,7 +165,7 @@ signature is checked over the transmitted payload bytes *before* the protobuf
    `relay_timeout` and fails closed, and the client's retry re-routes to the true
    owner. The owner's live agent control channel (its local dial-back must succeed)
    is the liveness backstop for a dead owner. This owner-side recheck — not the
-   ingress-side token compare — is what makes the nonce load-bearing (FR-HA-5). A CP
+   ingress-side token compare — is what makes the nonce load-bearing. A CP
    round-trip at `RELAY_ACCEPT` is deliberately **not** required: in the agent model
    any Gateway holding a live channel serves the correct node, so the cached
    `is_self_owner` belief plus dial-back liveness suffice without a hot-path round-trip.
@@ -175,18 +173,19 @@ signature is checked over the transmitted payload bytes *before* the protobuf
 ## 8. Deployment requirement — coordination transport (normative)
 
 The SLGW1 relay token travels in the `DialBackSignal` over the CoordinationBackend
-**by design** (§0: only *session bytes* are barred from the bus). The token is safe
-there — redemption additionally requires the owner's mTLS gateway certificate (§7.4),
-so a bus eavesdropper cannot use a captured token. As defense-in-depth, an HA
-deployment MUST run the coordination bus (NATS) **mutually authenticated, encrypted
-(TLS), and subject-authorized**, where the authorization covers **both directions**:
+**by design** (only *session bytes* are barred from the bus). The token is safe
+there — redemption additionally requires the owner's mTLS gateway certificate
+(security invariant 4), so a bus eavesdropper cannot use a captured token. As
+defense-in-depth, an HA deployment MUST run the coordination bus (NATS)
+**mutually authenticated, encrypted (TLS), and subject-authorized**, where the
+authorization covers **both directions**:
 only the addressed owner may **subscribe** to `sl.dialback.<owner>`, and only
 legitimate ingress Gateways may **publish** to it. Publish-authz matters because an
 attacker able to publish signals (without any subject-read) can still make an owner
 repeatedly perform its local dial-back (a signalling-amplification cost); the owner
 additionally drops any signal whose `owner_nonce` is older than its current presence
-nonce and caps concurrent served relays per node (§7.6), but publish-authz is the
-first line.
+nonce and caps concurrent served relays per node (security invariant 6), but
+publish-authz is the first line.
 
 **On the reference client:** the bundled NATS backend is a minimal **core** pub/sub
 client that connects in **plaintext with an unauthenticated CONNECT** — it targets a

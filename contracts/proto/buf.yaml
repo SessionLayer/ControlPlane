@@ -9,7 +9,7 @@ lint:
   except:
     # The version-negotiation service is deliberately named `Handshake` (not
     # `HandshakeService`) and exchanges `ClientHello`/`ServerHello` messages,
-    # mirroring the TLS handshake vocabulary the design leans on. These three
+    # mirroring the TLS handshake vocabulary. These three STANDARD rules only
     # STANDARD rules only enforce a *naming convention* (service suffix, and
     # `<Rpc>Request`/`<Rpc>Response` message names); every substantive rule
     # (package/version/directory match, casing, import hygiene, enum-zero) stays
