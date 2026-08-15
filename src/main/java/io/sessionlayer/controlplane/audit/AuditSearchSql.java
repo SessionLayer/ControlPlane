@@ -11,9 +11,9 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Parameterized keyset SQL for audit-event search (FR-AUD-8/9). All values
- * bound, never concatenated; fail-closed on malformed scopes. Empty grant list
- * is unrestricted.
+ * Parameterized keyset SQL for audit-event search. All values bound, never
+ * concatenated; fail-closed on malformed scopes. Empty grant list is
+ * unrestricted.
  */
 final class AuditSearchSql {
 

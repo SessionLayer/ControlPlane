@@ -9,9 +9,9 @@ import reactor.core.publisher.Mono;
 import tools.jackson.databind.JsonNode;
 
 /**
- * Pluggable audit-event store seam (owner requirement §12.2/§15). Append + read
- * only, never update/delete (WORM, FR-AUD-3). Swappable backend (Postgres/SIEM/
- * S3/OpenSearch). Off-box shipping is separate ({@link AuditForwarder}).
+ * Pluggable audit-event store seam. Append + read only, never update/delete
+ * (WORM). Swappable backend (Postgres/SIEM/S3/OpenSearch). Off-box shipping is
+ * separate ({@link AuditForwarder}).
  */
 public interface AuditEventStore {
 
@@ -29,18 +29,17 @@ public interface AuditEventStore {
 	}
 
 	/**
-	 * Append one audit event with every FR-AUD-8/9 dimension the producer has
-	 * (source IP, access model, capabilities, node labels, correlation id). This is
-	 * the single append seam; the core {@link #record} overload delegates here with
-	 * the snapshot dimensions null. The backing implementation is responsible for
+	 * Append one audit event with every dimension the producer has (source IP,
+	 * access model, capabilities, node labels, correlation id). This is the single
+	 * append seam; the core {@link #record} overload delegates here with the
+	 * snapshot dimensions null. The backing implementation is responsible for
 	 * tamper-evidence (the Postgres impl hash-chains the whole row).
 	 */
 	Mono<Void> record(AuditRecord record);
 
 	/**
-	 * Append a config-change event capturing before/after state (FR-PADM-3). The
-	 * two objects MUST be secret-free (config exposes references, never key
-	 * material).
+	 * Append a config-change event capturing before/after state. The two objects
+	 * MUST be secret-free (config exposes references, never key material).
 	 */
 	Mono<Void> recordChange(String actor, String subject, String action, Map<String, String> detail, Object before,
 			Object after);
@@ -50,15 +49,15 @@ public interface AuditEventStore {
 	Mono<AuditEvent> findById(UUID id);
 
 	/**
-	 * Recompute + verify the tamper-evidence hash chain (FR-AUD-3). A read path
-	 * calls this to prove a search left the chain intact.
+	 * Recompute + verify the tamper-evidence hash chain. A read path calls this to
+	 * prove a search left the chain intact.
 	 */
 	Mono<AuditChainVerifier.Result> verifyChain();
 
 	/**
-	 * Full FR-AUD-8/9 dimension set. Producer must validate sourceIp (valid IP/CIDR
-	 * literal) and capabilities (raw vocab) — bad values violate column CHECK and
-	 * roll back the enclosing transaction.
+	 * Full dimension set. Producer must validate sourceIp (valid IP/CIDR literal)
+	 * and capabilities (raw vocab) — bad values violate column CHECK and roll back
+	 * the enclosing transaction.
 	 */
 	record AuditRecord(String actor, String subject, String action, String outcome, UUID sessionId, UUID nodeId,
 			Map<String, String> detail, String sourceIp, String accessModel, List<String> capabilities,
@@ -154,10 +153,10 @@ public interface AuditEventStore {
 	}
 
 	/**
-	 * A resolved audit-search query: the caller-supplied filter dimensions
-	 * (FR-AUD-8) plus the RBAC {@code scopeGrants} the search must be confined to
-	 * and the keyset {@code cursor}/{@code limit}. A null/blank filter is
-	 * unrestricted for that dimension.
+	 * A resolved audit-search query: the caller-supplied filter dimensions plus
+	 * the RBAC {@code scopeGrants} the search must be confined to and the keyset
+	 * {@code cursor}/{@code limit}. A null/blank filter is unrestricted for that
+	 * dimension.
 	 *
 	 * @param nodeLabels
 	 *            snapshot node labels that must all be present (AND)

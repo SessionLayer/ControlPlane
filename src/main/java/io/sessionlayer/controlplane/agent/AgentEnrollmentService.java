@@ -100,8 +100,8 @@ public class AgentEnrollmentService {
 
 	// An Agent attached to an agentless-registered node leaves the authorizer
 	// telling the Gateway to dial that node's address directly, so the control
-	// channel the Agent just opened is never used (§9.2). Refuse the join and make
-	// the operator fix the registration.
+	// channel the Agent just opened is never used. Refuse the join and make the
+	// operator fix the registration.
 	private Mono<Node> requireAgentConnector(Node node) {
 		return "agent".equals(node.connectorKind())
 				? Mono.just(node)

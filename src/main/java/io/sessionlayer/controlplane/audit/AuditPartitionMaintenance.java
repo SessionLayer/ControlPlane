@@ -12,9 +12,9 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 /**
- * Create-ahead maintenance for audit_event range partitions (FR-AUD-6). Ensures
- * DEFAULT partition stays empty and prunable ranges land in dated partitions.
- * Failures are logged, not fatal.
+ * Create-ahead maintenance for audit_event range partitions. Ensures DEFAULT
+ * partition stays empty and prunable ranges land in dated partitions. Failures
+ * are logged, not fatal.
  */
 @Component
 @ConditionalOnProperty(value = "sessionlayer.audit.partition-maintenance.enabled", havingValue = "true", matchIfMissing = true)

@@ -12,9 +12,8 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 /**
- * Pluggable audit read path (FR-AUD-8/9). Read-only over audit rows; the only
- * write is FR-PADM-3 audit of the access itself (search/get append their own
- * audit events).
+ * Pluggable audit read path. Read-only over audit rows; the only write is the
+ * audit of the access itself (search/get append their own audit events).
  */
 @Service
 public class AuditEventSearchService {

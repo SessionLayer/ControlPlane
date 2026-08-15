@@ -21,10 +21,10 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * Postgres backend for audit stream ({@code runtime.audit_event}, Design
- * §12.2). INSERT + read only; hash-chain serialized per insert via advisory
- * lock (FR-AUD-3). Swappable for SIEM/S3/OpenSearch. Off-box shipping is
- * separate ({@link AuditForwarder} seam).
+ * Postgres backend for the audit stream ({@code runtime.audit_event}). INSERT +
+ * read only; hash-chain serialized per insert via advisory lock. Swappable for
+ * SIEM/S3/OpenSearch. Off-box shipping is separate ({@link AuditForwarder}
+ * seam).
  */
 @Service
 public class PostgresAuditEventStore implements AuditEventStore {
@@ -106,9 +106,9 @@ public class PostgresAuditEventStore implements AuditEventStore {
 				.flatMap(prevHash -> events
 						.save(event.withChain(prevHash, AuditRecordHash.recordHash(prevHash, event))));
 		// Ship off-box only AFTER the row commits, and never let a forward failure
-		// roll back or surface on the audited action (best-effort, §15/NFR-5). A
-		// failure/timeout is logged loudly (the event is already durably committed) —
-		// never swallowed silently.
+		// roll back or surface on the audited action (best-effort). A failure/timeout
+		// is logged loudly (the event is already durably committed) — never swallowed
+		// silently.
 		return tx.transactional(chainedInsert)
 				.flatMap(saved -> forwarder.forward(saved).timeout(FORWARD_TIMEOUT).onErrorResume(error -> {
 					LOG.warn("audit off-box forward failed for {} (event is committed): {}", saved.id(),
