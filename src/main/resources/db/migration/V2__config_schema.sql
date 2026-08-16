@@ -96,10 +96,11 @@ CREATE TABLE config.ca_config (
                          CHECK (key_reference NOT LIKE '%PRIVATE KEY%' AND key_reference NOT LIKE '%BEGIN %'),
     algorithm     text   NOT NULL DEFAULT 'ecdsa-p256'
                          CHECK (algorithm IN ('ecdsa-p256', 'ecdsa-p384', 'ed25519', 'rsa-2048', 'rsa-4096')),
-    -- CA rotation (FR-CA-7) requires the outgoing + incoming CA keys to be trusted
+    -- CA rotation requires the outgoing + incoming CA keys to be trusted
     -- simultaneously during the overlap window, so a CA kind may have multiple rows;
-    -- exactly one is 'active' at a time (partial unique index in V5). S3 owns the
-    -- rotation state machine (standby -> incoming -> active -> outgoing -> expired).
+    -- exactly one is 'active' at a time (partial unique index in V5). The CA rotation
+    -- service owns the state machine (standby -> incoming -> active -> outgoing ->
+    -- expired).
     rotation_state text NOT NULL DEFAULT 'active'
                          CHECK (rotation_state IN ('incoming', 'active', 'outgoing', 'expired')),
     origin        text   NOT NULL DEFAULT 'default'

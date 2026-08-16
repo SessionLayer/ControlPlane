@@ -11,7 +11,7 @@
 --     recording_ref.encryption_key_ref (never key material) so replay can
 --     locate the customer unwrap path.
 --   * recording_retention_days: object-lock retain-until + recording_ref retention
---     window (FR-AUD-6). The CHECK below is >= 1: 0 would mean retain nothing.
+--     window. The CHECK below is >= 1: 0 would mean retain nothing.
 --   * recording_strict_default: reserved operator knob for per-node recording-required
 --     policy; recording stays mandatory + fail-closed regardless.
 ALTER TABLE config.operator_settings
