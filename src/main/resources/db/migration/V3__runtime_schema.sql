@@ -44,7 +44,7 @@ CREATE TABLE runtime.node (
                                  CHECK (status IN ('pending', 'active', 'quarantined', 'removed')),
     health           text        NOT NULL DEFAULT 'unknown'
                                  CHECK (health IN ('unknown', 'healthy', 'unhealthy', 'unreachable')),
-    owning_gateway   text,                                       -- owning-gateway pointer (mirrors presence)
+    owning_gateway   text,                                       -- never written; the owner is derived from runtime.presence at read time (V32)
     address          text,
     version          bigint      NOT NULL DEFAULT 0,
     created_at       timestamptz NOT NULL DEFAULT now(),
