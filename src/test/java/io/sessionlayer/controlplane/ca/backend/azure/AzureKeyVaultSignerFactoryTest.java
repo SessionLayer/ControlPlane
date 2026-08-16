@@ -111,9 +111,6 @@ class AzureKeyVaultSignerFactoryTest {
 				.isInstanceOf(IllegalStateException.class).hasMessageContaining("does not permit the sign operation");
 	}
 
-	/**
-	 * Two well-formed, distinct Key Vault versions: 32 lowercase hex characters.
-	 */
 	private static final String VERSION_1 = "abcdef0123456789abcdef0123456789";
 	private static final String VERSION_2 = "abcdef0123456789abcdef0123456780";
 

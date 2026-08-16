@@ -11,7 +11,7 @@ public record DataPlaneDecision(Effect effect, Reason reason, Set<String> allowe
 		ALLOW, DENY
 	}
 
-	/** The decision-log reason (server-side only). */
+	/** Server-side only: a reason must never reach the SSH user. */
 	public enum Reason {
 		ALLOWED, LOCKED, EXPLICIT_DENY, NO_MATCHING_ALLOW, PRINCIPAL_NOT_ALLOWED, EVALUATION_ERROR
 	}

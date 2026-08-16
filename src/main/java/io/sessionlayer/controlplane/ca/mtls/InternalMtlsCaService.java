@@ -28,7 +28,9 @@ public class InternalMtlsCaService {
 		this.tx = tx;
 	}
 
-	/** Signals that no internal mTLS CA is available — callers MUST fail closed. */
+	/**
+	 * Callers MUST fail closed rather than fall back to an unauthenticated plane.
+	 */
 	public static final class NoMtlsCaAvailable extends RuntimeException {
 		public NoMtlsCaAvailable(String message) {
 			super(message);
