@@ -1,18 +1,8 @@
-# Default values for sessionlayer-controlplane.
-#
-# Nothing here is a credential. Every secret is referenced by the name of a
-# Secret you create out of band, and rendering fails with a named message when
-# a reference is missing, so the failure lands in your terminal rather than in
-# a CrashLoopBackOff hours later.
-
 replicaCount: 2
 
 image:
   repository: ghcr.io/sessionlayer/controlplane
-  # Empty resolves to the chart's appVersion.
   tag: ""
-  # A tag is mutable and a digest is not. Set this in production; it wins over
-  # tag when both are present.
   digest: ""
   pullPolicy: IfNotPresent
 
@@ -23,16 +13,10 @@ fullnameOverride: ""
 
 serviceAccount:
   create: true
-  # Empty uses the release's generated name.
   name: ""
   annotations: {}
-  # The Control Plane never calls the Kubernetes API, so a projected token in
-  # the pod is credential surface with no purpose.
   automountServiceAccountToken: false
 
-# The name of an existing Secret carrying every credential the process needs.
-# See secret.example.yaml in deploy/kubernetes/ for the key list and how to
-# generate the values. This chart never creates it and never defaults one.
 secrets:
   existingSecret: ""
 
@@ -49,22 +33,16 @@ mtls:
   # is what every SessionLayer deployment example exposes, and the Gateway's
   # cp_mtls_endpoint and the Agent's --cp-endpoint both default to it.
   port: 9443
-  # Extra SANs for the server certificate the process mints at runtime from the
-  # internal mTLS CA. The in-cluster service names are added automatically; add
-  # any external address Gateways or Agents dial.
   extraHostnames: []
 
 recording:
   worm:
-    # Where recordings land. The Control Plane only issues presigned URLs to
-    # this endpoint; recording bytes never pass through it.
     endpoint: ""
     region: "us-east-1"
     bucket: "sessionlayer-recordings"
     pathStyleAccess: false
 
 oidc:
-  # Set to false for an OTP, pins or machine-identity-only deployment.
   enabled: true
   issuer: ""
   clientId: ""
@@ -76,13 +54,9 @@ java:
   toolOptions: "-XX:MaxRAMPercentage=75.0"
 
 sessionLimits:
-  # Empty leaves the stored operator_settings default untouched, and the
-  # Control Plane warns at boot that identities are unlimited.
   defaultMaxConcurrent: ""
 
 bootstrap:
-  # An OIDC subject named here becomes the first platform admin. Empty means
-  # you claim the printed-once bootstrap credential from the pod logs instead.
   adminSubject: ""
 
 service:
@@ -106,10 +80,6 @@ resources:
     memory: 1Gi
 
 podSecurityContext:
-  # 65532 is the uid the distroless nonroot base ships, and the uid every
-  # SessionLayer component runs as. runAsUser here wins over the image's own
-  # USER, so a chart that named a different number would work while leaving a
-  # reader no way to tell which one is authoritative.
   runAsNonRoot: true
   runAsUser: 65532
   runAsGroup: 65532
@@ -133,9 +103,6 @@ probes:
     periodSeconds: 5
     timeoutSeconds: 1
     failureThreshold: 3
-  # /actuator/health/liveness reflects LivenessState only, never a downstream
-  # dependency. A slow Postgres must surface as a failed request, not as a
-  # restart storm.
   liveness:
     enabled: true
     periodSeconds: 15
@@ -151,8 +118,6 @@ probes:
     timeoutSeconds: 1
     failureThreshold: 60
 
-# No long-lived byte stream terminates here, so the Kubernetes default covers
-# in-flight requests.
 terminationGracePeriodSeconds: 30
 
 updateStrategy:
@@ -166,8 +131,6 @@ updateStrategy:
     # image versions coexisting during a rollout stays an application concern.
     maxUnavailable: 0
 
-# Netty unpacks its native epoll transport here at startup. If it cannot, it
-# falls back to NIO with a log warning rather than failing.
 tmpVolume:
   medium: Memory
   sizeLimit: 256Mi
@@ -177,11 +140,7 @@ podDisruptionBudget:
   minAvailable: 1
 
 networkPolicy:
-  # Default-deny both directions, then permit only what the process needs.
-  # Requires a CNI that enforces NetworkPolicy.
   enabled: true
-  # Peers selected by label. These match the labels the Gateway and Agent
-  # charts apply, so leave them alone unless you set nameOverride there.
   gatewayPodSelector:
     app.kubernetes.io/name: sessionlayer-gateway
   agentPodSelector:
@@ -191,15 +150,8 @@ networkPolicy:
   postgresPodSelector:
     app.kubernetes.io/name: postgresql
   otelPodSelector: {}
-  # CIDRs for peers outside the cluster. Left empty on purpose: a placeholder
-  # range would permit egress to hosts that are not your object store or your
-  # IdP. Empty denies the traffic, which fails closed and is visible at once.
-  # NetworkPolicy has no DNS-based match in the core API, so for a public S3 or
-  # SaaS IdP prefer your CNI's FQDN policy support or a VPC-level control.
   wormCidrs: []
   oidcCidrs: []
-  # Agents on fleet nodes outside the cluster reach the gRPC plane from an
-  # address no podSelector can express. Add their subnets here.
   extraGrpcIngressCidrs: []
   extraIngress: []
   extraEgress: []

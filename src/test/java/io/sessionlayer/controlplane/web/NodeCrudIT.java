@@ -193,8 +193,7 @@ class NodeCrudIT extends AbstractAuthIT {
 
 		client.delete().uri("/v1/nodes/" + id + "/quarantine").header("Authorization", "Bearer " + token).exchange()
 				.expectStatus().isOk().expectBody().jsonPath("$.status").isEqualTo("active");
-		assertThat(nodeLock(id)).isNull(); // the quarantine lock was released
-		// Idempotent: releasing an un-quarantined node still succeeds.
+		assertThat(nodeLock(id)).isNull();
 		client.delete().uri("/v1/nodes/" + id + "/quarantine").header("Authorization", "Bearer " + token).exchange()
 				.expectStatus().isOk();
 		assertThat(auditEvents.findByActor(admin).collectList().block())
@@ -224,12 +223,9 @@ class NodeCrudIT extends AbstractAuthIT {
 
 		client.delete().uri("/v1/nodes/" + id).header("Authorization", "Bearer " + token).exchange().expectStatus()
 				.isNoContent();
-		// Idempotent: removing an already-removed node is still 204.
 		client.delete().uri("/v1/nodes/" + id).header("Authorization", "Bearer " + token).exchange().expectStatus()
 				.isNoContent();
 
-		// Soft-remove: the row survives (status 'removed') but is excluded from the
-		// list.
 		assertThat(nodes.findById(UUID.fromString(id)).block().status()).isEqualTo("removed");
 		// Remove tears down in-flight sessions on an AGENTLESS node too: a bare
 		// node Lock is pushed (there is no agent identity to revoke here).

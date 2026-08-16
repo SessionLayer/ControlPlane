@@ -59,8 +59,6 @@ class SessionLimitPolicyCrudIT extends AbstractConfigApiIT {
 		List<AuditEvent> audit = auditEvents.findByActor(admin).collectList().block();
 		assertThat(audit).anySatisfy(e -> {
 			assertThat(e.action()).isEqualTo("session_limit_policy.create");
-			// Audit before/after: a create has no before-state and a full after
-			// snapshot.
 			assertThat(e.detail().get("before")).isNull();
 			assertThat(e.detail().get("after")).isNotNull();
 			assertThat(e.detail().get("after").get("name").stringValue()).isEqualTo(name);
@@ -100,7 +98,6 @@ class SessionLimitPolicyCrudIT extends AbstractConfigApiIT {
 		String reader = "svc-slp-reader-" + UUID.randomUUID();
 		String readToken = tokenWith(reader, PlatformPermissions.RBAC_READ);
 
-		// rbac:read may list but not write.
 		client.post().uri("/v1/session-limit-policies").header("Authorization", "Bearer " + readToken)
 				.contentType(MediaType.APPLICATION_JSON)
 				.bodyValue(policyBody("slp-" + UUID.randomUUID(), 2, null, null)).exchange().expectStatus()
@@ -108,7 +105,6 @@ class SessionLimitPolicyCrudIT extends AbstractConfigApiIT {
 		client.get().uri("/v1/session-limit-policies").header("Authorization", "Bearer " + readToken).exchange()
 				.expectStatus().isOk();
 
-		// rbac:write is NOT enough for this surface (settings:write governs it).
 		String rbacWriter = "svc-slp-rbacw-" + UUID.randomUUID();
 		String rbacWriteToken = tokenWith(rbacWriter, PlatformPermissions.RBAC_WRITE);
 		client.post().uri("/v1/session-limit-policies").header("Authorization", "Bearer " + rbacWriteToken)
@@ -134,9 +130,6 @@ class SessionLimitPolicyCrudIT extends AbstractConfigApiIT {
 				.expectStatus().isOk().expectBody().jsonPath("$.maxConcurrentSessions").isEqualTo(2)
 				.jsonPath("$.maxSessionSeconds").isEqualTo(3600);
 
-		// Update with the correct version replaces the mutable fields (an omitted
-		// maxSessionSeconds clears it — full replace, not merge) and bumps the
-		// version.
 		@SuppressWarnings("unchecked")
 		Map<String, Object> updated = client.put().uri("/v1/session-limit-policies/" + id)
 				.header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON)
@@ -149,7 +142,6 @@ class SessionLimitPolicyCrudIT extends AbstractConfigApiIT {
 		assertThat(updated.get("name")).isEqualTo(name);
 		assertThat(updated.get("version")).isEqualTo(1);
 
-		// The update was audited with before/after states.
 		List<AuditEvent> audit = auditEvents.findByActor(admin).collectList().block();
 		assertThat(audit).anySatisfy(e -> {
 			assertThat(e.action()).isEqualTo("session_limit_policy.update");
@@ -159,7 +151,6 @@ class SessionLimitPolicyCrudIT extends AbstractConfigApiIT {
 			assertThat(e.detail().get("after").get("maxConcurrentSessions").intValue()).isEqualTo(5);
 		});
 
-		// A stale version is a 409.
 		client.put().uri("/v1/session-limit-policies/" + id).header("Authorization", "Bearer " + token)
 				.contentType(MediaType.APPLICATION_JSON).bodyValue(Map.of("identitySelector",
 						Map.of("identities", List.of("alice")), "maxConcurrentSessions", 9, "version", 0))
@@ -167,7 +158,6 @@ class SessionLimitPolicyCrudIT extends AbstractConfigApiIT {
 
 		client.delete().uri("/v1/session-limit-policies/" + id).header("Authorization", "Bearer " + token).exchange()
 				.expectStatus().isNoContent();
-		// Idempotent delete + gone.
 		client.delete().uri("/v1/session-limit-policies/" + id).header("Authorization", "Bearer " + token).exchange()
 				.expectStatus().isNoContent();
 		client.get().uri("/v1/session-limit-policies/" + id).header("Authorization", "Bearer " + token).exchange()
@@ -200,14 +190,12 @@ class SessionLimitPolicyCrudIT extends AbstractConfigApiIT {
 				.header("Idempotency-Key", key).contentType(MediaType.APPLICATION_JSON).bodyValue(body).exchange()
 				.expectStatus().isCreated().returnResult(Map.class).getResponseBody().blockFirst().get("id").toString();
 
-		// Same key + same body -> the ORIGINAL response replayed, no second create.
 		String replayId = client.post().uri("/v1/session-limit-policies").header("Authorization", "Bearer " + token)
 				.header("Idempotency-Key", key).contentType(MediaType.APPLICATION_JSON).bodyValue(body).exchange()
 				.expectStatus().isCreated().returnResult(Map.class).getResponseBody().blockFirst().get("id").toString();
 		assertThat(replayId).isEqualTo(firstId);
 		assertThat(policies.findAll().collectList().block()).hasSize(1);
 
-		// Same key + DIFFERENT body -> 422 idempotency conflict.
 		client.post().uri("/v1/session-limit-policies").header("Authorization", "Bearer " + token)
 				.header("Idempotency-Key", key).contentType(MediaType.APPLICATION_JSON)
 				.bodyValue(policyBody(name, 9, null, null)).exchange().expectStatus().isEqualTo(422).expectBody()
@@ -237,11 +225,9 @@ class SessionLimitPolicyCrudIT extends AbstractConfigApiIT {
 				.getResponseBody().blockFirst();
 		List<Map<String, Object>> items2 = (List<Map<String, Object>>) page2.get("items");
 		assertThat(items2).isNotEmpty();
-		// Keyset: page 2 shares no id with page 1 (no OFFSET drift / overlap).
 		List<Object> ids1 = items1.stream().map(m -> m.get("id")).toList();
 		assertThat(items2.stream().map(m -> m.get("id"))).noneMatch(ids1::contains);
 
-		// A malformed cursor is a 400.
 		client.get().uri("/v1/session-limit-policies?cursor=not-a-cursor").header("Authorization", "Bearer " + token)
 				.exchange().expectStatus().isBadRequest();
 	}

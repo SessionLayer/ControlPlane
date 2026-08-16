@@ -24,13 +24,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-/**
- * Gateway enrollment tokens (RBAC + audited). Replaces the raw {@code INSERT
- * INTO runtime.gateway_enrollment_token} the install guide required, so
- * installing a Gateway no longer needs a database credential the hardening
- * guide tells the operator to lock away. The raw token is returned once at
- * issuance and never again.
- */
 @RestController
 public class GatewayEnrollmentTokenController implements GatewayEnrollmentTokensApi {
 
@@ -63,7 +56,6 @@ public class GatewayEnrollmentTokenController implements GatewayEnrollmentTokens
 						return Mono.error(ApiProblemException.malformed("invalid gatewayName"));
 					}
 					Duration ttl = clampTtl(req.getTtlSeconds());
-					// Persist + audit atomically so a mint that cannot be audited never stands.
 					Mono<GatewayEnrollmentTokenService.MintedEnrollmentToken> minted = tx.transactional(enrollmentTokens
 							.mint(gatewayName, subject.identity(), ttl)
 							.flatMap(token -> audit
@@ -85,7 +77,6 @@ public class GatewayEnrollmentTokenController implements GatewayEnrollmentTokens
 	public Mono<ResponseEntity<Void>> revokeGatewayEnrollmentToken(UUID gatewayEnrollmentTokenId,
 			ServerWebExchange exchange) {
 		return access.withPermission(PlatformPermissions.GATEWAY_ENROLL, subject -> {
-			// Idempotent: 204 whether the token is absent, live, or already consumed.
 			Mono<Void> revoked = tx.transactional(enrollmentTokens.revoke(gatewayEnrollmentTokenId)
 					.then(audit.record(subject.identity(), gatewayEnrollmentTokenId.toString(),
 							"gateway_enrollment_token.revoke", "success", null, null, Map.of())));

@@ -13,11 +13,6 @@ public final class AnchoredRe2 {
 	private AnchoredRe2() {
 	}
 
-	/**
-	 * True iff {@code value} matches {@code regex} in full (anchored). A too-long
-	 * pattern/value or an uncompilable pattern is rejected — the caller fails the
-	 * decision closed.
-	 */
 	public static boolean matches(String regex, String value) {
 		if (regex == null || value == null) {
 			return false;

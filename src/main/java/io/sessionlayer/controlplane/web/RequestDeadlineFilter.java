@@ -11,13 +11,6 @@ import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
-/**
- * Bounds every REST request to {@code sessionlayer.web.request-timeout}.
- * Ordered first so the deadline covers the whole downstream chain (security,
- * dispatch, handler) the same way the gRPC plane's per-RPC timeout does. A
- * request that times out before committing a response gets a clean 504 instead
- * of hanging the caller forever with no signal.
- */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 class RequestDeadlineFilter implements WebFilter {

@@ -29,8 +29,6 @@ class PlatformPermissionVocabularyTest {
 				.toList();
 		List<String> enforced = PlatformPermissions.ALL.stream().sorted().toList();
 
-		// Both directions at once: a permission in either copy and not the other fails,
-		// and the message names it.
 		assertThat(published).containsExactlyElementsOf(enforced);
 	}
 }

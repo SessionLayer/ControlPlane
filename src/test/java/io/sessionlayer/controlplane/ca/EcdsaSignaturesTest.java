@@ -31,8 +31,8 @@ class EcdsaSignaturesTest {
 	@Test
 	void fromP1363KnownVector() {
 		byte[] raw = new byte[64]; // p256: 32-byte r || 32-byte s
-		raw[31] = 0x01; // r = 1
-		raw[63] = 0x02; // s = 2
+		raw[31] = 0x01;
+		raw[63] = 0x02;
 		var rs = EcdsaSignatures.fromP1363(raw, CaKeyType.ECDSA_NISTP256);
 		assertThat(rs.r()).isEqualTo(BigInteger.ONE);
 		assertThat(rs.s()).isEqualTo(BigInteger.TWO);
@@ -40,8 +40,6 @@ class EcdsaSignaturesTest {
 
 	@Test
 	void derAndP1363OfSameSignatureNormalizeIdentically() throws Exception {
-		// The injected "signer double": a real JCA ECDSA signature (DER). We then
-		// re-express the SAME (r,s) as Azure-style P1363 and assert both paths agree.
 		KeyPairGenerator g = KeyPairGenerator.getInstance("EC");
 		g.initialize(new ECGenParameterSpec("secp256r1"));
 		KeyPair kp = g.generateKeyPair();

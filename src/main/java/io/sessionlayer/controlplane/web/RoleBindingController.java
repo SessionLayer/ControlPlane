@@ -19,9 +19,6 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import tools.jackson.databind.ObjectMapper;
 
-/**
- * Platform role bindings CRUD (RBAC + audited, idempotency-key guarded).
- */
 @RestController
 public class RoleBindingController implements RoleBindingsApi {
 

@@ -1,27 +1,17 @@
--- V30 — external (key-service) CA key material. SessionLayer Control Plane.
+-- A CA whose private key lives in an external key service (Azure Key Vault first;
+-- the shape is backend-agnostic) has no wrapped private key to store at all.
 --
--- A CA whose private key lives in an external key service (Azure Key Vault
--- first; the shape is backend-agnostic) has no wrapped private key to store at
--- all. Until now ca_key_material assumed 'local' unconditionally:
--- wrapped_key/iv/kek_reference were each individually NOT NULL / CHECKed, with
--- nothing tying the three together as one shape.
+-- The kek_reference "never a private key" guard moves into the new table-level
+-- constraint rather than being dropped, so the invariant survives the removal of the
+-- three V12 column-level CHECKs. 'local_kek' now enforces the V12 shape JOINTLY —
+-- strictly stronger than before, where a row could satisfy each CHECK individually
+-- while carrying only two of the three columns as non-null nonsense.
 --
--- Adds key_location ('local_kek' | 'external') and replaces the three V12
--- column-level CHECKs with one table-level CHECK keyed on it:
---   - 'local_kek' requires exactly the V12 shape, now enforced JOINTLY (strictly
---     stronger than today, where a row could satisfy each CHECK individually
---     while e.g. carrying only two of the three columns as non-null nonsense).
---     The kek_reference "never a private key" guard moves into the same
---     constraint rather than being dropped, so the invariant survives the
---     column-check removal.
---   - 'external' requires wrapped_key/iv/kek_reference all NULL: there is no
---     private key here and the schema says so.
--- public_key stays NOT NULL for both — an external CA's public key is resolved
--- from the key service at adoption and persisted, which is what keeps
--- CaPublicKeyService, CaRotationService.trustedCaKeys and
--- LocalCaFactory.publicAuthorizedKey working unchanged, and keeps "no private
--- material is read" provable from the same SQL projection regardless of
--- key_location.
+-- public_key stays NOT NULL for both — an external CA's public key is resolved from
+-- the key service at adoption and persisted, which is what keeps CaPublicKeyService,
+-- CaRotationService.trustedCaKeys and LocalCaFactory.publicAuthorizedKey working
+-- unchanged, and keeps "no private material is read" provable from the same SQL
+-- projection regardless of key_location.
 
 ALTER TABLE runtime.ca_key_material
     ADD COLUMN key_location text NOT NULL DEFAULT 'local_kek'
@@ -58,8 +48,6 @@ ALTER TABLE runtime.ca_key_material
 COMMENT ON CONSTRAINT ca_key_material_key_location_shape_check ON runtime.ca_key_material IS
     'Ties wrapped_key/iv/kek_reference to key_location as one shape instead of three independent CHECKs (V12 never tied them together).';
 
--- Write-once provenance (V12/V14): key_location is decided at insert (which row
--- shape a CA is) and, like the columns it gates, may never change afterward.
 CREATE OR REPLACE FUNCTION runtime.enforce_ca_key_material_write_once()
     RETURNS trigger
     LANGUAGE plpgsql AS $$
@@ -77,5 +65,3 @@ BEGIN
 END;
 $$;
 
--- No grant change: cp_runtime's INSERT/SELECT-only grant (V12) is table-level,
--- so it already covers this new column.

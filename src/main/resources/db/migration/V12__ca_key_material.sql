@@ -1,30 +1,16 @@
--- V12 — local-CA KEK-wrapped key material (RUNTIME). SessionLayer Control Plane.
---
--- FR-CA-8, Design §14: the local CA backend generates an ECDSA P-256 key
--- and envelope-encrypts the PRIVATE key with an operator KEK. Only the WRAPPED
--- (encrypted) key is persisted here, plus the public key blob (public material).
--- The KEK itself is sourced from the environment at runtime (never the DB), so a
--- DB-only compromise (even the restricted runtime role) yields ciphertext it cannot
--- unwrap. `config.ca_config.key_reference` = 'local:<this row id>'.
---
--- Placement: RUNTIME. This is generated operational secret material (like issued
--- credentials), RUNTIME not config. It references
--- config.ca_config by a SNAPSHOT id (no hard FK across runtime->config), consistent
--- with the model. Cleaned up with its config by ca_config_id lookup.
-
 CREATE TABLE runtime.ca_key_material (
     id            uuid        PRIMARY KEY,
     ca_config_id  uuid        NOT NULL UNIQUE,             -- snapshot ref to config.ca_config.id (NO FK)
-    ca_config_name text       NOT NULL,                    -- snapshot of the CA config name
+    ca_config_name text       NOT NULL,
     wrap_algorithm text       NOT NULL DEFAULT 'AES-256-GCM'
                               CHECK (wrap_algorithm IN ('AES-256-GCM')),
-    kek_reference text        NOT NULL                     -- which KEK wrapped it (reference, never the KEK)
+    kek_reference text        NOT NULL
                               CHECK (kek_reference NOT LIKE '%PRIVATE KEY%'),
-    wrapped_key   bytea       NOT NULL                     -- KEK-encrypted CA private key (ciphertext; never plaintext)
+    wrapped_key   bytea       NOT NULL
                               -- ciphertext-only guard: reject a '-----BEGIN' PEM marker written into the blob
                               CHECK (octet_length(wrapped_key) > 0
                                      AND position('\x2d2d2d2d2d424547494e'::bytea in wrapped_key) = 0),
-    iv            bytea       NOT NULL CHECK (octet_length(iv) = 12),  -- AES-GCM nonce is exactly 12 bytes
+    iv            bytea       NOT NULL CHECK (octet_length(iv) = 12),
     public_key    bytea       NOT NULL,                    -- CA public key (X.509 SubjectPublicKeyInfo; public material)
     key_type      text        NOT NULL DEFAULT 'ecdsa-sha2-nistp256',
     version       bigint      NOT NULL DEFAULT 0,
@@ -48,8 +34,6 @@ BEGIN
 END
 $grant$;
 
--- Write-once provenance (defense in depth, mirrors recording_ref): once inserted, the
--- wrapped key / iv / public key / config binding may never change (owner path too).
 CREATE OR REPLACE FUNCTION runtime.enforce_ca_key_material_write_once()
     RETURNS trigger
     LANGUAGE plpgsql AS $$

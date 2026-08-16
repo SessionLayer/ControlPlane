@@ -8,10 +8,6 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
-/**
- * Decision context codec: identity/groups/labels serialized, idle timeout N-1
- * byte-stable.
- */
 class DecisionContextCodecTest {
 
 	@Test

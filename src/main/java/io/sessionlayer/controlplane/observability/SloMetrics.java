@@ -11,10 +11,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
-/**
- * SLO instruments and the session-limit/lease lifecycle meters; tagged by
- * outcome/kind only.
- */
 @Component
 public class SloMetrics {
 
@@ -99,10 +95,6 @@ public class SloMetrics {
 		});
 	}
 
-	/**
-	 * Time the JIT grant lookup; cancelled indicates lookup-timeout (distinguished
-	 * from miss).
-	 */
 	public Mono<JitRequest> timeJitLookup(Mono<JitRequest> source) {
 		return Mono.defer(() -> {
 			long start = System.nanoTime();

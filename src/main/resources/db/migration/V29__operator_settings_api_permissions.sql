@@ -1,54 +1,44 @@
--- V29 — Two new platform permissions, the vocabulary back-fill an upgraded
--- deployment never received, and a CA-algorithm widening. Forward-only,
--- additive; V1-V28 unchanged.
+-- 1. recording:key-manage gates PUT /v1/operator-settings/recording-customer-key,
+--    which provisions the customer public key every recording is sealed to. It is
+--    deliberately NOT settings:write and NOT ca:manage. Its holder can point future
+--    recordings at a key whose private half they control, which is a privilege of a
+--    different kind from data-plane grant administration -- folding it into
+--    settings:write would hand every config administrator the ability to break the
+--    property that the platform cannot read its own recordings.
 --
--- 1. config.platform_role gains recording:key-manage (Design §4.B): the verb
---    gating PUT /v1/operator-settings/recording-customer-key, which provisions
---    the customer public key every recording is sealed to. It is deliberately
---    NOT settings:write and NOT ca:manage. Its holder can point future
---    recordings at a key whose private half they control, which is a privilege
---    of a different kind from data-plane grant administration -- folding it into
---    settings:write would hand every config administrator the ability to break
---    the property that the platform cannot read its own recordings.
+-- 2. gateway:remove gates DELETE /v1/gateways/{gatewayId}. Removing a Gateway
+--    identity is destructive in a way enrolling one is not: a removed identity is
+--    refused immediately by ConnectAuthorizationService.requireActiveGateway and by
+--    the lock-feed and presence paths, so the deletion stops that Gateway
+--    authorizing sessions at once.
 --
--- 2. config.platform_role also gains gateway:remove, gating
---    DELETE /v1/gateways/{gatewayId}. Removing a Gateway identity is destructive
---    in a way enrolling one is not: a removed identity is refused immediately by
---    ConnectAuthorizationService.requireActiveGateway and by the lock-feed and
---    presence paths, so the deletion stops that Gateway authorizing sessions at
---    once. Separated from gateway:enroll exactly as node:remove is separated
---    from node:enroll.
+-- 3. The back-fill. BootstrapService.ensureAdminRole() creates platform-admin only
+--    when it is absent, and runAtStartup() returns early once bootstrap_completed is
+--    set, so an already-bootstrapped deployment's admin role is never revisited.
+--    Every vocabulary-extending migration since V18 (lock:read/lock:write), V20
+--    (breakglass:manage), V23 (recording:delete) and V28 (gateway:enroll) widened the
+--    CHECK without granting the new verb to the seeded role, so an upgraded
+--    deployment's platform admin silently lacks them -- most visibly, it cannot
+--    enroll a Gateway. Append every missing entry once, here.
 --
--- 3. The back-fill. BootstrapService.ensureAdminRole() creates platform-admin
---    only when it is absent, and runAtStartup() returns early once
---    bootstrap_completed is set, so an already-bootstrapped deployment's admin
---    role is never revisited. Every vocabulary-extending migration since V18
---    (lock:read/lock:write), V20 (breakglass:manage), V23 (recording:delete) and
---    V28 (gateway:enroll) widened the CHECK without granting the new verb to the
---    seeded role, so an upgraded deployment's platform admin silently lacks
---    them -- most visibly, it cannot enroll a Gateway. Append every missing
---    entry once, here.
+--    Scoped to origin = 'default', i.e. the row the bootstrap seeded and no one has
+--    edited through /v1/roles. A role an operator has curated (origin flips to 'api'
+--    on any API write) is left alone: restoring a permission that was deliberately
+--    removed would be the worse failure. Such a deployment grants the verb through
+--    /v1/roles like any other, and BootstrapService warns at boot when the seeded row
+--    is missing vocabulary.
 --
---    Scoped to origin = 'default', i.e. the row the bootstrap seeded and no one
---    has edited through /v1/roles. A role an operator has curated (origin flips
---    to 'api' on any API write) is left alone: restoring a permission that was
---    deliberately removed would be the worse failure. Such a deployment grants
---    the verb through /v1/roles like any other, and BootstrapService warns at
---    boot when the seeded row is missing vocabulary.
+-- 4. config.ca_config.algorithm gains ecdsa-p521. CaKeyType implements P-256, P-384
+--    and P-521, but the CHECK admitted only the first two of those -- a fully working
+--    algorithm was unreachable. The CHECK is WIDENED and never narrowed: it still
+--    admits ed25519/rsa-2048/rsa-4096, which CaKeyType cannot assemble, because a row
+--    carrying one may already exist on a real deployment and a narrowing migration
+--    would fail at startup on exactly the deployment that has the problem.
+--    CaConfigService is the stricter gate and rejects an unassemblable algorithm with
+--    a 422 before anything is stored.
 --
--- 4. config.ca_config.algorithm gains ecdsa-p521. CaKeyType implements P-256,
---    P-384 and P-521, but the CHECK admitted only the first two of those -- a
---    fully working algorithm was unreachable. The CHECK is WIDENED and never
---    narrowed: it still admits ed25519/rsa-2048/rsa-4096, which CaKeyType cannot
---    assemble, because a row carrying one may already exist on a real deployment
---    and a narrowing migration would fail at startup on exactly the deployment
---    that has the problem. CaConfigService is the stricter gate and rejects an
---    unassemblable algorithm with a 422 before anything is stored.
---
--- Extends the closed vocabulary CHECK the same way V18/V20/V23/V28 did (drop +
--- recreate; existing roles stay a subset). The CHECK and PlatformPermissions.ALL
--- must stay in lockstep or the first-admin bootstrap breaks;
--- MigrationIntegrityIT asserts both that lockstep and the back-fill.
+-- The CHECK and PlatformPermissions.ALL must stay in lockstep or the first-admin
+-- bootstrap breaks; MigrationIntegrityIT asserts both that lockstep and the back-fill.
 ALTER TABLE config.platform_role DROP CONSTRAINT platform_role_permissions_check;
 ALTER TABLE config.platform_role
     ADD CONSTRAINT platform_role_permissions_check

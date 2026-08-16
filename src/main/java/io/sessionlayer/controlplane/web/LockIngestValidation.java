@@ -8,10 +8,6 @@ import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
-/**
- * Lock CRUD ingest validation. A lock is top-tier deny; malformed targets could
- * silently over- or under-block, so reject upfront.
- */
 final class LockIngestValidation {
 
 	private static final JsonNodeFactory JSON = JsonNodeFactory.instance;

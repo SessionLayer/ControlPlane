@@ -20,13 +20,10 @@ public final class DecisionContextCodec {
 				.setSessionId(str(ctx.sessionId())).setSourceAddress(nullToEmpty(ctx.sourceAddress()))
 				.setIssuedAtEpochSeconds(ctx.issuedAt().getEpochSecond()).setIdentity(nullToEmpty(ctx.identity()))
 				.addAllIdentityGroups(ctx.identityGroups()).addAllNodeLabels(ctx.nodeLabels());
-		// Emit NON-standing models only; STANDING stays UNSPECIFIED for N-1
-		// byte-identical compat.
 		io.sessionlayer.controlplane.grpc.v1.AccessModel model = accessModel(ctx.accessModel());
 		if (model != io.sessionlayer.controlplane.grpc.v1.AccessModel.ACCESS_MODEL_UNSPECIFIED) {
 			builder.setAccessModel(model);
 		}
-		// Emit idle timeout only when resolved for N-1 byte-identical compat.
 		if (ctx.idleTimeoutSeconds() != null && ctx.idleTimeoutSeconds() > 0) {
 			builder.setIdleTimeoutSeconds(ctx.idleTimeoutSeconds());
 		}

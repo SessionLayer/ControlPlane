@@ -28,10 +28,9 @@ import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * The chain columns turn the runbook's raw head capture and linkage walk into
- * API calls, but only for a reader who sees the whole stream: a sequence number
- * over a filtered view discloses how many events were filtered out, and a
- * linkage walk over one proves nothing about the rows it never saw.
+ * The chain columns are for a reader who sees the whole stream: a sequence
+ * number over a filtered view discloses how many events were filtered out, and
+ * a linkage walk over one proves nothing about the rows it never saw.
  */
 class AuditChainFieldsIT extends AbstractConfigApiIT {
 
@@ -94,10 +93,6 @@ class AuditChainFieldsIT extends AbstractConfigApiIT {
 	}
 
 	/**
-	 * The two operations the runbook needed a database credential for: capture the
-	 * chain head before a restore, and walk linkage across an unfiltered page.
-	 */
-	/**
 	 * Anchored on rows this test appended through the store, deliberately, rather
 	 * than on whatever happens to be newest. Sibling suites insert audit rows
 	 * straight through the repository without calling {@code withChain}, so the
@@ -109,7 +104,6 @@ class AuditChainFieldsIT extends AbstractConfigApiIT {
 	@Test
 	void anUnscopedReaderCanCaptureTheHeadAndWalkLinkage() {
 		String unscoped = tokenWith("svc-chain-walk-" + UUID.randomUUID(), PlatformPermissions.AUDIT_READ);
-		// Seeded last and through the store, so the newest rows are chained and ours.
 		List<AuditEvent> appended = new ArrayList<>();
 		for (int i = 0; i < 4; i++) {
 			appended.add(seed("chain-walk", UUID.randomUUID(), Map.of()));

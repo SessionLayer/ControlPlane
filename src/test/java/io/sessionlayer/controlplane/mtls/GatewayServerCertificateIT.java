@@ -78,8 +78,6 @@ class GatewayServerCertificateIT extends AbstractMtlsIT {
 		assertThat(response.getCaChainList()).hasSize(1);
 		assertThat(X509Certificates.parse(response.getCaChain(0).toByteArray())).isEqualTo(caCertificate());
 
-		// The Agent's check: a PKIX path from the presented leaf to the internal mTLS
-		// CA it already holds — no trust on first use.
 		CertPath path = CertificateFactory.getInstance("X.509").generateCertPath(List.of(leaf));
 		PKIXParameters params = new PKIXParameters(Set.of(new TrustAnchor(caCertificate(), null)));
 		params.setRevocationEnabled(false);
@@ -128,8 +126,6 @@ class GatewayServerCertificateIT extends AbstractMtlsIT {
 
 	@Test
 	void refusesAValidCertificateForAnUnknownGatewayIdentity() {
-		// A genuinely CA-signed client cert whose SAN names a gateway_identity that
-		// does not exist (never enrolled / deleted). The lookup must fail closed.
 		KeyPair key = MtlsTestSupport.generateEcKeyPair();
 		X509Certificate stranger = mintClientCert(key.getPublic(), UUID.randomUUID(), Instant.now().minusSeconds(60),
 				Instant.now().plusSeconds(3600));

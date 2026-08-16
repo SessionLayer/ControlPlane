@@ -83,7 +83,6 @@ public final class LocalStackKms {
 		return ADMIN;
 	}
 
-	/** A P-256 signing key: what a session CA is adopted onto. */
 	public static String createSigningKey() {
 		return createKey(KeySpec.ECC_NIST_P256);
 	}
@@ -101,22 +100,16 @@ public final class LocalStackKms {
 		ADMIN.scheduleKeyDeletion(request -> request.keyId(keyArn).pendingWindowInDays(7));
 	}
 
-	/** A real, resolvable alias — the reference SessionLayer refuses on purpose. */
 	public static String createAlias(String keyArn) {
 		String alias = "alias/session-ca-" + UUID.randomUUID();
 		ADMIN.createAlias(request -> request.aliasName(alias).targetKeyId(keyArn));
 		return alias;
 	}
 
-	/** The production configuration bean, pointed at this container. */
 	public static AwsKmsProperties properties() {
 		return propertiesFor(endpoint().toString());
 	}
 
-	/**
-	 * The same configuration against a different endpoint, for the tests that need
-	 * KMS to be unreachable or to answer with bytes no real KMS would send.
-	 */
 	public static AwsKmsProperties propertiesFor(String endpointOverride) {
 		AwsKmsProperties properties = new AwsKmsProperties();
 		properties.setEnabled(true);

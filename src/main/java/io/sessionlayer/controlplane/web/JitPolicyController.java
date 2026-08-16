@@ -22,9 +22,6 @@ import reactor.core.publisher.Mono;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-/**
- * CRUD for JIT-access policies (RBAC + audited, idempotency-key guarded).
- */
 @RestController
 public class JitPolicyController implements JitPoliciesApi {
 

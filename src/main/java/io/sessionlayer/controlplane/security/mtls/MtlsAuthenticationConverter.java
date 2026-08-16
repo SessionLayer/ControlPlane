@@ -15,10 +15,6 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-/**
- * Independent re-validation against internal CA; fail-closed (no weaker
- * fallback).
- */
 @Component
 public class MtlsAuthenticationConverter implements ServerAuthenticationConverter {
 

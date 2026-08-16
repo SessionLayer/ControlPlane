@@ -54,7 +54,6 @@ class RoleBindingCrudIT extends AbstractConfigApiIT {
 		String admin = "svc-rb-invalid-" + UUID.randomUUID();
 		String token = tokenWith(admin, PlatformPermissions.RBAC_WRITE);
 
-		// The roleId FK is checked pre-commit: an unknown role is a 422 problem+json.
 		client.post().uri("/v1/role-bindings").header("Authorization", "Bearer " + token)
 				.contentType(MediaType.APPLICATION_JSON)
 				.bodyValue(bindingBody(UUID.randomUUID(), "user-" + UUID.randomUUID(), Map.of())).exchange()
@@ -94,22 +93,18 @@ class RoleBindingCrudIT extends AbstractConfigApiIT {
 		client.get().uri("/v1/role-bindings/" + id).header("Authorization", "Bearer " + token).exchange().expectStatus()
 				.isOk().expectBody().jsonPath("$.scope.node_labels.env").isEqualTo("prod");
 
-		// Update replaces the (only mutable) scope + bumps version; subject/role are
-		// fixed.
 		client.put().uri("/v1/role-bindings/" + id).header("Authorization", "Bearer " + token)
 				.contentType(MediaType.APPLICATION_JSON)
 				.bodyValue(Map.of("scope", Map.of("node_labels", Map.of("env", "staging")), "version", 0)).exchange()
 				.expectStatus().isOk().expectBody().jsonPath("$.scope.node_labels.env").isEqualTo("staging")
 				.jsonPath("$.subject").isEqualTo(subject).jsonPath("$.version").isEqualTo(1);
 
-		// A stale version is a 409.
 		client.put().uri("/v1/role-bindings/" + id).header("Authorization", "Bearer " + token)
 				.contentType(MediaType.APPLICATION_JSON).bodyValue(Map.of("scope", Map.of(), "version", 0)).exchange()
 				.expectStatus().isEqualTo(409);
 
 		client.delete().uri("/v1/role-bindings/" + id).header("Authorization", "Bearer " + token).exchange()
 				.expectStatus().isNoContent();
-		// Idempotent delete + gone.
 		client.delete().uri("/v1/role-bindings/" + id).header("Authorization", "Bearer " + token).exchange()
 				.expectStatus().isNoContent();
 		client.get().uri("/v1/role-bindings/" + id).header("Authorization", "Bearer " + token).exchange().expectStatus()
@@ -129,13 +124,11 @@ class RoleBindingCrudIT extends AbstractConfigApiIT {
 				.header("Idempotency-Key", key).contentType(MediaType.APPLICATION_JSON).bodyValue(body).exchange()
 				.expectStatus().isCreated().returnResult(Map.class).getResponseBody().blockFirst().get("id").toString();
 
-		// Same key + same body -> the ORIGINAL response replayed, no second create.
 		String replayId = client.post().uri("/v1/role-bindings").header("Authorization", "Bearer " + token)
 				.header("Idempotency-Key", key).contentType(MediaType.APPLICATION_JSON).bodyValue(body).exchange()
 				.expectStatus().isCreated().returnResult(Map.class).getResponseBody().blockFirst().get("id").toString();
 		assertThat(replayId).isEqualTo(firstId);
 
-		// Same key + DIFFERENT body -> 422 idempotency conflict.
 		client.post().uri("/v1/role-bindings").header("Authorization", "Bearer " + token).header("Idempotency-Key", key)
 				.contentType(MediaType.APPLICATION_JSON)
 				.bodyValue(bindingBody(roleId, subject, Map.of("node_labels", Map.of("env", "dev")))).exchange()
@@ -167,11 +160,9 @@ class RoleBindingCrudIT extends AbstractConfigApiIT {
 				.getResponseBody().blockFirst();
 		List<Map<String, Object>> items2 = (List<Map<String, Object>>) page2.get("items");
 		assertThat(items2).isNotEmpty();
-		// Keyset: page 2 shares no id with page 1 (no OFFSET drift / overlap).
 		List<Object> ids1 = items1.stream().map(m -> m.get("id")).toList();
 		assertThat(items2.stream().map(m -> m.get("id"))).noneMatch(ids1::contains);
 
-		// A malformed cursor is a 400.
 		client.get().uri("/v1/role-bindings?cursor=not-a-cursor").header("Authorization", "Bearer " + token).exchange()
 				.expectStatus().isBadRequest();
 	}

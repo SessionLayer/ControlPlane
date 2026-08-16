@@ -20,7 +20,6 @@ public class PresenceFreshness {
 		this.properties = properties;
 	}
 
-	/** The {@code last_seen} floor a claim must beat to count as live. */
 	public Instant staleBefore(Instant now) {
 		return now.minus(properties.getPresenceStaleness());
 	}

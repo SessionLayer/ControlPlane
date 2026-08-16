@@ -29,12 +29,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
-/**
- * The mTLS gRPC plane + version negotiation over mTLS. Proves a valid peer
- * connects and negotiates 1.1, every rejection case fails closed (no
- * plaintext/unauthenticated fallback), the N-1 window resolves 1.0, and a hung
- * peer is bounded by the server's TLS handshake timeout.
- */
 class MtlsPlaneIT extends AbstractMtlsIT {
 
 	@Test
@@ -89,7 +83,6 @@ class MtlsPlaneIT extends AbstractMtlsIT {
 		try {
 			ServerHello reply = HandshakeGrpc.newBlockingStub(channel).negotiate(hello(1, 0, 1, 1));
 			assertThat(reply.getSelected().getMinor()).isEqualTo(1);
-			// mTLS-required tier (Renew) fails closed.
 			StatusRuntimeException error = catchThrowableOfType(StatusRuntimeException.class,
 					() -> GatewayIdentityGrpc.newBlockingStub(channel).renewGatewayIdentity(renewRequest()));
 			assertThat(error.getStatus().getCode()).isEqualTo(Status.Code.UNAUTHENTICATED);
@@ -155,11 +148,10 @@ class MtlsPlaneIT extends AbstractMtlsIT {
 			socket.setSoTimeout(20000);
 			InputStream in = socket.getInputStream();
 			try {
-				assertThat(in.read()).isEqualTo(-1); // clean close by the server
+				assertThat(in.read()).isEqualTo(-1);
 			} catch (SocketTimeoutException notBounded) {
 				throw new AssertionError("server did not bound a stalled TLS handshake", notBounded);
 			} catch (IOException reset) {
-				// connection reset by the server closing the stalled handshake — also bounded
 				assertThat(reset).isNotNull();
 			}
 		}

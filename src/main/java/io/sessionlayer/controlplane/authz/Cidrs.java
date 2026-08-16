@@ -2,22 +2,11 @@ package io.sessionlayer.controlplane.authz;
 
 import java.net.InetAddress;
 
-/**
- * CIDR containment for source-IP-based access control. Parses IPv4/IPv6
- * literals and addr/prefix networks; fails closed on malformed input. Never
- * treats source IP as positive identity—only suppresses grants.
- */
 public final class Cidrs {
 
 	private Cidrs() {
 	}
 
-	/**
-	 * True iff ip is inside cidr; v4/v6 mismatch returns false (not an error).
-	 *
-	 * @throws IllegalArgumentException
-	 *             if cidr or ip is malformed
-	 */
 	public static boolean contains(String cidr, String ip) {
 		int slash = cidr.indexOf('/');
 		if (slash < 0) {

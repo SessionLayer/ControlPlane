@@ -3,10 +3,6 @@ package io.sessionlayer.controlplane.platform;
 import java.time.Instant;
 import tools.jackson.databind.JsonNode;
 
-/**
- * Decides whether a scope covers a request (fail-closed: degenerate scope
- * covers nothing).
- */
 public final class PlatformScopes {
 
 	private PlatformScopes() {
@@ -14,7 +10,7 @@ public final class PlatformScopes {
 
 	public static boolean covers(JsonNode scope, PlatformScope request) {
 		if (scope == null || scope.isNull() || scope.isEmpty()) {
-			return true; // unrestricted binding (no scope)
+			return true;
 		}
 		if (!scope.isObject() || request == null) {
 			return false;
@@ -47,10 +43,6 @@ public final class PlatformScopes {
 		return anyConstraint;
 	}
 
-	/**
-	 * Reject degenerate scopes (fail-closed: they cover nothing yet read as
-	 * "scoped").
-	 */
 	public static boolean isValid(JsonNode scope) {
 		if (scope == null || scope.isNull() || scope.isEmpty()) {
 			return true;

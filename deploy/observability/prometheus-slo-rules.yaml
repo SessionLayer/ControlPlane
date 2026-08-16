@@ -1,26 +1,8 @@
-# SessionLayer Control Plane — Prometheus SLO alert rules.
-#
-# The service emits the OTel traces + the SLO histograms; these are the alerts
-# over them. They page on the two SLOs and on fail-closed spikes, off the meters
-# SloMetrics.java actually registers (Micrometer → Prometheus,
-# percentiles-histogram buckets, so histogram_quantile() is fleet-aggregatable
-# across CP replicas).
-#
-# Metric provenance (all from ControlPlane observability/SloMetrics.java):
-#   sessionlayer.session.establishment  -> sessionlayer_session_establishment_seconds_{bucket,count,sum}
-#       tags: outcome{allow,deny,error,cancelled}, access_model
-#   sessionlayer.cert.sign              -> sessionlayer_cert_sign_seconds_{bucket,count,sum}
-#       tags: kind{session,gateway_host}, outcome{success,error,cancelled}
-#   sessionlayer.ca.signer (Counter)    -> sessionlayer_ca_signer_total
-#       tags: kind, source{request,probe}, outcome{available,unavailable,error}
-#
-# Targets: establishment p95 = 250 ms; cert-sign p95 = 100 ms; CA-signer
-# availability = 99.9% (computed over source="request" only, so the ~6/min
-# health-probe baseline never masks partial degradation).
+# CA-signer availability is computed over source="request" only, so the
+# ~6/min health-probe baseline never masks partial degradation.
 groups:
   - name: sessionlayer-cp-slo
     rules:
-      # --- Session-establishment latency (p95, ex-human-OIDC) ---------------------
       - alert: SessionEstablishmentP95SloBreach
         expr: >
           histogram_quantile(0.95,
@@ -45,7 +27,6 @@ groups:
           description: "Inner/host cert signing p95 = {{ $value | humanizeDuration }}; SLO is 100 ms. Check the CA backend (KMS/Vault) latency."
           runbook_url: "https://github.com/SessionLayer/Documentation/blob/main/docs/operations/monitoring.md#the-two-slos"
 
-      # --- Session-CA signing availability (99.9%, real requests only) ------------
       - alert: CaSignerAvailabilitySloBreach
         expr: >
           (
@@ -72,7 +53,6 @@ groups:
           description: "{{ $value | humanize }}/s real sign requests are failing closed. All redundant signer backends may be down. New sessions cannot start until a signer recovers."
           runbook_url: "https://github.com/SessionLayer/Documentation/blob/main/docs/operations/troubleshooting.md#service-temporarily-unavailable"
 
-      # --- Fail-closed / deny observability ---------------------------------------
       - alert: SessionEstablishmentErrorSpike
         expr: >
           sum(rate(sessionlayer_session_establishment_seconds_count{outcome="error"}[5m]))

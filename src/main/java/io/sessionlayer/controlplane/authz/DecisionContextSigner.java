@@ -20,10 +20,6 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-/**
- * Signs decision contexts with ephemeral P-256 keypair (re-minted per boot).
- * Gateway pins CA, not leaf; private key stays in-process.
- */
 @Component
 public class DecisionContextSigner {
 

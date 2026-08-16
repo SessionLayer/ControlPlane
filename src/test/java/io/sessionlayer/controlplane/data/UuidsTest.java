@@ -13,7 +13,7 @@ class UuidsTest {
 	void generatesVersion7AndVariant2() {
 		UUID u = Uuids.v7();
 		assertThat(u.version()).isEqualTo(7);
-		assertThat(u.variant()).isEqualTo(2); // RFC 4122 / 9562 variant (0b10)
+		assertThat(u.variant()).isEqualTo(2);
 	}
 
 	@Test

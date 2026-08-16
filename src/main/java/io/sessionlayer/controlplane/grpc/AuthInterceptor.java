@@ -27,28 +27,6 @@ import javax.net.ssl.X509TrustManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * The per-RPC authorization interceptor for the mTLS plane (VERSIONING.md §7).
- * mTLS authenticates the channel; this interceptor decides, per method, whether
- * a valid client certificate is required and — independently of the TLS-layer
- * {@code clientAuth} toggle — re-validates the presented client chain against
- * the internal CA trust anchor, checks validity, and resolves the caller's
- * {@code gateway_identity} id from the certificate SAN. The resolved
- * {@link MtlsPeer} is placed in the gRPC {@link Context} for handlers.
- *
- * <ul>
- * <li><b>Bootstrap tier</b> ({@code Handshake/Negotiate},
- * {@code GatewayIdentity/EnrollGateway}, {@code AgentIdentity/EnrollAgent}) —
- * reachable without a client cert; the enrollment token / join proof authorises
- * Enroll.</li>
- * <li><b>mTLS-required tier</b> ({@code RenewGatewayIdentity},
- * {@code RenewAgentIdentity}, {@code SignSessionCertificate}, and any unknown
- * method) — refused {@code UNAUTHENTICATED} unless a valid client cert chained
- * to the internal CA resolves to a gateway or agent identity. The
- * active/unlocked check + token binding are enforced reactively by the handlers
- * (fail closed).</li>
- * </ul>
- */
 public final class AuthInterceptor implements ServerInterceptor {
 
 	private static final Logger LOG = LoggerFactory.getLogger(AuthInterceptor.class);
@@ -56,7 +34,6 @@ public final class AuthInterceptor implements ServerInterceptor {
 	/** GeneralName type for a URI SAN (RFC 5280 §4.2.1.6). */
 	private static final int SAN_URI = 6;
 
-	/** Methods reachable without a client certificate (the bootstrap exception). */
 	private static final Set<String> BOOTSTRAP_METHODS = Set.of(HandshakeGrpc.getNegotiateMethod().getFullMethodName(),
 			GatewayIdentityGrpc.getEnrollGatewayMethod().getFullMethodName(),
 			AgentIdentityGrpc.getEnrollAgentMethod().getFullMethodName());
@@ -75,27 +52,15 @@ public final class AuthInterceptor implements ServerInterceptor {
 		MtlsPeer peer = resolvePeer(call);
 		boolean bootstrap = BOOTSTRAP_METHODS.contains(call.getMethodDescriptor().getFullMethodName());
 		if (!bootstrap && !peer.authenticated()) {
-			// mTLS-required tier with no valid, resolvable client certificate → fail
-			// closed.
 			call.close(Status.UNAUTHENTICATED.withDescription("valid client certificate required"), new Metadata());
 			return new ServerCall.Listener<>() {
 			};
 		}
-		// Attach the Gateway's W3C trace context so the handler's cp.* span is a
-		// child of the Gateway root — one trace across the CP<->GW gRPC plane.
 		Context context = Context.current().withValue(MtlsContext.PEER, peer).withValue(CpTracing.OTEL_PARENT,
 				tracing.extractParent(headers));
 		return Contexts.interceptCall(context, call, headers, next);
 	}
 
-	/**
-	 * Resolve the caller from the TLS session: independently re-validate the client
-	 * chain against the internal CA, check validity, and parse the principal id
-	 * from the SAN URI — a gateway URI resolves to a Gateway peer, an agent URI to
-	 * an Agent peer (the two namespaces never overlap). Any absence/failure yields
-	 * {@link MtlsPeer#NONE} (a bootstrap caller); the tier gate above decides
-	 * whether that is acceptable.
-	 */
 	private MtlsPeer resolvePeer(ServerCall<?, ?> call) {
 		SSLSession session = call.getAttributes().get(Grpc.TRANSPORT_ATTR_SSL_SESSION);
 		if (session == null) {

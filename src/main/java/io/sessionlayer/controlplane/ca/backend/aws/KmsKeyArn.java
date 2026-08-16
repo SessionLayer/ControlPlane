@@ -36,7 +36,6 @@ public final class KmsKeyArn {
 
 	private static final String ALIAS_RESOURCE_PREFIX = "alias/";
 
-	/** A single-Region key id (a UUID) or a multi-Region key id. */
 	private static final Pattern KEY_ID = Pattern
 			.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|mrk-[0-9a-f]{32}");
 
@@ -46,7 +45,6 @@ public final class KmsKeyArn {
 
 	private static final Pattern PARTITION = Pattern.compile("aws|aws-us-gov|aws-cn");
 
-	/** The number of colon-separated fields in an ARN. */
 	private static final int ARN_FIELDS = 6;
 
 	private final Anchor anchor;
@@ -57,11 +55,6 @@ public final class KmsKeyArn {
 		this.keyId = keyId;
 	}
 
-	/**
-	 * The account, region and partition a {@code key_reference} is required to name
-	 * — {@code sessionlayer.ca.aws.*}, read from process configuration rather than
-	 * from anything a database row can influence.
-	 */
 	public record Anchor(String partition, String region, String accountId) {
 		public Anchor {
 			// AwsKmsProperties already refuses to start with any of these missing or
@@ -86,9 +79,6 @@ public final class KmsKeyArn {
 
 		private static void require(String value, Pattern shape, String property) {
 			if (value == null || !shape.matcher(value).matches()) {
-				// The offending value is deliberately not echoed: this record carries the
-				// account id, and AwsKmsProperties has already reported the real
-				// configuration error by name at startup.
 				throw new IllegalStateException("sessionlayer.ca.aws." + property + " is not a usable value");
 			}
 		}
@@ -115,7 +105,6 @@ public final class KmsKeyArn {
 			this.rule = rule;
 		}
 
-		/** The rule that was broken, naming no part of the reference. */
 		public String rule() {
 			return rule;
 		}
@@ -184,11 +173,6 @@ public final class KmsKeyArn {
 				+ " the key ARN.", "it is a KMS alias rather than a key ARN");
 	}
 
-	/**
-	 * The canonical ARN, rebuilt from the parsed fields rather than echoed from the
-	 * input — this is what is persisted and what every KMS request names, so it
-	 * cannot carry anything the validation above did not look at.
-	 */
 	public String keyArn() {
 		return "arn:" + anchor.partition() + ":kms:" + anchor.region() + ":" + anchor.accountId() + ":"
 				+ KEY_RESOURCE_PREFIX + keyId;

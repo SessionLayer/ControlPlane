@@ -4,10 +4,8 @@ import java.net.InetAddress;
 
 /**
  * Strict literal validator for the audit {@code source_ip} column, matching
- * Postgres {@code ::inet} (the {@code runtime.is_ip_or_cidr} CHECK) exactly: a
- * canonical dotted-quad IPv4 (four {@code 0-255} octets, no leading zeros, no
- * integer/abbreviated forms) or a valid IPv6 literal. Non-resolving (never a
- * DNS lookup) so it is safe on the reactive event loop.
+ * Postgres {@code ::inet} (the {@code runtime.is_ip_or_cidr} CHECK) exactly.
+ * Non-resolving (never a DNS lookup) so it is safe on the reactive event loop.
  *
  * <p>
  * The audit writer keeps only values this accepts and drops the rest to

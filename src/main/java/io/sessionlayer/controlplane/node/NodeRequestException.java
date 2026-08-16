@@ -8,15 +8,9 @@ package io.sessionlayer.controlplane.node;
  */
 public class NodeRequestException extends RuntimeException {
 
-	/**
-	 * The rejection category, mapped to an HTTP status by the controller advice.
-	 */
 	public enum Reason {
-		/** Malformed input (bad name/address, missing host anchor) — 400. */
 		INVALID_ARGUMENT,
-		/** The node id does not exist — 404. */
 		NOT_FOUND,
-		/** A node with that name is already registered — 409. */
 		CONFLICT,
 		/**
 		 * Well-formed request, unusable content — an empty or malformed anchor set on a

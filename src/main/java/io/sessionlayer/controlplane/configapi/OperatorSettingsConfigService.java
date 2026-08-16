@@ -17,27 +17,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Mono;
 
-/**
- * The {@code config.operator_settings} singleton and its recording-key
- * sub-resource.
- *
- * <p>
- * Two rules shape everything here. The evidence-retention fields
- * <b>ratchet</b>: their destructive direction is unreachable through this API
- * at any scope, because exposing an owner-only anti-forensics primitive to a
- * lower tier is the defect class this resource exists to avoid, and choosing a
- * bigger permission would not fix it. And a field a deployment property pins is
- * <b>refused</b> rather than accepted, because
- * {@code BootstrapService.reconcileSessionLimitDefaults} rewrites it on every
- * boot — accepting the write would ship a setting that silently reverts at the
- * next restart.
- */
 @Service
 public class OperatorSettingsConfigService {
 
 	private static final String ORIGIN_API = "api";
 
-	/** The only algorithm the Gateway's sealer implements. */
 	private static final String SEAL_ALGORITHM_ECIES_P256 = "ecies_p256";
 	private static final int MAX_KEY_BYTES = 8 * 1024;
 	private static final String OWNER_ONLY = "This direction destroys evidence and is deliberately not reachable "
@@ -60,7 +44,6 @@ public class OperatorSettingsConfigService {
 		this.tx = tx;
 	}
 
-	/** The writable projection, for before/after audit. Carries no secrets. */
 	public record SettingsAudit(int auditRetentionDays, int recordingRetentionDays, String defaultWormMode,
 			int otpTtlSeconds, Integer defaultMaxSessionSeconds, Integer defaultIdleTimeoutSeconds,
 			Integer defaultMaxConcurrentSessions) {
@@ -72,9 +55,6 @@ public class OperatorSettingsConfigService {
 		}
 	}
 
-	/**
-	 * Recording-key before/after audit state: FINGERPRINTS only, never key bytes.
-	 */
 	public record RecordingKeyAudit(String fingerprintSha256, String sealAlgorithm, String keyRef) {
 
 		static RecordingKeyAudit of(OperatorSettings s) {
@@ -138,21 +118,10 @@ public class OperatorSettingsConfigService {
 		});
 	}
 
-	/**
-	 * Provision or rotate the customer recording key. Every check runs before any
-	 * write, and the private-key rejection runs before everything else so the
-	 * operator mistake this endpoint exists to catch is named rather than reported
-	 * as "not a valid public key".
-	 */
 	public Mono<OperatorSettings> setRecordingKey(String actor, Long expectedVersion, String publicKeyBase64,
 			String sealAlgorithm, String keyRef, String expectedFingerprintSha256,
 			Boolean acknowledgeExistingRecordingsUndecryptable) {
 		byte[] der = decodePublicKey(publicKeyBase64);
-		// The Gateway seals with the p256 crate and refuses every other algorithm by
-		// construction. Storing one the data plane cannot honour is a cluster-wide
-		// switch: strict recording refuses every session, and with strict off every
-		// session runs unrecorded. Refuse it here, where the operator can still read
-		// why, rather than at the first seal where nothing points back to this call.
 		if (SEAL_ALGORITHM_ECIES_P256.equals(sealAlgorithm)) {
 			if (!CustomerPublicKeys.isValid(der, sealAlgorithm)) {
 				throw ApiProblemException.validation("the submitted key is not a public key on the P-256 curve"
@@ -237,8 +206,6 @@ public class OperatorSettingsConfigService {
 	private static void requireRotationGuards(boolean rotation, RecordingKeyAudit before, String expectedFingerprint,
 			Boolean acknowledged) {
 		if (!rotation) {
-			// A caller that believes it is replacing a key when none exists has lost track
-			// of the cluster's state; provisioning for it silently would hide that.
 			if (expectedFingerprint != null || acknowledged != null) {
 				throw ApiProblemException.validation(
 						"no recording key is configured, so this is a first provisioning: expectedFingerprintSha256 "

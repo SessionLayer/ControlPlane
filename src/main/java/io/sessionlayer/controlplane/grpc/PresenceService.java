@@ -79,8 +79,6 @@ public class PresenceService extends PresenceGrpc.PresenceImplBase {
 
 	@Override
 	public void heartbeat(PresenceHeartbeatRequest request, StreamObserver<PresenceHeartbeatResponse> observer) {
-		// Read the authenticated peer on the gRPC handler thread (the Context is not
-		// carried onto the reactive schedulers), exactly as AuthorizationService does.
 		UUID caller = MtlsContext.peer().gatewayId();
 		Mono<PresenceHeartbeatResponse> result = heartbeat(caller, request.getNodeName(), request.getGatewayAddr());
 		ReactiveBridge.forward(result, observer, mtlsProperties.getRpcTimeout(), "Presence.Heartbeat");
@@ -95,7 +93,6 @@ public class PresenceService extends PresenceGrpc.PresenceImplBase {
 
 	private Mono<PresenceHeartbeatResponse> heartbeat(UUID caller, String nodeName, String gatewayAddr) {
 		if (caller == null) {
-			// A non-Gateway (e.g. agent) mTLS peer cannot own a node — fail closed.
 			return Mono.error(new GatewayRequestException(GatewayRequestException.Reason.PERMISSION_DENIED,
 					"gateway identity required"));
 		}
@@ -120,8 +117,6 @@ public class PresenceService extends PresenceGrpc.PresenceImplBase {
 				if (existing.lastSeen().isBefore(staleBefore)) {
 					return takeover(existing, owner, gatewayAddr, now);
 				}
-				// A fresh owner that is not us: standby — no write, return the authoritative
-				// owner so the caller learns it is not the owner.
 				return Mono.just(existing);
 			}).switchIfEmpty(claimFresh(nodeId, owner, gatewayAddr, now));
 
@@ -161,34 +156,16 @@ public class PresenceService extends PresenceGrpc.PresenceImplBase {
 			}).defaultIfEmpty(false);
 
 			return tx.transactional(released)
-					// Lost the row to a concurrent claim: we did not relinquish (someone else now
-					// owns it), so report not-released — fail-safe and truthful.
 					.onErrorResume(PresenceService::isContention, contended -> Mono.just(false))
 					.map(done -> PresenceReleaseResponse.newBuilder().setReleased(done).build());
 		}));
 	}
 
-	// The Gateway addresses a node by its stable enrollment NAME (it holds the
-	// agent
-	// channel keyed by the name it read from that agent cert's dNSName SAN; it has
-	// no
-	// DB). Resolve it to the runtime.node id that keys runtime.presence. An unknown
-	// name fails closed — no such node, so no ownership is written (never TOFU a
-	// node).
 	private Mono<UUID> resolveNodeId(String nodeName) {
 		return nodes.findByName(nodeName).map(Node::id).switchIfEmpty(Mono
 				.error(new GatewayRequestException(GatewayRequestException.Reason.PERMISSION_DENIED, "unknown node")));
 	}
 
-	// The owner is the AUTHENTICATED peer's gateway_identity.name (the HA routing
-	// key), resolved from its gatewayId — never a request field. An unknown
-	// identity fails closed (a deleted identity must not own a node). A Gateway is
-	// a first-class lockable principal, so a non-active (locked/revoked/removed)
-	// one
-	// may not acquire or hold ownership — the same fail-closed gate every sibling
-	// gateway-write RPC applies (SignSessionCertificate, RenewGatewayIdentity). A
-	// squatting locked owner is at worst a bounded availability dip a healthy
-	// standby then claims (fail-safe), never a routing bypass.
 	private Mono<String> ownerName(UUID caller) {
 		return gatewayIdentities.findById(caller)
 				.switchIfEmpty(Mono.error(new GatewayRequestException(GatewayRequestException.Reason.UNAUTHENTICATED,

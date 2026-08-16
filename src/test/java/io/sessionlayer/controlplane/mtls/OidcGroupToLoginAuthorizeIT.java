@@ -60,8 +60,6 @@ class OidcGroupToLoginAuthorizeIT extends AbstractMtlsIT {
 		assertThat(parsed.getPrincipal()).isEqualTo(login);
 		assertThat(parsed.getIdentityGroupsList()).containsExactly(group);
 
-		// The same identity WITHOUT the group does not resolve to the login — the group
-		// membership is the mapping (fail closed).
 		AuthorizeResponse deny = authorize(gateway, resolved.identity(), List.of(), node.name(), login);
 		assertThat(deny.getDecision()).isEqualTo(Decision.DECISION_DENY);
 		assertThat(deny.getSessionToken()).isEmpty();

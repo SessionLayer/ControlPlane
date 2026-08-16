@@ -29,7 +29,6 @@ public class OidcMetadataService {
 			return Mono.just(cached.discovery());
 		}
 		return fetch().doOnNext(d -> cache.set(new Cached(d, System.currentTimeMillis())))
-				// If a refresh fails but we hold a cached copy, keep serving it (degrade).
 				.onErrorResume(err -> cached != null ? Mono.just(cached.discovery()) : Mono.error(err));
 	}
 

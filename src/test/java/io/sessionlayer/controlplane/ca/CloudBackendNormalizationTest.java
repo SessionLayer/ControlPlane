@@ -50,9 +50,6 @@ class CloudBackendNormalizationTest {
 		return (ECPublicKey) ecKeyPair().getPublic();
 	}
 
-	/**
-	 * Sign a raw SHA-256 digest with the CA key (emulates a HSM DIGEST-mode sign).
-	 */
 	private byte[] signDigestDer(byte[] digest) throws Exception {
 		Signature s = Signature.getInstance("NONEwithECDSA");
 		s.initSign((PrivateKey) caKeyPair.getPrivate());
@@ -88,7 +85,6 @@ class CloudBackendNormalizationTest {
 
 			public byte[] signDigestP1363(byte[] digest) {
 				try {
-					// Azure returns P1363 (r||s); derive it from the DER the key produces.
 					EcdsaSignatures.RS rs = EcdsaSignatures
 							.fromDer(CloudBackendNormalizationTest.this.signDigestDer(digest));
 					byte[] out = new byte[64];
@@ -119,8 +115,7 @@ class CloudBackendNormalizationTest {
 			}
 
 			public SignedCertificate sign(String role, String publicKeyOpenSshLine, SignRequest request) {
-				endpoint.set("POST /v1/ssh/sign/" + role); // never /ssh/issue
-				// A canned Vault response cert (structure not important for this assertion).
+				endpoint.set("POST /v1/ssh/sign/" + role);
 				return new SignedCertificate("ecdsa-sha2-nistp256-cert-v01@openssh.com AAAAcanned vault-signed");
 			}
 		};
@@ -131,7 +126,6 @@ class CloudBackendNormalizationTest {
 
 		assertThat(cert.certificateLine()).contains("vault-signed");
 		assertThat(endpoint.get()).contains("/ssh/sign/").doesNotContain("/ssh/issue");
-		// Vault path exposes no raw-sign primitive.
 		assertThatThrownBy(() -> signer.rawSign(new byte[]{1})).isInstanceOf(UnsupportedOperationException.class);
 	}
 

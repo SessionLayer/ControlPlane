@@ -16,7 +16,6 @@ class VersionNegotiatorTest {
 
 	@Test
 	void picksHighestVersionWithinOverlap() {
-		// client [1.0, 1.2] ∩ server [1.1, 1.3] -> 1.2
 		assertThat(VersionNegotiator.highestCommon(v(1, 0), v(1, 2), v(1, 1), v(1, 3))).contains(v(1, 2));
 	}
 
@@ -29,7 +28,6 @@ class VersionNegotiatorTest {
 
 	@Test
 	void comparesMinorWithinSameMajor() {
-		// client [1.0, 1.5] ∩ server [1.0, 1.4] -> 1.4
 		assertThat(VersionNegotiator.highestCommon(v(1, 0), v(1, 5), v(1, 0), v(1, 4))).contains(v(1, 4));
 	}
 
@@ -45,9 +43,8 @@ class VersionNegotiatorTest {
 
 	@Test
 	void currentVersionDisplaysAsOnePointOne() {
-		// The CP<->Gateway gRPC protocol is 1.1 (VERSIONING.md §6).
 		assertThat(ProtocolVersions.display(ProtocolVersions.CURRENT)).isEqualTo("1.1");
-		assertThat(ProtocolVersions.display(ProtocolVersions.SUPPORTED_MIN)).isEqualTo("1.0"); // N-1 window
+		assertThat(ProtocolVersions.display(ProtocolVersions.SUPPORTED_MIN)).isEqualTo("1.0");
 		assertThat(ProtocolVersions.display(ProtocolVersions.SUPPORTED_MAX)).isEqualTo("1.1");
 	}
 

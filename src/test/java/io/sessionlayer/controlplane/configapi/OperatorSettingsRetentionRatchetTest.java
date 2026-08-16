@@ -97,7 +97,6 @@ class OperatorSettingsRetentionRatchetTest {
 		assertThat(saved.origin()).isEqualTo("api");
 	}
 
-	/** An unchanged value is not a change, so a read-modify-write still works. */
 	@Test
 	void anUnchangedRetentionIsAccepted() {
 		assertThat(accepts(STORED_RETENTION, STORED_RETENTION).recordingRetentionDays()).isEqualTo(STORED_RETENTION);
@@ -116,9 +115,6 @@ class OperatorSettingsRetentionRatchetTest {
 				.block());
 	}
 
-	/**
-	 * Returns the persisted row, so a rule that silently skipped the write fails.
-	 */
 	private static OperatorSettings accepts(int auditRetentionDays, int recordingRetentionDays) {
 		OperatorSettingsRepository settings = mock(OperatorSettingsRepository.class);
 		AuditEventStore audit = mock(AuditEventStore.class);

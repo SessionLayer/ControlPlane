@@ -20,13 +20,6 @@ import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTest
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
-/**
- * Two surfaces an operator could not use, and the reason both were hard to
- * diagnose. {@code GET /v1/pins} required the identity up front, which assumed
- * the caller already knew the answer to the question they were asking; and a
- * deny rule had to invent a {@code ttlSeconds} it has no use for, failing with
- * a framework 400 that named no field when it was omitted.
- */
 @AutoConfigureWebTestClient
 class PinAndRuleDiagnosabilityIT extends AbstractAuthIT {
 
@@ -64,7 +57,6 @@ class PinAndRuleDiagnosabilityIT extends AbstractAuthIT {
 		String token = tokenWith("svc-rules-" + unique(), PlatformPermissions.RBAC_WRITE,
 				PlatformPermissions.RBAC_READ);
 
-		// A deny grants nothing, so it has no lifetime to bound.
 		client.post().uri("/v1/rules").header("Authorization", "Bearer " + token)
 				.contentType(MediaType.APPLICATION_JSON).bodyValue(rule("deny-" + unique(), "deny", null)).exchange()
 				.expectStatus().isCreated().expectBody().jsonPath("$.ttlSeconds").doesNotExist().jsonPath("$.id")
@@ -78,15 +70,11 @@ class PinAndRuleDiagnosabilityIT extends AbstractAuthIT {
 				.contentType(MediaType.APPLICATION_JSON).bodyValue(rule("deny2-" + unique(), "deny", 3600)).exchange()
 				.expectStatus().isCreated().expectBody().jsonPath("$.ttlSeconds").isEqualTo(3600);
 
-		// A present-but-nonsensical value is a named 422 rather than an unmapped
-		// integrity failure against the column's own CHECK.
 		client.post().uri("/v1/rules").header("Authorization", "Bearer " + token)
 				.contentType(MediaType.APPLICATION_JSON).bodyValue(rule("deny3-" + unique(), "deny", 0)).exchange()
 				.expectStatus().isEqualTo(422).expectBody().jsonPath("$.detail")
 				.value(detail -> assertThat((String) detail).contains("ttlSeconds"));
 
-		// An allow still bounds its grant, and omitting it NAMES the field — the whole
-		// point, since the failure this replaces was a bare 400 naming nothing.
 		client.post().uri("/v1/rules").header("Authorization", "Bearer " + token)
 				.contentType(MediaType.APPLICATION_JSON).bodyValue(rule("allow-" + unique(), "allow", null)).exchange()
 				.expectStatus().isEqualTo(422).expectHeader()
@@ -103,8 +91,7 @@ class PinAndRuleDiagnosabilityIT extends AbstractAuthIT {
 		String token = tokenWith("svc-bind-" + unique(), PlatformPermissions.RBAC_WRITE);
 
 		// principals is required by the schema, so this fails inside Spring's binding
-		// before any handler runs. It used to answer with the framework default —
-		// timestamp/path/status/error/requestId — naming nothing.
+		// before any handler runs.
 		client.post().uri("/v1/rules").header("Authorization", "Bearer " + token)
 				.contentType(MediaType.APPLICATION_JSON)
 				.bodyValue(Map.of("name", "bind-" + unique(), "identitySelector", Map.of("identities", List.of("x")),

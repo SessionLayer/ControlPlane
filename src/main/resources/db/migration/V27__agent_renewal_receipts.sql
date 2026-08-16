@@ -1,5 +1,3 @@
--- V27 — agent renewal replay receipts (idempotent renew retries). SessionLayer CP.
---
 -- A lost/late RenewAgentIdentity response makes the Agent retry with the SAME
 -- (now-stale) generation after the CP already committed the renewal. Without a
 -- receipt, that retry is indistinguishable from a genuine clone racing the old
@@ -7,9 +5,7 @@
 -- clone cannot reproduce the CSR key (it holds its own keypair), so keying the
 -- receipt on (agent, prior generation, CSR public key hash) lets a benign self-retry
 -- replay the already-issued cert while clone detection stays intact for a different
--- key. RUNTIME (per-request operational state, mirrors runtime.idempotency_key from
--- V22): bounded by expires_at, no `origin`. cp_runtime auto-gets CRUD via the V11
--- default privileges.
+-- key. cp_runtime auto-gets CRUD via the V11 default privileges.
 
 CREATE TABLE runtime.agent_renewal_receipt (
     id                  uuid        PRIMARY KEY,

@@ -43,15 +43,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
-/**
- * Drives the genuine Azure SDK ({@code CryptographyClient}/{@code KeyClient})
- * against {@link KeyVaultRestDouble}. This is deliberately not a test of our
- * own {@code KeyVaultSigner} seam:
- * {@code io.sessionlayer.controlplane.ca.CloudBackendNormalizationTest} in this
- * module already covers the normalization with a hand-written double, which
- * never touches request shape, auth, or encoding. This class proves the wire
- * contract the seam depends on.
- */
 class KeyVaultSdkContractTest {
 
 	private static final ObjectMapper MAPPER = new ObjectMapper();

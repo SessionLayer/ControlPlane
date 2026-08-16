@@ -23,13 +23,6 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-/**
- * {@code /v1/session-leases} closes the runbook's raw {@code SELECT}/
- * {@code UPDATE} on {@code runtime.session_lease}. The cap it reports on is a
- * hard security limit, so the reported flag must equal the enforcement
- * predicate, a release must not corrupt the count against the reaper or the
- * extend path, and the bulk shape must not exist.
- */
 class SessionLeaseAdminIT extends AbstractConfigApiIT {
 
 	@Autowired
@@ -65,18 +58,11 @@ class SessionLeaseAdminIT extends AbstractConfigApiIT {
 		client.get().uri("/v1/session-leases").header("Authorization", "Bearer " + auditor).exchange().expectStatus()
 				.isOk();
 
-		// Reading a lease does not authorise correcting one.
 		release(auditor, lease.id(), "auditor should not be able to do this").expectStatus().isForbidden();
 		String writer = tokenWith("svc-lease-writer-" + UUID.randomUUID(), PlatformPermissions.LOCK_WRITE);
 		release(writer, lease.id(), "operator confirmed the session is gone").expectStatus().isOk();
 	}
 
-	/**
-	 * The reported flag and the {@code activeOnly} filter must both equal
-	 * {@code countLiveByIdentity}: unreleased AND unexpired. An expired unreleased
-	 * lease has already stopped counting — the reaper releases the row afterwards
-	 * as bookkeeping, not as the moment the slot frees.
-	 */
 	@Test
 	void countsTowardCapMatchesTheEnforcementPredicate() {
 		String identity = "lease-count-" + suffix();
@@ -98,7 +84,6 @@ class SessionLeaseAdminIT extends AbstractConfigApiIT {
 				released.id());
 	}
 
-	/** The confirmation step before a release; same gate as the collection. */
 	@Test
 	void getReturnsOneLeaseUnderTheReadPermission() {
 		String identity = "lease-get-" + suffix();
@@ -142,11 +127,6 @@ class SessionLeaseAdminIT extends AbstractConfigApiIT {
 		assertThat(event.subject()).isEqualTo(identity);
 	}
 
-	/**
-	 * The count is derived from unreleased rows rather than a counter, and the
-	 * UPDATE is guarded on {@code released_at IS NULL}, so a repeat release is a
-	 * no-op: it can neither double-decrement nor move the release timestamp.
-	 */
 	@Test
 	void repeatingAReleaseDoesNotDecrementTwice() {
 		String identity = "lease-idem-" + suffix();
@@ -167,11 +147,6 @@ class SessionLeaseAdminIT extends AbstractConfigApiIT {
 				.containsExactlyInAnyOrder("true", "false");
 	}
 
-	/**
-	 * Both interleavings of a release and the reaper end in exactly one release,
-	 * because both statements are guarded on {@code released_at IS NULL} and the
-	 * row lock serialises them.
-	 */
 	@Test
 	void aReleaseAndTheReaperCannotBothStampTheSameLease() {
 		String identity = "lease-reap-" + suffix();
@@ -194,7 +169,6 @@ class SessionLeaseAdminIT extends AbstractConfigApiIT {
 		assertThat(leases.countLiveByIdentity(identity, Instant.now()).block()).isZero();
 	}
 
-	/** A released lease cannot be resurrected by the Gateway keep-alive path. */
 	@Test
 	void anExtendCannotUndoARelease() {
 		String identity = "lease-extend-" + suffix();
@@ -227,11 +201,6 @@ class SessionLeaseAdminIT extends AbstractConfigApiIT {
 		release(writer, UUID.randomUUID(), "no such lease").expectStatus().isNotFound();
 	}
 
-	/**
-	 * The dangerous shape must not exist. There is no collection-level release, and
-	 * an identity parameter smuggled onto the single-lease call must be inert — it
-	 * must never widen the call into the by-identity form the runbook warns about.
-	 */
 	@Test
 	void thereIsNoBulkReleaseAndAnIdentityParameterIsInert() {
 		String identity = "lease-nobulk-" + suffix();

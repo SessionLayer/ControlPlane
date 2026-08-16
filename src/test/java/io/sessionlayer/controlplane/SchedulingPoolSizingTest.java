@@ -16,12 +16,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.ClassUtils;
 
 /**
- * Every {@code @Scheduled} job shares ONE scheduling pool, and audit
- * partitioning on that pool is authz-availability-critical (a missed partition
- * fails audit inserts, which rolls back allow txs — a fail-closed outage). This
- * guard keeps the pool sized to the real job census so a future job can't
- * silently re-introduce starvation: it scans the codebase for scheduled methods
- * and asserts the configured pool covers them with headroom.
+ * Every {@code @Scheduled} job shares ONE scheduling pool, and audit partitioning
+ * on that pool is authz-availability-critical: a missed partition fails audit
+ * inserts, which rolls back allow txs — a fail-closed outage. Sizing the pool to
+ * the real job census keeps a future job from silently re-introducing starvation.
  */
 class SchedulingPoolSizingTest {
 

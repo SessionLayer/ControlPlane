@@ -34,20 +34,6 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-/**
- * The outer-leg AUTHENTICATION gRPC service, implemented over the OTP, pins,
- * device flow, and user-facing CA services. mTLS-required tier: the
- * {@link AuthInterceptor} authenticates the calling Gateway; these RPCs are not
- * bootstrap methods, so an unauthenticated call is refused
- * {@code UNAUTHENTICATED} before it reaches here.
- *
- * <p>
- * AUTHENTICATION ONLY: every RPC answers "who is this?" and never grants access
- * — the Gateway still calls {@code Authorization.Authorize} for the target
- * node. Resolution failure is the single generic {@code resolved = false} for
- * ANY reason; reasons go only to the decision log. The CP maps identity →
- * principals; a client-claimed principal is never echoed.
- */
 @Service
 public class OuterLegAuthService extends OuterLegAuthGrpc.OuterLegAuthImplBase {
 
@@ -93,7 +79,6 @@ public class OuterLegAuthService extends OuterLegAuthGrpc.OuterLegAuthImplBase {
 
 	@Override
 	public void resolveOtp(ResolveOtpRequest request, StreamObserver<ResolveOtpResponse> observer) {
-		// request.getOtp() is a SECRET (echo-off keyboard-interactive) — never logged.
 		Mono<ResolveOtpResponse> result = otpService
 				.validate(request.getOtp(), blankToNull(request.getSourceIp())).map(r -> ResolveOtpResponse.newBuilder()
 						.setIdentity(resolved(r.identity(), r.principals(), List.of())).build())
@@ -119,8 +104,6 @@ public class OuterLegAuthService extends OuterLegAuthGrpc.OuterLegAuthImplBase {
 
 	@Override
 	public void pollDeviceFlow(PollDeviceFlowRequest request, StreamObserver<PollDeviceFlowResponse> observer) {
-		// An unknown device_code reports EXPIRED (generic, no existence disclosure); a
-		// throttled poll surfaces as RESOURCE_EXHAUSTED via GrpcErrors.
 		Mono<PollDeviceFlowResponse> result = deviceFlowService.poll(request.getDeviceCode())
 				.map(OuterLegAuthService::toPollResponse).defaultIfEmpty(PollDeviceFlowResponse.newBuilder()
 						.setStatus(DeviceFlowStatus.DEVICE_FLOW_STATUS_EXPIRED).setIdentity(unresolved()).build());
@@ -132,7 +115,6 @@ public class OuterLegAuthService extends OuterLegAuthGrpc.OuterLegAuthImplBase {
 			case "pending" -> DeviceFlowStatus.DEVICE_FLOW_STATUS_PENDING;
 			case "authorized", "approved" -> DeviceFlowStatus.DEVICE_FLOW_STATUS_APPROVED;
 			case "denied" -> DeviceFlowStatus.DEVICE_FLOW_STATUS_DENIED;
-			// expired or any unexpected state → generic EXPIRED (fail closed, no leak).
 			default -> DeviceFlowStatus.DEVICE_FLOW_STATUS_EXPIRED;
 		};
 		boolean approved = wire == DeviceFlowStatus.DEVICE_FLOW_STATUS_APPROVED && status.identity() != null
@@ -168,8 +150,6 @@ public class OuterLegAuthService extends OuterLegAuthGrpc.OuterLegAuthImplBase {
 	@Override
 	public void resolveBreakglassCode(ResolveBreakglassCodeRequest request,
 			StreamObserver<ResolveBreakglassCodeResponse> observer) {
-		// request.getCode() is a SECRET (keyboard-interactive, echo off) — NEVER
-		// logged.
 		UUID caller = callerGatewayId();
 		Mono<ResolveBreakglassCodeResponse> result = breakglassResolution
 				.resolveCode(request.getCode(), blankToNull(request.getSourceIp()), parseUuid(request.getNodeId()),

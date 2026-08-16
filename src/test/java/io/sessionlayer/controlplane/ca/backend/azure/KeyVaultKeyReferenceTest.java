@@ -6,10 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import io.sessionlayer.controlplane.ca.backend.azure.KeyVaultKeyReference.InvalidKeyReference;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link KeyVaultKeyReference} is a pure security boundary — every rejection is
- * exercised in isolation so a regression names the exact clause it broke.
- */
 class KeyVaultKeyReferenceTest {
 
 	private static final String ALLOWED = "https://myvault.vault.azure.net";
@@ -36,12 +32,6 @@ class KeyVaultKeyReferenceTest {
 		assertThat(ref.keyName()).isEqualTo("ssh-ca");
 	}
 
-	/**
-	 * A default-port reference must match a configured vault-uri with no explicit
-	 * port, and vice versa: both name the same vault, so treating them as different
-	 * authorities would make the allow-list anchor reject a perfectly ordinary
-	 * deployment.
-	 */
 	@Test
 	void anExplicitDefaultPortMatchesAConfiguredUriWithNoPort() {
 		KeyVaultKeyReference ref = KeyVaultKeyReference
@@ -108,7 +98,6 @@ class KeyVaultKeyReferenceTest {
 				.isInstanceOf(InvalidKeyReference.class).hasMessageContaining("must not contain userinfo");
 	}
 
-	/** The allow-list anchor — a row cannot redirect signing to another vault. */
 	@Test
 	void rejectsAKeyReferenceNamingADifferentVault() {
 		assertThatThrownBy(() -> KeyVaultKeyReference

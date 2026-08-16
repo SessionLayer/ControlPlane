@@ -14,9 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Mono;
 
-/**
- * Service account definitions: this surface never accepts or returns a secret.
- */
 @Service
 public class ServiceAccountConfigService {
 

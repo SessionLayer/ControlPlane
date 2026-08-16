@@ -8,9 +8,6 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.stereotype.Component;
 
-/**
- * Derives verifier/nonce from state (never persisted; only state hash stored).
- */
 @Component
 public class StateDerivation {
 

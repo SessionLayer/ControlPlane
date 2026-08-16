@@ -22,17 +22,9 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 /**
- * The cluster operator-settings singleton and its recording-key sub-resource
- * (RBAC + audited). Replaces the raw {@code UPDATE config.operator_settings}
- * the hardening guide required, so completing a first install — provisioning
- * the customer recording key, which strict recording refuses every session
- * without — no longer needs a database credential the same guide tells the
- * operator to lock away.
- *
- * <p>
- * The key sub-resource is gated on {@code recording:key-manage} rather than
- * {@code settings:write}: its holder can point future recordings at a key whose
- * private half they control, which no other setting confers.
+ * The recording-key sub-resource is gated on {@code recording:key-manage} rather
+ * than {@code settings:write}: its holder can point future recordings at a key
+ * whose private half they control, which no other setting confers.
  */
 @RestController
 public class OperatorSettingsController implements OperatorSettingsApi {

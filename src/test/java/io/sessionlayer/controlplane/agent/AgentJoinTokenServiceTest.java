@@ -36,7 +36,7 @@ class AgentJoinTokenServiceTest {
 		org.mockito.Mockito.verify(tokens).save(saved.capture());
 		JoinToken row = saved.getValue();
 		assertThat(row.tokenHash()).isEqualTo(SingleUseTokens.hash(minted.rawToken()));
-		assertThat(row.tokenHash()).isNotEqualTo(minted.rawToken()); // hash, never the raw token
+		assertThat(row.tokenHash()).isNotEqualTo(minted.rawToken());
 		assertThat(row.joinMethod()).isEqualTo("token");
 		assertThat(AgentJoinTokenService.scopedNodeName(row)).isEqualTo("node-x");
 		assertThat(minted.nodeName()).isEqualTo("node-x");

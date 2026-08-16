@@ -44,9 +44,6 @@ class CaPublicKeyExportIT extends AbstractConfigApiIT {
 		assertThat(exported.getOpensshPublicKey()).startsWith("ecdsa-sha2-nistp256 AAAA");
 		assertThat(exported.getFingerprint()).startsWith("SHA256:");
 
-		// The two forms must be the same key: parse the DER SPKI, re-encode it as an
-		// OpenSSH blob, and require the served line and fingerprint to match. That is
-		// what makes a TrustedUserCAKeys line pasted from here actually verify.
 		byte[] spki = Base64.getDecoder().decode(exported.getPublicKeySpkiDer());
 		ECPublicKey fromSpki = (ECPublicKey) java.security.KeyFactory.getInstance("EC")
 				.generatePublic(new X509EncodedKeySpec(spki));
@@ -128,8 +125,6 @@ class CaPublicKeyExportIT extends AbstractConfigApiIT {
 			assertThat(after.getAlgorithm().getValue()).isEqualTo("ecdsa-p256");
 			assertThat(after.getOpensshPublicKey()).startsWith("ecdsa-sha2-nistp256 AAAA");
 		} finally {
-			// This class has no per-test reset, so the divergence must not outlive the
-			// test that created it.
 			db.sql("UPDATE config.ca_config SET algorithm = 'ecdsa-p256'"
 					+ " WHERE ca_kind = 'session' AND rotation_state = 'active'").fetch().rowsUpdated().block();
 		}

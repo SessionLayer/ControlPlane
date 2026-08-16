@@ -10,7 +10,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import tools.jackson.databind.JsonNode;
 
-/** Fails closed on token-endpoint errors. */
 @Service
 public class OidcClient {
 

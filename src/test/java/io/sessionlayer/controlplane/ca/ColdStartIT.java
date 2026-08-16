@@ -70,7 +70,6 @@ class ColdStartIT {
 		assertThat(activeCount("session")).isEqualTo(1);
 		assertThat(activeCount("user")).isEqualTo(1);
 		assertThat(activeCount("host")).isEqualTo(1);
-		// each local CA has KEK-wrapped material persisted.
 		assertThat(caKeyMaterials.count().block()).isGreaterThanOrEqualTo(3L);
 	}
 
@@ -78,13 +77,11 @@ class ColdStartIT {
 	void reProvisioningIsIdempotent() {
 		long before = activeCount();
 		provisioning.provisionAll().block(Duration.ofSeconds(20));
-		assertThat(activeCount()).isEqualTo(before); // no new CAs on a re-run
+		assertThat(activeCount()).isEqualTo(before);
 	}
 
 	@Test
 	void concurrentProvisioningIsRaceSafe() {
-		// Clean slate, then two concurrent provisions must still yield exactly one CA
-		// set.
 		// ca_key_material is INSERT/SELECT-only for the runtime role, so clean up as
 		// owner.
 		OwnerDb.of(POSTGRES).sql("DELETE FROM runtime.ca_key_material").then()

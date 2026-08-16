@@ -157,9 +157,6 @@ class LockFeedIT extends AbstractMtlsIT {
 		lockFeedHub.publishRemoved(id);
 	}
 
-	// Server-side stream cancellation propagates asynchronously after a client
-	// channel
-	// closes; poll the hub's connected-stream gauge until it settles (bounded).
 	private void awaitSubscribers(int expected) {
 		long deadline = System.nanoTime() + Duration.ofSeconds(5).toNanos();
 		while (System.nanoTime() < deadline && lockFeedHub.currentSubscribers() != expected) {

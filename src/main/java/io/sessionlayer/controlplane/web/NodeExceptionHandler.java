@@ -25,9 +25,7 @@ class NodeExceptionHandler {
 			case UNPROCESSABLE -> HttpStatus.UNPROCESSABLE_CONTENT;
 		};
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, failure.getMessage());
-		// The RFC 9457 `type` member was absent, so these documents were a problem
-		// shape without the one field that makes a problem machine-classifiable. The
-		// title stays as published — the vocabulary is shared, the wording is this
+		// The title stays as published — the vocabulary is shared, the wording is this
 		// controller's, and changing a response body the contract did not change would
 		// be a breaking change for a cosmetic gain.
 		problem.setType(URI.create(problemType(failure.reason()).typeUri()));

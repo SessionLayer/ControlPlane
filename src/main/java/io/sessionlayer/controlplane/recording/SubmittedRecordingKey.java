@@ -16,9 +16,7 @@ import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
  * {@link CustomerPublicKeys#isValid} would already refuse it — a PKCS#8
  * {@code PrivateKeyInfo} is not an SPKI — but only as "not a valid public key",
  * which does not tell an operator that they have just put private key material
- * on the wire. These checks run first so the error can name it. V17's
- * {@code recording_key_ref NOT LIKE '%PRIVATE KEY%'} CHECK exists because
- * someone anticipated the same mistake on the neighbouring column.
+ * on the wire. These checks run first so the error can name it.
  */
 public final class SubmittedRecordingKey {
 
@@ -45,12 +43,6 @@ public final class SubmittedRecordingKey {
 		return decoded != null && carriesPemMarker(new String(decoded, StandardCharsets.ISO_8859_1));
 	}
 
-	/**
-	 * True if the DER parses as private key material in either encoding an operator
-	 * is likely to have to hand: PKCS#8 {@code PrivateKeyInfo}
-	 * ({@code BEGIN PRIVATE KEY}) or SEC1 {@code ECPrivateKey}
-	 * ({@code BEGIN EC PRIVATE KEY}).
-	 */
 	public static boolean isPrivateKeyMaterial(byte[] der) {
 		if (der == null || der.length == 0) {
 			return false;
@@ -77,16 +69,13 @@ public final class SubmittedRecordingKey {
 	 * {@code ECPrivateKey.getInstance} accepts a well-formed SubjectPublicKeyInfo —
 	 * it reads the members positionally without checking their types — so using it
 	 * here refused every legitimate public key with the message reserved for the
-	 * one mistake this guard exists to name. A guard that fires on the correct
-	 * input is worse than no guard: it is unfalsifiable from the operator's side,
-	 * because the error insists they did the thing they did not do.
+	 * one mistake this guard exists to name.
 	 */
 	private static boolean isSec1EcPrivateKey(ASN1Sequence sequence) {
 		return sequence.size() >= 2 && sequence.getObjectAt(0) instanceof ASN1Integer version
 				&& version.getValue().intValueExact() == 1 && sequence.getObjectAt(1) instanceof ASN1OctetString;
 	}
 
-	/** Lowercase hex SHA-256 over the DER SubjectPublicKeyInfo. */
 	public static String fingerprintSha256(byte[] der) {
 		try {
 			return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(der));

@@ -60,7 +60,6 @@ class BreakglassCrudIT extends AbstractAuthIT {
 				.expectStatus().isOk().expectBody().jsonPath("$.credentials[?(@.id=='" + id + "')].identity")
 				.isEqualTo("root@corp");
 
-		// Revoke is idempotent (204 twice).
 		client.delete().uri("/v1/breakglass/credentials/" + id).header("Authorization", "Bearer " + token).exchange()
 				.expectStatus().isNoContent();
 		client.delete().uri("/v1/breakglass/credentials/" + id).header("Authorization", "Bearer " + token).exchange()
@@ -78,7 +77,6 @@ class BreakglassCrudIT extends AbstractAuthIT {
 				.expectStatus().isCreated().expectBody().jsonPath("$.codes.length()").isEqualTo(3)
 				.jsonPath("$.codes[0]").isNotEmpty();
 
-		// The list projection is metadata only — never the raw code.
 		client.get().uri("/v1/breakglass/offline-codes").header("Authorization", "Bearer " + token).exchange()
 				.expectStatus().isOk().expectBody().jsonPath("$.offlineCodes").isArray()
 				.jsonPath("$.offlineCodes[0].code").doesNotExist();

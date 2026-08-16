@@ -9,16 +9,6 @@ import java.security.interfaces.ECPublicKey;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.stereotype.Component;
 
-/**
- * Adopts an existing KMS key as a CA: the rotation-time bridge between
- * {@link KmsKeyArn} (write-path validation) and
- * {@link AwsKmsSignerFactory#fetchPublicKey} (the one KMS read this whole seam
- * performs). Present only when {@code sessionlayer.ca.aws.enabled=true} — its
- * absence is the same "not configured" branch {@link AwsKmsSignerFactory}'s
- * absence is for signing, so {@code CaRotationService.NoProvisionerForBackend}
- * is the correct refusal on a Control Plane with no KMS support, not a fallback
- * to a database key.
- */
 @Component
 @ConditionalOnBooleanProperty(name = "sessionlayer.ca.aws.enabled")
 public class AwsKmsCaProvisioner implements CaKeyProvisioner {
@@ -34,14 +24,6 @@ public class AwsKmsCaProvisioner implements CaKeyProvisioner {
 		return "aws_kms";
 	}
 
-	/**
-	 * Refuses an alias, a bare key id, or an ARN outside the configured
-	 * account/region/partition before ever calling KMS (the write-path enforcement
-	 * of the pinning and allow-list anchor), then resolves the key's public half —
-	 * the one network call this makes, and the one point a CA's whole trust chain
-	 * is rooted at, so a mismatched or wrong-shaped key fails here rather than
-	 * getting silently adopted.
-	 */
 	@Override
 	public Provisioned provision(Request request) {
 		CaBackendCapabilities.validate(backend(), request.algorithm());

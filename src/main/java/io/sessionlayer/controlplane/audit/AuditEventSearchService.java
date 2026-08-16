@@ -11,10 +11,6 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-/**
- * Pluggable audit read path. Read-only over audit rows; the only write is the
- * audit of the access itself (search/get append their own audit events).
- */
 @Service
 public class AuditEventSearchService {
 
@@ -51,9 +47,6 @@ public class AuditEventSearchService {
 				.map(event -> visible(event, grant.unrestricted()));
 	}
 
-	// The hash-chain columns leave this service only for a read that was NOT
-	// scope-filtered. Both halves are decided here, from the one grant, so a
-	// response can never be assembled from rows the filter never redacted.
 	private static AuditEvent visible(AuditEvent event, boolean unrestricted) {
 		return unrestricted ? event : event.withoutChain();
 	}
@@ -66,8 +59,6 @@ public class AuditEventSearchService {
 		return store.record(actor, subject, action, "success", null, null, detail);
 	}
 
-	// A compact, secret-free record of which filter dimensions were queried (values
-	// are already caller-supplied filters, not sensitive derived data).
 	private static Map<String, String> summarize(AuditQuery q) {
 		Map<String, String> detail = new LinkedHashMap<>();
 		put(detail, "actor", q.actor());

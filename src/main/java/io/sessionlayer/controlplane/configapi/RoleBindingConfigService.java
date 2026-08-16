@@ -96,8 +96,7 @@ public class RoleBindingConfigService {
 
 	// A scope that is present but imposes no effective facet (degenerate/typo'd) is
 	// rejected pre-commit so it can never be stored: it would cover nothing (fail
-	// closed) yet read as "scoped" — a footgun that silently locks a grant out and,
-	// on the audit read path, previously diverged between search and get-by-id.
+	// closed) yet read as "scoped" — a footgun that silently locks a grant out.
 	private static void requireValidScope(JsonNode scope) {
 		if (!PlatformScopes.isValid(scope)) {
 			throw ApiProblemException

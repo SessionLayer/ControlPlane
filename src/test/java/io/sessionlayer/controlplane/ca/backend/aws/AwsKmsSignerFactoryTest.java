@@ -19,12 +19,6 @@ import software.amazon.awssdk.services.kms.model.KeySpec;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 
-/**
- * The adoption-time checks on a {@code GetPublicKey} response are pure, so they
- * are proven without KMS, independent of the network call in
- * {@code fetchPublicKey} itself. Client construction is exercised for real
- * here; that it does no I/O is {@code AwsKmsCredentialsSmokeTest}'s claim.
- */
 class AwsKmsSignerFactoryTest {
 
 	private static final String ACCOUNT_ID = "111122223333";

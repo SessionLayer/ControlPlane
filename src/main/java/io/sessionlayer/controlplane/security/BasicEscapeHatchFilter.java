@@ -14,9 +14,6 @@ import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-/**
- * Deny-only, fail-closed: only allows configured operator from allowed CIDRs.
- */
 final class BasicEscapeHatchFilter implements WebFilter {
 
 	private final SecurityProperties.BasicAuth config;
@@ -43,7 +40,6 @@ final class BasicEscapeHatchFilter implements WebFilter {
 		String user = creds[0];
 		String password = creds[1];
 		return Mono.fromCallable(() -> {
-			// Constant-time username comparison to avoid existence timing oracle.
 			boolean userOk = io.sessionlayer.controlplane.auth.Secrets.constantTimeEquals(user, config.getUsername());
 			boolean passwordOk = passwordEncoder.matches(password, config.getPasswordHash());
 			return userOk && passwordOk;

@@ -64,7 +64,7 @@ class PlatformScopesTest {
 	@Test
 	void isValidRejectsDegenerateScopeButAllowsUnscopedOrEffective() {
 		assertThat(PlatformScopes.isValid(null)).isTrue();
-		assertThat(PlatformScopes.isValid(JSON.objectNode())).isTrue(); // unscoped
+		assertThat(PlatformScopes.isValid(JSON.objectNode())).isTrue();
 		assertThat(PlatformScopes.isValid(JSON.objectNode().set("node_labels", JSON.objectNode().put("env", "prod"))))
 				.isTrue();
 		assertThat(PlatformScopes.isValid(JSON.objectNode().set("users", JSON.arrayNode().add("alice")))).isTrue();

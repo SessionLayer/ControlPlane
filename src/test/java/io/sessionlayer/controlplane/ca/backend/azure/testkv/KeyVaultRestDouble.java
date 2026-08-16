@@ -49,17 +49,10 @@ import java.util.regex.Pattern;
  */
 public final class KeyVaultRestDouble implements AutoCloseable {
 
-	/**
-	 * Injectable failures: every one must fail the caller, never fall back.
-	 */
 	public enum FaultMode {
 		NONE, CREDENTIAL_REJECTED, KEY_DISABLED, KEY_NOT_FOUND, RETURN_DER, RETURN_TRUNCATED, RETURN_OVERLONG, RETURN_WRONG_KEY
 	}
 
-	/**
-	 * One captured request, so tests can assert on wire shape and not only on the
-	 * SDK's return value.
-	 */
 	public record RecordedRequest(String method, String path, String apiVersion, String authorizationHeader,
 			String body) {
 		public boolean bearerTokenPresent() {

@@ -52,7 +52,6 @@ class MtlsAuthenticationConverterTest {
 		KeyPair ca = ec();
 		X509Certificate caCert = X509Certificates.selfSignCa("test-ca", ca.getPublic(), ca.getPrivate(), BigInteger.ONE,
 				Instant.now().minusSeconds(60), Instant.now().plusSeconds(3600));
-		// A self-signed cert NOT chained to the trusted CA.
 		KeyPair rogue = ec();
 		X509Certificate rogueCert = X509Certificates.selfSignCa("rogue", rogue.getPublic(), rogue.getPrivate(),
 				BigInteger.TEN, Instant.now().minusSeconds(60), Instant.now().plusSeconds(3600));

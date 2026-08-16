@@ -17,30 +17,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
- * Derives a node's {@code health} and {@code owningGateway} at read time. Both
- * were once columns nothing ever wrote, so the API reported every working node
- * as {@code unknown} with no owner — an operator following the install guide
- * read a successful Agent install as a failure. The truth lives in
- * {@code runtime.presence} (which Gateway holds the agent control channel, and
- * how recently) and {@code runtime.node_host_key} (whether the node has any
- * enrollment-anchored host identity at all).
- *
- * <p>
- * Health, in precedence order:
- * <ol>
- * <li>{@code unhealthy} — no host anchor. The node is enrolled but unusable:
- * the Gateway never TOFUs, so every session to it aborts.</li>
- * <li>agent-connected — {@code healthy} on a fresh presence claim,
- * {@code unreachable} on a stale one, {@code unknown} when no Gateway has ever
- * claimed it (the Agent has not joined yet).</li>
- * <li>agentless — {@code unknown}, always. The CP holds no continuous liveness
- * signal for a node it dials on demand, and runs no probe.</li>
- * </ol>
- *
- * <p>
- * {@code owningGateway} is the presence owner's name and only while that claim
- * is fresh, by the same {@link PresenceFreshness} rule the authorizer routes on
- * — so the API can never name an owner routing has already given up on.
+ * Health for an agentless node is always {@code unknown} by design: the CP holds
+ * no continuous liveness signal for a node it dials on demand, and runs no probe.
  */
 @Service
 public class NodeViewService {
@@ -66,10 +44,6 @@ public class NodeViewService {
 				.map(read -> derive(node, read.getT1(), read.getT2().orElse(null), now));
 	}
 
-	/**
-	 * The same derivation for a whole listing in two queries — one anchor probe and
-	 * one presence read for the page, never a pair per node.
-	 */
 	public Flux<NodeView> ofAll(List<Node> nodes) {
 		if (nodes.isEmpty()) {
 			return Flux.empty();
@@ -85,16 +59,11 @@ public class NodeViewService {
 	}
 
 	private NodeView derive(Node node, boolean anchored, Presence owner, Instant now) {
-		// The owner is resolved FIRST and independently of the anchor, because the two
-		// fields answer different questions: owningGateway is "which Gateway holds
-		// this node's agent control channel", which is true or false regardless of
-		// whether anyone ever anchored the node, and health is the field that says the
-		// node is unusable. Suppressing the owner on the anchorless branch conflated
-		// them — and disagreed with routing, which attaches the same fresh owner with
-		// no anchor precondition. It also threw away the most useful thing an operator
-		// can be told about a node an Agent join created: `unhealthy` WITH an owner
-		// reads "the Agent is connected and you never anchored it", which names the
-		// repair.
+		// Resolved independently of the anchor: owningGateway answers "which Gateway
+		// holds this node's agent control channel", which is true or false whether or
+		// not anyone ever anchored the node — and routing attaches the same fresh owner
+		// with no anchor precondition. `unhealthy` WITH an owner reads "the Agent is
+		// connected and you never anchored it", which names the repair.
 		String freshOwner = isAgent(node) && freshness.isFresh(owner, now) ? owner.owningGateway() : null;
 		if (!anchored) {
 			return new NodeView(node, NodeView.HEALTH_UNHEALTHY, freshOwner);

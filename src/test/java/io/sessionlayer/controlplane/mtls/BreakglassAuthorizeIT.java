@@ -116,7 +116,6 @@ class BreakglassAuthorizeIT extends AbstractMtlsIT {
 		UUID sessionId = UUID.randomUUID();
 		AuthorizeResponse response = authorize(gateway, identity, nodeId, "root", sessionId,
 				resolution.getBreakglassToken());
-		// A locked target refuses break-glass (deny wins).
 		assertThat(response.getDecision()).isEqualTo(Decision.DECISION_DENY);
 		assertThat(response.getSessionToken()).isEmpty();
 

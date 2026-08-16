@@ -31,17 +31,12 @@ import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 
 /**
- * X.509 helpers for the internal mTLS CA, built on BouncyCastle. We do NOT
- * hand-roll DER: BC assembles the TBS structure, extensions and signature. Both
- * the local backend and the (unit-tested) cloud seam issue the same certificate
- * shape through {@link #issueLeaf}. The CA and its leaves are ECDSA P-256
- * signed with {@code SHA256withECDSA} using the JDK's default
- * signature/certificate providers (no global BouncyCastle provider registration
- * — the footprint stays minimal).
+ * Signing uses the JDK's default providers — BouncyCastle is never registered
+ * globally with {@code Security.addProvider}, so its algorithms stay scoped to the
+ * builders here rather than becoming JVM-wide.
  */
 public final class X509Certificates {
 
-	/** ECDSA P-256 signature algorithm for the internal mTLS CA. */
 	public static final String SIGNATURE_ALGORITHM = "SHA256withECDSA";
 
 	private X509Certificates() {
@@ -79,11 +74,6 @@ public final class X509Certificates {
 		}
 	}
 
-	/**
-	 * Issue a leaf certificate for {@code spec}, signed by the CA cert/key.
-	 * BasicConstraints CA=false, KeyUsage {@code digitalSignature}, a single EKU
-	 * per {@link LeafPurpose}, the requested SANs, and SKI/AKI.
-	 */
 	public static X509Certificate issueLeaf(X509Certificate caCertificate, PrivateKey caPrivateKey,
 			LeafCertificateSpec spec) {
 		try {
@@ -131,7 +121,6 @@ public final class X509Certificates {
 		return new JcaX509CertificateConverter().getCertificate(holder);
 	}
 
-	/** Parse a DER-encoded X.509 certificate. */
 	public static X509Certificate parse(byte[] der) {
 		try {
 			return (X509Certificate) CertificateFactory.getInstance("X.509")

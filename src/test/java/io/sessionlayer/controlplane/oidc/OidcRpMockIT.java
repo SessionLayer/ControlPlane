@@ -68,7 +68,6 @@ class OidcRpMockIT extends AbstractAuthIT {
 				Instant.now().plusSeconds(300));
 		oidcRpService.handleCallback(code, params.get("state"), "203.0.113.5").block();
 
-		// The state is single-use; a second callback with the same state fails closed.
 		IDP.registerCode("code2", "sub-1", "bob@corp.example", List.of(), "sessionlayer-cp", params.get("nonce"),
 				Instant.now().plusSeconds(300));
 		assertThatThrownBy(() -> oidcRpService.handleCallback("code2", params.get("state"), "203.0.113.5").block())

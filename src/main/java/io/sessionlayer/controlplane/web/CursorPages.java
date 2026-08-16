@@ -13,10 +13,6 @@ import org.springframework.data.relational.core.query.Query;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
-/**
- * Cursor pagination (keyset, stable under concurrent inserts, ordered by
- * UUIDv7).
- */
 @Component
 public class CursorPages {
 

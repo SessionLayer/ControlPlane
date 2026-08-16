@@ -1,25 +1,7 @@
--- V19 — Agent join & renewable identity. SessionLayer Control Plane.
--- Forward-only, additive; V1-V18 unchanged.
---
--- Generalizes the Gateway enrollment/renewal machinery for
--- per-node Agents (Design §8, FR-JOIN-1/3/4/6). The durable Agent credential is
--- the same renewable internal mTLS X.509 identity + generation counter the
--- Gateway uses (D25/D28), so the schema change is symmetric with V15's gateway
--- pinning column — one nullable column on the existing runtime.agent_identity
--- (created in V3). No new tables: the join methods reuse runtime.join_token (V3),
--- and incident response reuses the existing runtime.access_lock.
-
--- 1. -------------------------------------------------------------------------
--- prev_fingerprint — the previous generation's client-cert SHA-256 fingerprint,
--- pinned alongside fingerprint at renew so a superseded (renewed-away) certificate
--- stops authenticating, while tolerating the renew-ahead overlap {current, prev}.
--- The exact mirror of V15's gateway_identity.prev_fingerprint (M6). NULL for a
--- freshly-enrolled (generation 0) identity. Public material.
 ALTER TABLE runtime.agent_identity ADD COLUMN prev_fingerprint text;
 COMMENT ON COLUMN runtime.agent_identity.prev_fingerprint IS
     'SHA-256 fingerprint of the previous-generation mTLS cert; pinned alongside fingerprint at renew to survive renew-ahead overlap (M6). Public material.';
 
--- 2. -------------------------------------------------------------------------
 -- Grants. V11 already granted cp_runtime SELECT/INSERT/UPDATE/DELETE on ALL
 -- runtime tables (incl. agent_identity, join_token, node) plus default privileges
 -- for future tables, so the agent-join write paths — agent_identity status flip

@@ -6,12 +6,6 @@ import java.net.URISyntaxException;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/**
- * Azure Key Vault CA backend configuration ({@code sessionlayer.ca.azure.*}).
- * Disabled by default: an unconfigured deployment keeps every
- * {@code azure_keyvault} CA refused by {@link AzureKeyVaultSignerFactory}'s
- * absence, never silently local.
- */
 @ConfigurationProperties(prefix = "sessionlayer.ca.azure")
 public class AzureKeyVaultProperties {
 

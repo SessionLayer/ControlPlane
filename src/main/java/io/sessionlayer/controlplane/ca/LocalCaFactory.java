@@ -13,11 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-/**
- * Creates and loads local (KEK-encrypted) CA keys — shared by cold-start
- * provisioning and CA rotation. Generation KEK-wraps a fresh ECDSA key with a
- * loud production warning; loading unwraps it transiently into a signer.
- */
 @Component
 public class LocalCaFactory implements CaKeyProvisioner {
 
@@ -38,23 +33,11 @@ public class LocalCaFactory implements CaKeyProvisioner {
 		return "local";
 	}
 
-	/**
-	 * The local backend generates its own key and reference; a requested
-	 * {@code keyReference} is meaningless for it and ignored. The requested
-	 * algorithm is honored, not ignored: the caller (rotation's capability gate)
-	 * has already confirmed it against what this backend can produce, and silently
-	 * substituting a different curve would change a CA's key strength without
-	 * anyone asking for that.
-	 */
 	@Override
 	public Provisioned provision(Request request) {
 		return create(request.caKind(), request.caName(), request.rotationState(), request.algorithm());
 	}
 
-	/**
-	 * Generate a new local ECDSA CA of the given kind/name/rotation state and
-	 * algorithm (P-256/P-384/P-521 — see {@link CaKeyType}).
-	 */
 	public Provisioned create(String kind, String name, String rotationState, String algorithm) {
 		warn(kind);
 		CaKeyType keyType = CaKeyType.fromAlgorithmId(algorithm);
@@ -84,11 +67,6 @@ public class LocalCaFactory implements CaKeyProvisioner {
 		return (caConfigId + "|" + keyTypeName + "|" + kekReference).getBytes(java.nio.charset.StandardCharsets.UTF_8);
 	}
 
-	/**
-	 * The CA public key as a {@code TrustedUserCAKeys} line, derived from the
-	 * stored public material alone — no private-key unwrap (used to publish the
-	 * trusted set).
-	 */
 	public String publicAuthorizedKey(CaConfig config, CaKeyMaterial material) {
 		try {
 			CaKeyType keyType = CaKeyType.fromAlgorithmId(config.algorithm());

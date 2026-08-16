@@ -56,20 +56,10 @@ public class AzureKeyVaultSignerFactory {
 				.responseTimeout(properties.getTimeout()).build();
 	}
 
-	/**
-	 * The one vault this Control Plane signs in — the allow-list anchor
-	 * {@link KeyVaultKeyReference} enforces.
-	 */
 	public String vaultUri() {
 		return properties.getVaultUri();
 	}
 
-	/**
-	 * A {@link KeyVaultSigner} bound to {@code ref}'s pinned key version and
-	 * {@code pinnedPublicKey} (read from {@code ca_key_material}, never re-fetched
-	 * here). The underlying {@link CryptographyClient} is cached per key identifier
-	 * so repeated signing does not rebuild the HTTP pipeline.
-	 */
 	public KeyVaultSigner signerFor(KeyVaultKeyReference ref, ECPublicKey pinnedPublicKey) {
 		CryptographyClient client = cryptographyClients.computeIfAbsent(ref.keyIdentifier(),
 				keyIdentifier -> new CryptographyClientBuilder().keyIdentifier(keyIdentifier).credential(credential)
@@ -77,12 +67,6 @@ public class AzureKeyVaultSignerFactory {
 		return new AzureKeyVaultSigner(client, pinnedPublicKey, ref.keyIdentifier());
 	}
 
-	/**
-	 * Resolves the public key for {@code ref} directly from Key Vault. Used only at
-	 * CA adoption (rotation onto a Key Vault key) — every other read of the CA
-	 * public key is the persisted {@code ca_key_material.public_key} column, so
-	 * this is the sole point where the vault is asked "what is this key".
-	 */
 	public ECPublicKey fetchPublicKey(KeyVaultKeyReference ref) {
 		KeyClient keyClient = new KeyClientBuilder().vaultUrl(ref.vaultUrl()).credential(credential)
 				.httpClient(httpClient).buildClient();
@@ -109,11 +93,6 @@ public class AzureKeyVaultSignerFactory {
 		}
 	}
 
-	/**
-	 * Package-visible for {@code AzureKeyVaultSignerFactoryTest}: the EC/P-256/sign
-	 * checks are pure, so they are proven without a vault, independent of the
-	 * network call in {@link #fetchPublicKey}.
-	 */
 	static void validateSigningKey(JsonWebKey jwk, String keyIdentifier) {
 		KeyType keyType = jwk.getKeyType();
 		if (!KeyType.EC.equals(keyType) && !KeyType.EC_HSM.equals(keyType)) {

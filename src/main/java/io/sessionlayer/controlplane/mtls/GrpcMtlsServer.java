@@ -60,8 +60,6 @@ public class GrpcMtlsServer implements SmartLifecycle {
 			return;
 		}
 		try {
-			// Blocking on startup thread: the server must not accept traffic until it
-			// can present a CA-issued cert.
 			X509CaBackend backend = mtlsCa.loadOrProvision("local").block(STARTUP_TIMEOUT);
 			if (backend == null) {
 				throw new IllegalStateException("internal mTLS CA did not load");

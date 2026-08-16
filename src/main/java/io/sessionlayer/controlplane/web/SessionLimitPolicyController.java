@@ -18,9 +18,6 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import tools.jackson.databind.ObjectMapper;
 
-/**
- * Session-limit policies CRUD (RBAC + audited, idempotency-key guarded).
- */
 @RestController
 public class SessionLimitPolicyController implements SessionLimitPoliciesApi {
 

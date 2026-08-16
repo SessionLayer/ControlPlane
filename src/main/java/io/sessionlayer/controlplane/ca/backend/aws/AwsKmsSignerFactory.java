@@ -67,16 +67,6 @@ public class AwsKmsSignerFactory implements AutoCloseable {
 		warnIfEndpointRedirected(properties);
 	}
 
-	/**
-	 * An endpoint override leaves no other trace at runtime — no field on the CA,
-	 * nothing in a health detail, nothing in the certificates it signs — so an
-	 * operator inspecting a Control Plane cannot otherwise tell that its KMS calls
-	 * and its AWS credentials are going somewhere the region did not choose. The
-	 * dev KEK stamps its own presence into the persisted key material for the same
-	 * reason; this seam has nowhere to stamp, so it says so at startup instead. The
-	 * host is named because that is the fact worth reading; the ARN is not, because
-	 * this line lands in the same log as everything else.
-	 */
 	private static void warnIfEndpointRedirected(AwsKmsProperties properties) {
 		String endpoint = properties.getEndpointOverride();
 		if (endpoint == null || endpoint.isBlank()) {
@@ -88,30 +78,14 @@ public class AwsKmsSignerFactory implements AutoCloseable {
 				endpoint, properties.isAllowInsecureEndpoint() ? " Plaintext HTTP is permitted on it." : "");
 	}
 
-	/**
-	 * The one account, region and partition this Control Plane signs in — the
-	 * allow-list anchor {@link KmsKeyArn} enforces.
-	 */
 	public KmsKeyArn.Anchor anchor() {
 		return anchor;
 	}
 
-	/**
-	 * A {@link KmsSigner} bound to {@code ref}'s key ARN and
-	 * {@code pinnedPublicKey} (read from {@code ca_key_material}, never re-fetched
-	 * here).
-	 */
 	public KmsSigner signerFor(KmsKeyArn ref, ECPublicKey pinnedPublicKey) {
 		return new AwsKmsSigner(kms, pinnedPublicKey, ref);
 	}
 
-	/**
-	 * Resolves the public key for {@code ref} directly from KMS. Used only at CA
-	 * adoption (rotation onto a KMS key) — every other read of the CA public key is
-	 * the persisted {@code ca_key_material.public_key} column, so this is the sole
-	 * point where KMS is asked "what is this key", and the only permission this
-	 * seam needs beyond {@code kms:Sign}.
-	 */
 	public ECPublicKey fetchPublicKey(KmsKeyArn ref) {
 		GetPublicKeyResponse response = kms.getPublicKey(GetPublicKeyRequest.builder().keyId(ref.keyArn()).build());
 		validateSigningKey(response, ref.keyArn(), ref.redacted());
@@ -209,7 +183,6 @@ public class AwsKmsSignerFactory implements AutoCloseable {
 		credentialsProvider.close();
 	}
 
-	/** Held apart so the JCA lookup happens once, on first use rather than boot. */
 	private static final class P256 {
 		private static final ECParameterSpec SPEC = load();
 

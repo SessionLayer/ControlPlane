@@ -10,11 +10,6 @@ import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Table;
 import tools.jackson.databind.JsonNode;
 
-/**
- * Single-use break-glass code; stores codeHash only, never raw code. Atomic
- * single-use via @Version lock; revokedAt invalidates unused batch without
- * DELETE.
- */
 @Table(schema = "runtime", name = "breakglass_offline_code")
 public record BreakglassOfflineCode(@Id UUID id, String codeHash, String identity, List<String> allowedPrincipals,
 		JsonNode nodeSelector, String sourceCidr, Instant expiresAt, boolean used, Instant usedAt, Instant revokedAt,

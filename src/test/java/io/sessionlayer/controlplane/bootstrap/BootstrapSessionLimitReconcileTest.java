@@ -25,9 +25,9 @@ import reactor.test.StepVerifier;
 
 /**
  * Two replicas booting together both reconcile the session-limit defaults, so
- * one loses the optimistic-lock race. Before the retry existed the loser
- * propagated the failure out of an {@code ApplicationReadyEvent} listener,
- * which is the shape that crash-loops a control plane rather than degrading it.
+ * one loses the optimistic-lock race. Propagating that failure out of an
+ * {@code ApplicationReadyEvent} listener is the shape that crash-loops a control
+ * plane rather than degrading it.
  *
  * <p>
  * These run through {@link BootstrapService#runAtStartup()} rather than the
@@ -84,11 +84,6 @@ class BootstrapSessionLimitReconcileTest {
 		assertThat(saved.getAllValues()).allSatisfy(row -> assertThat(row.defaultMaxConcurrentSessions()).isEqualTo(5));
 	}
 
-	/**
-	 * The direction that would otherwise be invisible: with nothing to reconcile
-	 * there must be no write at all, so a quiet boot cannot be mistaken for a retry
-	 * that happened to succeed.
-	 */
 	@Test
 	void aRowThatAlreadyMatchesIsNotWrittenAtAll() {
 		when(settings.findSingleton()).thenReturn(Mono.just(completed(5)));
@@ -98,7 +93,6 @@ class BootstrapSessionLimitReconcileTest {
 		verify(settings, never()).save(any(OperatorSettings.class));
 	}
 
-	/** Bootstrap already completed, so startup stops after the reconcile. */
 	private static OperatorSettings completed(Integer maxConcurrent) {
 		return new OperatorSettings(Uuids.v7(), true, null, "local", 365, "governance", 120, null, null, maxConcurrent,
 				null, null, true, null, null, "ecies_p256", null, 365, true, "default", 1L, null, null);

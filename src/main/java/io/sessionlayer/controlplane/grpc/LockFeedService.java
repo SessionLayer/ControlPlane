@@ -76,10 +76,6 @@ public class LockFeedService extends LockFeedGrpc.LockFeedImplBase {
 		ServerStreamBridge.forward(stream, server, "StreamLocks");
 	}
 
-	// The caller Gateway must be ACTIVE and present a cert pinned to its current or
-	// previous fingerprint; else a generic PERMISSION_DENIED (fail closed). Agent
-	// peers
-	// (gatewayId == null) are refused — the lock feed is a Gateway-only surface.
 	private Mono<GatewayIdentity> requireActiveGateway(UUID callerGatewayId, String presentedFingerprint) {
 		if (callerGatewayId == null || presentedFingerprint == null) {
 			return Mono.error(denied());

@@ -3,10 +3,6 @@ package io.sessionlayer.controlplane.auth;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/**
- * Tunables for the authentication surface: OTP entropy and fixed-window rate
- * limits.
- */
 @ConfigurationProperties(prefix = "sessionlayer.auth")
 public class AuthProperties {
 

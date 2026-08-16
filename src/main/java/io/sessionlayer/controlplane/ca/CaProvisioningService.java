@@ -12,20 +12,6 @@ import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-/**
- * Cold-start CA provisioning. On first run against an empty DB it ensures the
- * operator-settings singleton exists and provisions the three CAs (user /
- * internal session / host) exactly once, then is a no-op on every subsequent
- * start (idempotent, restart-safe). It is <b>race-safe</b>: the whole operation
- * runs under a Postgres transaction-scoped <b>advisory lock</b>, so two
- * starting instances cannot double-generate, and the partial-unique
- * active-per-kind index is a hard backstop.
- *
- * <p>
- * Local CAs are generated and KEK-wrapped with a loud production warning; cloud
- * CAs (KMS/KeyVault/Vault) are <b>referenced</b> via an operator-pre-created
- * {@code ca_config} (their key lives in the cloud, not generated here).
- */
 @Service
 public class CaProvisioningService {
 
@@ -75,8 +61,6 @@ public class CaProvisioningService {
 		Mono<Void> body = acquireLock().then(ensureSettings())
 				.flatMap(settings -> Flux.fromIterable(CA_KINDS)
 						.concatMap(kind -> ensureCa(kind, settings.defaultCaBackend())).then()
-						// Provisioned inside the SAME lock + tx, so a cold boot brings up every CA
-						// atomically.
 						.then(internalMtlsCa.ensureProvisioned(settings.defaultCaBackend())));
 		return tx.transactional(body).then();
 	}

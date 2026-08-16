@@ -97,7 +97,6 @@ class ServiceAccountCrudIT extends AbstractConfigApiIT {
 		client.get().uri("/v1/service-accounts/" + id).header("Authorization", "Bearer " + token).exchange()
 				.expectStatus().isOk().expectBody().jsonPath("$.tokenTtlSeconds").isEqualTo(3600);
 
-		// Correct version replaces mutable fields; name is immutable.
 		client.put().uri("/v1/service-accounts/" + id).header("Authorization", "Bearer " + token)
 				.contentType(MediaType.APPLICATION_JSON)
 				.bodyValue(Map.of("description", "updated", "authMethod", "client_secret", "keyReference", "jwks://new",
@@ -106,14 +105,12 @@ class ServiceAccountCrudIT extends AbstractConfigApiIT {
 				.jsonPath("$.authMethod").isEqualTo("client_secret").jsonPath("$.name").isEqualTo(name)
 				.jsonPath("$.origin").isEqualTo("api").jsonPath("$.version").isEqualTo(1);
 
-		// A PUT omitting the (NOT NULL) authMethod preserves it rather than nulling it.
 		client.put().uri("/v1/service-accounts/" + id).header("Authorization", "Bearer " + token)
 				.contentType(MediaType.APPLICATION_JSON)
 				.bodyValue(Map.of("description", "again", "tokenTtlSeconds", 7200, "version", 1)).exchange()
 				.expectStatus().isOk().expectBody().jsonPath("$.authMethod").isEqualTo("client_secret")
 				.jsonPath("$.version").isEqualTo(2);
 
-		// A stale version is a 409.
 		client.put().uri("/v1/service-accounts/" + id).header("Authorization", "Bearer " + token)
 				.contentType(MediaType.APPLICATION_JSON)
 				.bodyValue(Map.of("description", "stale", "tokenTtlSeconds", 60, "version", 0)).exchange()
@@ -121,7 +118,6 @@ class ServiceAccountCrudIT extends AbstractConfigApiIT {
 
 		client.delete().uri("/v1/service-accounts/" + id).header("Authorization", "Bearer " + token).exchange()
 				.expectStatus().isNoContent();
-		// Idempotent delete + gone.
 		client.delete().uri("/v1/service-accounts/" + id).header("Authorization", "Bearer " + token).exchange()
 				.expectStatus().isNoContent();
 		client.get().uri("/v1/service-accounts/" + id).header("Authorization", "Bearer " + token).exchange()
@@ -144,7 +140,6 @@ class ServiceAccountCrudIT extends AbstractConfigApiIT {
 				.expectStatus().isCreated().returnResult(Map.class).getResponseBody().blockFirst().get("id").toString();
 		assertThat(replayId).isEqualTo(firstId);
 
-		// Same key + DIFFERENT body -> 422 idempotency conflict.
 		client.post().uri("/v1/service-accounts").header("Authorization", "Bearer " + token)
 				.header("Idempotency-Key", key).contentType(MediaType.APPLICATION_JSON)
 				.bodyValue(saBody(name, "mtls", "jwks://issuer/keys", 9999)).exchange().expectStatus().isEqualTo(422)

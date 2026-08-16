@@ -22,15 +22,6 @@ import org.mockito.ArgumentMatchers;
 import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Mono;
 
-/**
- * {@code CaRotationService.beginRotation} dispatches to the
- * {@link CaKeyProvisioner} registered for the requested backend instead of
- * branching on the backend string. A second, non-local implementation
- * ({@link #fakeProvisioner}) proves that dispatch is real polymorphism rather
- * than a disguised {@code if (local)}; a backend with no registered provisioner
- * proves the fail-closed path writes nothing — rotation refuses rather than
- * provisioning anywhere else.
- */
 class CaRotationServiceProvisionerTest {
 
 	private static final String KIND = "session";
@@ -85,12 +76,6 @@ class CaRotationServiceProvisionerTest {
 		verify(caKeyMaterials, never()).save(any());
 	}
 
-	/**
-	 * A provisioner that never returns must not pin the rotation indefinitely: it
-	 * has to fail within the configured bound, and — since
-	 * {@code provisionIncoming} has no transaction to roll back — writing nothing
-	 * is proven directly rather than inferred from a rollback.
-	 */
 	@Test
 	void provisionIncomingTimesOutAndWritesNothingWhenAProvisionerNeverReturns() {
 		CaConfigRepository caConfigs = mock(CaConfigRepository.class);

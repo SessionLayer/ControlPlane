@@ -24,12 +24,6 @@ public class PlatformAccess {
 		this.currentAuthentication = currentAuthentication;
 	}
 
-	/**
-	 * Whether an already-authorized subject also holds a second permission, for a
-	 * projection that widens rather than a route that opens. Deliberately returns a
-	 * boolean instead of a 403: the caller is allowed to be here, and the question
-	 * is only how much of the resource it may see.
-	 */
 	public Mono<Boolean> holds(PlatformSubject subject, String permission) {
 		return platformAuthorization.authorize(subject, permission, null).map(decision -> decision.allowed());
 	}

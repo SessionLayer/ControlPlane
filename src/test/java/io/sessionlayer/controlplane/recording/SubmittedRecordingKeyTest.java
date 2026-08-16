@@ -14,7 +14,7 @@ class SubmittedRecordingKeyTest {
 	 * The direction nobody wrote. Every other assertion here checks that private
 	 * key material is refused, and a detector that fires on everything passes all
 	 * of them — so the suite could not distinguish a strict guard from a broken
-	 * one. It took a real key from a real install to tell them apart.
+	 * one.
 	 */
 	@Test
 	void aRealPublicKeyIsNotPrivateKeyMaterial() throws Exception {

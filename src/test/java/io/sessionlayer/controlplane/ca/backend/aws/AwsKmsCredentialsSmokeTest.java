@@ -11,14 +11,6 @@ import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.http.apache5.Apache5HttpClient;
 
-/**
- * The AWS dependency tree is trimmed by an exclusion in {@code pom.xml} and the
- * transport is pinned in code rather than discovered; this is the evidence for
- * both, plus for the claim that building the client does no I/O — a claim about
- * code that is not otherwise executed until the first signature, which is when
- * a hang or a {@code NoClassDefFoundError} would surface, in production,
- * mid-certificate.
- */
 class AwsKmsCredentialsSmokeTest {
 
 	@Test
@@ -48,8 +40,7 @@ class AwsKmsCredentialsSmokeTest {
 	}
 
 	/**
-	 * Constructing the factory opens no connection to the configured endpoint. An
-	 * eager call here would make bean creation depend on KMS being reachable at
+	 * An eager call here would make bean creation depend on KMS being reachable at
 	 * startup, which turns a key-service outage into a Control Plane that will not
 	 * boot rather than one CA that cannot sign.
 	 */
@@ -72,7 +63,6 @@ class AwsKmsCredentialsSmokeTest {
 		}
 	}
 
-	/** An IPv6 loopback has to be bracketed before it is a URL host. */
 	private static String urlHost(InetAddress address) {
 		String literal = address.getHostAddress();
 		return literal.contains(":") ? "[" + literal + "]" : literal;

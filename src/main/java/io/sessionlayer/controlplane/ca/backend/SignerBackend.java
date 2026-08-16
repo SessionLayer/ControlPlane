@@ -18,18 +18,11 @@ import java.security.interfaces.ECPublicKey;
  */
 public interface SignerBackend {
 
-	/** The CA key type this backend signs with. */
 	CaKeyType keyType();
 
-	/** The CA public key (public material only; never a private key). */
 	ECPublicKey publicKey();
 
-	/** What algorithms this backend can produce. */
 	SignerCapabilities capabilities();
 
-	/**
-	 * Sign the to-be-signed bytes with the CA key and return the normalized ECDSA
-	 * {@code (r, s)}. MUST throw (fail closed) on any signer failure.
-	 */
 	EcdsaSignatures.RS sign(byte[] toBeSigned);
 }

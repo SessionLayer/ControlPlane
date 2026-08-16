@@ -36,10 +36,8 @@ public final class KeyVaultKeyReference {
 
 	private static final int HTTPS_DEFAULT_PORT = 443;
 
-	/** Azure Key Vault key names: letters, digits, and hyphens. */
 	private static final Pattern KEY_NAME = Pattern.compile("[0-9A-Za-z-]+");
 
-	/** Azure Key Vault key versions: exactly 32 lowercase hex characters. */
 	private static final Pattern KEY_VERSION = Pattern.compile("[0-9a-f]{32}");
 
 	private final String vaultUrl;
@@ -52,7 +50,6 @@ public final class KeyVaultKeyReference {
 		this.keyVersion = keyVersion;
 	}
 
-	/** Refused for every way a {@code key_reference} can fail validation. */
 	public static final class InvalidKeyReference extends RuntimeException {
 		public InvalidKeyReference(String message) {
 			super(message);
@@ -121,10 +118,6 @@ public final class KeyVaultKeyReference {
 		return normalizedPort(allowed) == normalizedPort(reference);
 	}
 
-	// A configured vault-uri with no explicit port and a key_reference pinning
-	// the default HTTPS port (or vice versa) name the same vault; comparing raw
-	// getPort() values would treat "https://v" and "https://v:443" as different
-	// authorities, which is not the guarantee this anchor is supposed to give.
 	private static int normalizedPort(URI uri) {
 		return uri.getPort() == -1 ? HTTPS_DEFAULT_PORT : uri.getPort();
 	}

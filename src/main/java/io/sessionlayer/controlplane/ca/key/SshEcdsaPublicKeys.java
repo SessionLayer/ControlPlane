@@ -28,7 +28,7 @@ public final class SshEcdsaPublicKeys {
 		byte[] x = fixedWidth(publicKey.getW().getAffineX(), coordLen);
 		byte[] y = fixedWidth(publicKey.getW().getAffineY(), coordLen);
 		byte[] q = new byte[1 + x.length + y.length];
-		q[0] = 0x04; // uncompressed point
+		q[0] = 0x04;
 		System.arraycopy(x, 0, q, 1, x.length);
 		System.arraycopy(y, 0, q, 1 + x.length, y.length);
 		return new SshWriter().writeString(keyType.curveName()).writeString(q).toByteArray();
@@ -80,10 +80,6 @@ public final class SshEcdsaPublicKeys {
 		}
 	}
 
-	/**
-	 * Reject a point not on the curve (defense at the presented-key trust
-	 * boundary).
-	 */
 	static void requireOnCurve(ECPoint point, ECParameterSpec spec) {
 		if (point.equals(ECPoint.POINT_INFINITY)) {
 			throw new IllegalArgumentException("EC point is the point at infinity");
@@ -102,7 +98,6 @@ public final class SshEcdsaPublicKeys {
 		}
 	}
 
-	/** Parse an OpenSSH {@code "<type> <base64> [comment]"} public-key line. */
 	public static ECPublicKey parseAuthorizedKey(String line) {
 		String[] parts = line.trim().split("\\s+");
 		if (parts.length < 2) {
@@ -111,14 +106,8 @@ public final class SshEcdsaPublicKeys {
 		return parse(Base64.getDecoder().decode(parts[1]));
 	}
 
-	/**
-	 * Big-endian fixed-width encoding of a non-negative integer: strips
-	 * {@link BigInteger#toByteArray()}'s sign byte and left-pads with zeros to
-	 * {@code length}. Rejects a value too wide for the coordinate size.
-	 */
 	static byte[] fixedWidth(BigInteger value, int length) {
 		byte[] raw = value.toByteArray();
-		// Drop a leading 0x00 sign byte if present.
 		int start = 0;
 		if (raw.length > 1 && raw[0] == 0x00) {
 			start = 1;

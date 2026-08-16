@@ -55,12 +55,6 @@ class CaConfigServiceValidationTest {
 		return new CaConfigService(null, null, null, null, null, null, null);
 	}
 
-	/**
-	 * An {@code ObjectProvider} whose only registered bean is a mock
-	 * {@code AzureKeyVaultSignerFactory} pinned to {@code vaultUri} — enough for
-	 * {@code KeyVaultKeyReference.parse} to run against a real allow-list anchor
-	 * without a live vault.
-	 */
 	private static ObjectProvider<AzureKeyVaultSignerFactory> azureConfiguredFor(String vaultUri) {
 		AzureKeyVaultSignerFactory factory = mock(AzureKeyVaultSignerFactory.class);
 		when(factory.vaultUri()).thenReturn(vaultUri);
@@ -70,7 +64,6 @@ class CaConfigServiceValidationTest {
 		return provider;
 	}
 
-	/** No {@code AzureKeyVaultSignerFactory} bean at all — Azure not configured. */
 	private static ObjectProvider<AzureKeyVaultSignerFactory> azureNotConfigured() {
 		@SuppressWarnings("unchecked")
 		ObjectProvider<AzureKeyVaultSignerFactory> provider = mock(ObjectProvider.class);
@@ -78,11 +71,6 @@ class CaConfigServiceValidationTest {
 		return provider;
 	}
 
-	/**
-	 * The KMS counterpart: a mock factory pinned to one account/region/partition,
-	 * enough for {@code KmsKeyArn.parse} to run against a real allow-list anchor
-	 * without a live KMS.
-	 */
 	private static ObjectProvider<AwsKmsSignerFactory> awsKmsConfigured() {
 		AwsKmsSignerFactory factory = mock(AwsKmsSignerFactory.class);
 		when(factory.anchor()).thenReturn(new KmsKeyArn.Anchor("aws", "us-east-1", "111122223333"));
@@ -113,9 +101,8 @@ class CaConfigServiceValidationTest {
 
 	/**
 	 * update()'s algorithm gate applies to non-active rows too — an active CA is
-	 * refused for a different reason before this rule is even reached (see
-	 * updateRefusesToChangeAnActiveCasAlgorithm below), so this is exercised on a
-	 * non-active row, the only shape update() can still write.
+	 * refused for a different reason before this rule is even reached, so this is
+	 * exercised on a non-active row, the only shape update() can still write.
 	 */
 	@ParameterizedTest
 	@ValueSource(strings = {"ed25519", "rsa-2048", "rsa-4096"})
@@ -204,16 +191,12 @@ class CaConfigServiceValidationTest {
 		assertThat(problem.getMessage()).contains("private material");
 	}
 
-	/** ecdsa-p521 among them: implemented, and reachable end to end at last. */
 	@ParameterizedTest
 	@ValueSource(strings = {"ecdsa-p256", "ecdsa-p384", "ecdsa-p521"})
 	void everyCurveTheLocalBackendSignsIsAcceptedAndReachesTheWrite(String algorithm) {
 		assertThat(accepts("local", algorithm).algorithm()).isEqualTo(algorithm);
 	}
 
-	/**
-	 * Returns the persisted row, so a rule that silently skipped the write fails.
-	 */
 	private static CaConfig accepts(String backend, String algorithm) {
 		CaConfigRepository caConfigs = mock(CaConfigRepository.class);
 		AuditEventStore audit = mock(AuditEventStore.class);
@@ -253,11 +236,6 @@ class CaConfigServiceValidationTest {
 		verify(caConfigs, never()).save(any());
 	}
 
-	/**
-	 * Rotation is validated through the same capability gate as create/update,
-	 * before {@link CaRotationService} is ever called — a rotation must not be able
-	 * to leave a CA kind pointing at a key nothing can sign with.
-	 */
 	@Test
 	void rotateRefusesABackendCaBackendCapabilitiesCannotSignBeforeAnythingIsWritten() {
 		UUID id = UUID.randomUUID();
@@ -308,11 +286,6 @@ class CaConfigServiceValidationTest {
 		assertThat(problem.getMessage()).contains("azure_keyvault").contains("Configure the backend");
 	}
 
-	/**
-	 * {@code RotateCaRequest}'s overrides are optional; an omitted one must inherit
-	 * the active CA's current value rather than some other default — proven by
-	 * asserting the exact arguments {@link CaRotationService} receives.
-	 */
 	@Test
 	void rotateDefaultsOmittedOverridesToTheActiveCasCurrentValues() {
 		UUID id = UUID.randomUUID();
@@ -349,12 +322,6 @@ class CaConfigServiceValidationTest {
 		return new CaKeyProvisioner.Provisioned(config, material);
 	}
 
-	/**
-	 * An explicit {@code backend}/{@code keyReference} override in the request must
-	 * reach {@link CaRotationService} exactly as given, not be silently dropped in
-	 * favor of the active CA's own values — the adoption path (moving a CA onto a
-	 * different key service) depends on the override actually being used.
-	 */
 	@Test
 	void rotateHonorsExplicitBackendAndKeyReferenceOverridesRatherThanIgnoringThem() {
 		UUID id = UUID.randomUUID();
@@ -419,10 +386,6 @@ class CaConfigServiceValidationTest {
 		verify(caConfigs, never()).save(any());
 	}
 
-	/**
-	 * Same refusal, isolated to keyReference alone changing (backend/algorithm
-	 * unchanged).
-	 */
 	@Test
 	void updateRefusesToChangeAnActiveCasKeyReference() {
 		UUID id = UUID.randomUUID();
@@ -463,9 +426,6 @@ class CaConfigServiceValidationTest {
 		verify(caConfigs, never()).save(any());
 	}
 
-	/**
-	 * Non-active rows (incoming/outgoing/expired) are not signing — still editable.
-	 */
 	@Test
 	void updateStillEditsANonActiveCa() {
 		UUID id = UUID.randomUUID();
@@ -486,11 +446,6 @@ class CaConfigServiceValidationTest {
 		verify(caConfigs).save(any(CaConfig.class));
 	}
 
-	/**
-	 * A Key Vault key_reference must be pinned to an exact version. A reference
-	 * with no version segment at all is refused at the write path, not left to fail
-	 * only when a signature is attempted.
-	 */
 	@Test
 	void createRefusesAVersionLessAzureKeyReferenceAtTheWritePath() {
 		ApiProblemException problem = catchThrowableOfType(ApiProblemException.class,
@@ -504,11 +459,6 @@ class CaConfigServiceValidationTest {
 		assertThat(problem.getMessage()).contains("version");
 	}
 
-	/**
-	 * The allow-list anchor. A key_reference naming any host but the configured
-	 * vault is refused, so a compromised write path cannot redirect CA signing to a
-	 * vault the operator did not configure.
-	 */
 	@Test
 	void createRefusesAWrongVaultAzureKeyReferenceAtTheWritePath() {
 		ApiProblemException problem = catchThrowableOfType(ApiProblemException.class,
@@ -524,11 +474,6 @@ class CaConfigServiceValidationTest {
 		assertThat(problem.getMessage()).contains("not the configured Key Vault");
 	}
 
-	/**
-	 * A Control Plane with no Azure support configured has no
-	 * {@code AzureKeyVaultSignerFactory} bean at all — refused rather than
-	 * dereferencing a vault URI that does not exist.
-	 */
 	@Test
 	void createRefusesAzureKeyvaultWhenNoVaultIsConfiguredOnThisControlPlane() {
 		ApiProblemException problem = catchThrowableOfType(ApiProblemException.class,
@@ -541,11 +486,6 @@ class CaConfigServiceValidationTest {
 		assertThat(problem.getMessage()).contains("not configured");
 	}
 
-	/**
-	 * The alias refusal is the pinning guarantee for KMS, and it has to hold at the
-	 * write path: {@code kms:UpdateAlias} would otherwise repoint a live CA's
-	 * signing key with nothing here ever seeing it change.
-	 */
 	@Test
 	void createRefusesAnAliasKeyReferenceAtTheWritePath() {
 		ApiProblemException problem = catchThrowableOfType(ApiProblemException.class,
@@ -559,11 +499,6 @@ class CaConfigServiceValidationTest {
 		assertThat(problem.getMessage()).contains("alias");
 	}
 
-	/**
-	 * The allow-list anchor. A key ARN naming any account but the configured one is
-	 * refused, so a compromised write path cannot redirect CA signing to a KMS key
-	 * the operator does not own.
-	 */
 	@Test
 	void createRefusesAForeignAccountKeyArnAtTheWritePath() {
 		ApiProblemException problem = catchThrowableOfType(ApiProblemException.class,
@@ -577,11 +512,6 @@ class CaConfigServiceValidationTest {
 		assertThat(problem.getMessage()).contains("only the configured account, region and partition are permitted");
 	}
 
-	/**
-	 * A Control Plane with no KMS support configured has no
-	 * {@code AwsKmsSignerFactory} bean at all — refused rather than dereferencing
-	 * an anchor that does not exist.
-	 */
 	@Test
 	void createRefusesAwsKmsWhenNoKmsIsConfiguredOnThisControlPlane() {
 		ApiProblemException problem = catchThrowableOfType(ApiProblemException.class,

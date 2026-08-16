@@ -53,7 +53,6 @@ class RuleCrudIT extends AbstractConfigApiIT {
 		String admin = "svc-rule-invalid-" + UUID.randomUUID();
 		String token = tokenWith(admin, PlatformPermissions.RBAC_WRITE);
 
-		// ttlSeconds = 0 is a semantic (pre-commit) violation -> 422 problem+json.
 		client.post().uri("/v1/rules").header("Authorization", "Bearer " + token)
 				.contentType(MediaType.APPLICATION_JSON).bodyValue(ruleBody("rule-" + UUID.randomUUID(), 0, "allow"))
 				.exchange().expectStatus().isEqualTo(422).expectHeader()
@@ -89,7 +88,6 @@ class RuleCrudIT extends AbstractConfigApiIT {
 		client.get().uri("/v1/rules/" + id).header("Authorization", "Bearer " + token).exchange().expectStatus().isOk()
 				.expectBody().jsonPath("$.ttlSeconds").isEqualTo(3600);
 
-		// Update with the correct version bumps ttl and version.
 		client.put().uri("/v1/rules/" + id).header("Authorization", "Bearer " + token)
 				.contentType(MediaType.APPLICATION_JSON)
 				.bodyValue(Map.of("identitySelector", Map.of("identities", List.of("alice")), "nodeLabelSelector",
@@ -98,7 +96,6 @@ class RuleCrudIT extends AbstractConfigApiIT {
 				.exchange().expectStatus().isOk().expectBody().jsonPath("$.ttlSeconds").isEqualTo(7200)
 				.jsonPath("$.effect").isEqualTo("deny").jsonPath("$.version").isEqualTo(1);
 
-		// A stale version is a 409.
 		client.put().uri("/v1/rules/" + id).header("Authorization", "Bearer " + token)
 				.contentType(MediaType.APPLICATION_JSON)
 				.bodyValue(Map.of("identitySelector", Map.of(), "nodeLabelSelector", Map.of(), "principals",
@@ -107,7 +104,6 @@ class RuleCrudIT extends AbstractConfigApiIT {
 
 		client.delete().uri("/v1/rules/" + id).header("Authorization", "Bearer " + token).exchange().expectStatus()
 				.isNoContent();
-		// Idempotent delete + gone.
 		client.delete().uri("/v1/rules/" + id).header("Authorization", "Bearer " + token).exchange().expectStatus()
 				.isNoContent();
 		client.get().uri("/v1/rules/" + id).header("Authorization", "Bearer " + token).exchange().expectStatus()
@@ -126,13 +122,11 @@ class RuleCrudIT extends AbstractConfigApiIT {
 				.header("Idempotency-Key", key).contentType(MediaType.APPLICATION_JSON).bodyValue(body).exchange()
 				.expectStatus().isCreated().returnResult(Map.class).getResponseBody().blockFirst().get("id").toString();
 
-		// Same key + same body -> the ORIGINAL response replayed, no second create.
 		String replayId = client.post().uri("/v1/rules").header("Authorization", "Bearer " + token)
 				.header("Idempotency-Key", key).contentType(MediaType.APPLICATION_JSON).bodyValue(body).exchange()
 				.expectStatus().isCreated().returnResult(Map.class).getResponseBody().blockFirst().get("id").toString();
 		assertThat(replayId).isEqualTo(firstId);
 
-		// Same key + DIFFERENT body -> 422 idempotency conflict.
 		client.post().uri("/v1/rules").header("Authorization", "Bearer " + token).header("Idempotency-Key", key)
 				.contentType(MediaType.APPLICATION_JSON).bodyValue(ruleBody(name, 999, "allow")).exchange()
 				.expectStatus().isEqualTo(422).expectBody().jsonPath("$.type")
@@ -161,11 +155,9 @@ class RuleCrudIT extends AbstractConfigApiIT {
 				.getResponseBody().blockFirst();
 		List<Map<String, Object>> items2 = (List<Map<String, Object>>) page2.get("items");
 		assertThat(items2).isNotEmpty();
-		// Keyset: page 2 shares no id with page 1 (no OFFSET drift / overlap).
 		List<Object> ids1 = items1.stream().map(m -> m.get("id")).toList();
 		assertThat(items2.stream().map(m -> m.get("id"))).noneMatch(ids1::contains);
 
-		// A malformed cursor is a 400.
 		client.get().uri("/v1/rules?cursor=not-a-cursor").header("Authorization", "Bearer " + token).exchange()
 				.expectStatus().isBadRequest();
 	}

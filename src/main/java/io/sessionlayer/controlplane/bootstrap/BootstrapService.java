@@ -19,23 +19,12 @@ import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-/**
- * First-admin bootstrap. On an unconfigured system it provisions the initial
- * platform admin — a config-named OIDC subject, or a printed-once credential
- * surrendered via {@code POST /v1/bootstrap/claim} — seeding a
- * {@code platform-admin} role + a {@code role_binding}. It <b>self-disables</b>
- * once a platform admin with {@code user:manage} + {@code rbac:write} exists (a
- * race-safe conditional flip of {@code operator_settings.bootstrap_completed}),
- * and every use is audited.
- */
 @Service
 public class BootstrapService {
 
 	private static final Logger LOG = LoggerFactory.getLogger(BootstrapService.class);
 	private static final String ADMIN_ROLE = "platform-admin";
 
-	// Race-safe self-disable: only the caller that flips completed=false→true wins
-	// and provisions; concurrent HA callers observe zero rows and stand down.
 	private static final String CLAIM_COMPLETION = """
 			UPDATE config.operator_settings
 			SET bootstrap_completed = true, bootstrap_completed_at = now(), version = version + 1
@@ -109,7 +98,6 @@ public class BootstrapService {
 		}).then();
 	}
 
-	/** Claim the printed-once credential to become the first admin. */
 	public Mono<ClaimOutcome> claim(String credential, String subject) {
 		if (subject == null || subject.isBlank() || credential == null || credential.isBlank()) {
 			return Mono.just(ClaimOutcome.INVALID_CREDENTIAL);
@@ -168,10 +156,6 @@ public class BootstrapService {
 		}
 		String credential = Secrets.randomToken(24);
 		OperatorSettings armed = withCredentialHash(current, Secrets.sha256Hex(credential));
-		// The `subject` becomes a role_binding matched against the authenticated
-		// identity, so naming only an OIDC subject would strand an operator installing
-		// without an IdP: their only other first credential is the Basic escape hatch,
-		// whose username must be the value claimed here.
 		return settings.save(armed).doOnSuccess(s -> LOG
 				.warn("FIRST-ADMIN BOOTSTRAP CREDENTIAL (shown once): {}  — claim it via POST /v1/bootstrap/claim "
 						+ "{{\"credential\":\"...\",\"subject\":\"<subject>\"}}; it self-disables after use. "
@@ -213,14 +197,6 @@ public class BootstrapService {
 				.flatMap(this::reconcileSessionLimitDefaults).doOnNext(BootstrapService::warnWhenCapUnlimited);
 	}
 
-	// The cluster-default session-limit knobs (concurrent cap, max duration, idle
-	// timeout) are OPT-IN deployment-config values
-	// (sessionlayer.session-limits.default-*). Seed them into a freshly-created
-	// singleton, and — since the singleton may already have been created null at
-	// cold start — reconcile each on every boot when its property is set
-	// (deployment config is authoritative for the cluster default); when unset,
-	// leave the stored value untouched (default null ⇒ unlimited/none), so
-	// existing deployments are unaffected.
 	private OperatorSettings seededDefaults() {
 		return applyConfigured(OperatorSettings.defaults());
 	}
@@ -265,8 +241,6 @@ public class BootstrapService {
 		return result;
 	}
 
-	// An unlimited cluster-default concurrent cap is a legitimate but
-	// easily-unintended posture — say so once, loudly, at boot.
 	private static void warnWhenCapUnlimited(OperatorSettings current) {
 		if (current.defaultMaxConcurrentSessions() == null) {
 			LOG.warn("the cluster-default concurrent-session cap is UNLIMITED: identities without a matching "

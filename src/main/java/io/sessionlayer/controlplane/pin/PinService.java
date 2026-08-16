@@ -13,10 +13,6 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-/**
- * Pin store: an authentication shortcut binding fingerprint + identity +
- * source-CIDR.
- */
 @Service
 public class PinService {
 
@@ -52,10 +48,6 @@ public class PinService {
 	public record Resolved(String identity, List<String> principals) {
 	}
 
-	/**
-	 * Resolve a fingerprint to its identity from the given source IP (outer-leg
-	 * reconnect shortcut).
-	 */
 	public Mono<Resolved> resolveForSource(String fingerprint, String sourceIp) {
 		if (fingerprint == null || fingerprint.isBlank()) {
 			return Mono.empty();
@@ -75,13 +67,10 @@ public class PinService {
 	}
 
 	/**
-	 * Live pins — one identity's when a name is given, every one when it is not.
-	 * The unfiltered form is what offboarding and incident review need: a pin
-	 * authenticates on its own and outlives the session it was created for, so one
-	 * nobody has accounted for is standing access. Withholding the enumeration
-	 * protected nothing, because {@code user:manage} — the permission gating this
-	 * read — also MINTS pins, so its holder could always reach the same information
-	 * by a route it already had.
+	 * The unfiltered form is deliberate: a pin authenticates on its own and outlives
+	 * the session it was created for, so one nobody has accounted for is standing
+	 * access. It discloses nothing new — {@code user:manage}, the permission gating
+	 * this read, also MINTS pins.
 	 */
 	public Flux<Pin> listActive(String identity) {
 		Instant now = Instant.now();

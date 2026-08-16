@@ -81,8 +81,6 @@ class OuterLegAuthIT extends AbstractMtlsIT {
 		channels.clear();
 	}
 
-	// ---- ResolveOtp --------------------------------------------------------
-
 	@Test
 	void resolveOtpValidThenReplayed() {
 		String ip = "10.30.0.1";
@@ -94,7 +92,6 @@ class OuterLegAuthIT extends AbstractMtlsIT {
 		assertThat(first.getIdentity()).isEqualTo("alice@corp");
 		assertThat(first.getPrincipalsList()).containsExactly("deploy", "ops");
 
-		// Single-use: the same code never resolves twice (generic resolved=false).
 		assertThat(authed().resolveOtp(otpRequest(issued.otp(), ip)).getIdentity().getResolved()).isFalse();
 	}
 
@@ -102,7 +99,6 @@ class OuterLegAuthIT extends AbstractMtlsIT {
 	void resolveOtpWrongSourceDoesNotResolveOrBurn() {
 		OtpService.IssuedOtp issued = otpService.issue("bob@corp", List.of("deploy"), "10.31.0.0/16", 120, "test")
 				.block();
-		// Presented from outside the bound CIDR → resolved=false, and not consumed.
 		assertThat(authed().resolveOtp(otpRequest(issued.otp(), "192.0.2.5")).getIdentity().getResolved()).isFalse();
 		assertThat(authed().resolveOtp(otpRequest(issued.otp(), "10.31.0.7")).getIdentity().getResolved()).isTrue();
 	}
@@ -126,8 +122,6 @@ class OuterLegAuthIT extends AbstractMtlsIT {
 		assertThat(authed().resolveOtp(otpRequest(issued.otp(), ip)).getIdentity().getResolved()).isFalse();
 	}
 
-	// ---- ResolvePin --------------------------------------------------------
-
 	@Test
 	void resolvePinValidAndWrongSource() {
 		String fingerprint = "SHA256:" + Secrets.randomToken(16);
@@ -138,7 +132,6 @@ class OuterLegAuthIT extends AbstractMtlsIT {
 		assertThat(ok.getIdentity()).isEqualTo("dave@corp");
 		assertThat(ok.getPrincipalsList()).containsExactly("deploy", "shell");
 
-		// Outside the bound CIDR → generic resolved=false.
 		assertThat(authed().resolvePin(pinRequest(fingerprint, "203.0.113.4")).getIdentity().getResolved()).isFalse();
 	}
 
@@ -147,21 +140,16 @@ class OuterLegAuthIT extends AbstractMtlsIT {
 		assertThat(authed().resolvePin(pinRequest("SHA256:unknown", "10.41.0.1")).getIdentity().getResolved())
 				.isFalse();
 
-		// Expired pin (persisted with a past expiry) → resolved=false.
 		String expiredFp = "SHA256:" + Secrets.randomToken(16);
 		pinRepository.save(Pin.create(expiredFp, "erin@corp", null, List.of("deploy"), Instant.now().minusSeconds(60)))
 				.block();
 		assertThat(authed().resolvePin(pinRequest(expiredFp, "10.41.0.2")).getIdentity().getResolved()).isFalse();
 
-		// The same fingerprint pinned to two identities (both active, unbound) is
-		// ambiguous → resolved=false (fail closed).
 		String ambiguousFp = "SHA256:" + Secrets.randomToken(16);
 		pinService.create(ambiguousFp, "frank@corp", null, List.of("deploy"), 3600, "test").block();
 		pinService.create(ambiguousFp, "grace@corp", null, List.of("deploy"), 3600, "test").block();
 		assertThat(authed().resolvePin(pinRequest(ambiguousFp, "10.41.0.3")).getIdentity().getResolved()).isFalse();
 	}
-
-	// ---- ResolveUserCert ---------------------------------------------------
 
 	@Test
 	void resolveUserCertTrustedResolves() {
@@ -175,29 +163,23 @@ class OuterLegAuthIT extends AbstractMtlsIT {
 
 	@Test
 	void resolveUserCertWrongCaExpiredAndWrongSourceAreGenericFalse() {
-		// Signed by the HOST CA — not a trusted USER CA → resolved=false.
 		byte[] wrongCa = signUserCert("host", "ivan@corp", List.of("deploy"), Instant.now().minusSeconds(60),
 				Instant.now().plusSeconds(600), null);
 		assertThat(authed().resolveUserCert(userCertRequest(wrongCa, "10.50.0.2")).getIdentity().getResolved())
 				.isFalse();
 
-		// Signed by the user CA but already expired → resolved=false.
 		byte[] expired = signUserCert("user", "judy@corp", List.of("deploy"), Instant.now().minusSeconds(7200),
 				Instant.now().minusSeconds(3600), null);
 		assertThat(authed().resolveUserCert(userCertRequest(expired, "10.50.0.3")).getIdentity().getResolved())
 				.isFalse();
 
-		// A cert pinning source-address, presented from outside it → resolved=false.
 		byte[] sourcePinned = signUserCert("user", "mallory@corp", List.of("deploy"), Instant.now().minusSeconds(60),
 				Instant.now().plusSeconds(600), "10.60.0.0/16");
 		assertThat(authed().resolveUserCert(userCertRequest(sourcePinned, "203.0.113.9")).getIdentity().getResolved())
 				.isFalse();
-		// …and resolves when presented from inside the pinned source.
 		assertThat(authed().resolveUserCert(userCertRequest(sourcePinned, "10.60.0.7")).getIdentity().getResolved())
 				.isTrue();
 	}
-
-	// ---- Device flow -------------------------------------------------------
 
 	@Test
 	void beginDeviceFlowReturnsPromptMaterialAndConfiguredVerificationUri() {
@@ -228,7 +210,6 @@ class OuterLegAuthIT extends AbstractMtlsIT {
 
 	@Test
 	void deviceFlowExpiryAndUnknownCodeReportExpired() {
-		// A pending flow past its expiry lazily reports EXPIRED on poll.
 		String rawDeviceCode = Secrets.randomToken(32);
 		String rawUserCode = Secrets.randomUserCode();
 		deviceFlowRepository.save(DeviceFlow.create(Secrets.sha256Hex(rawDeviceCode), Secrets.sha256Hex(rawUserCode),
@@ -236,7 +217,6 @@ class OuterLegAuthIT extends AbstractMtlsIT {
 		assertThat(authed().pollDeviceFlow(pollRequest(rawDeviceCode)).getStatus())
 				.isEqualTo(DeviceFlowStatus.DEVICE_FLOW_STATUS_EXPIRED);
 
-		// An unknown device_code is indistinguishable: EXPIRED, resolved=false.
 		PollDeviceFlowResponse unknown = authed().pollDeviceFlow(pollRequest("no-such-device-code"));
 		assertThat(unknown.getStatus()).isEqualTo(DeviceFlowStatus.DEVICE_FLOW_STATUS_EXPIRED);
 		assertThat(unknown.getIdentity().getResolved()).isFalse();
@@ -254,8 +234,6 @@ class OuterLegAuthIT extends AbstractMtlsIT {
 		assertThat(throttled.getStatus().getCode()).isEqualTo(Status.Code.RESOURCE_EXHAUSTED);
 	}
 
-	// ---- Tier --------------------------------------------------------------
-
 	@Test
 	void unauthenticatedCallerIsRefused() {
 		SslContext noCert = MtlsTestSupport.clientSslContext(caCertificate(), null, null);
@@ -266,8 +244,6 @@ class OuterLegAuthIT extends AbstractMtlsIT {
 				() -> stub.resolveOtp(otpRequest("whatever", "10.80.0.1")));
 		assertThat(error.getStatus().getCode()).isEqualTo(Status.Code.UNAUTHENTICATED);
 	}
-
-	// ---- helpers -----------------------------------------------------------
 
 	private OuterLegAuthGrpc.OuterLegAuthBlockingStub authed() {
 		if (authedGateway == null) {

@@ -100,11 +100,9 @@ class AgentNodeHostAnchorIT extends AbstractAuthIT {
 		assertThat(decision.allowed()).withFailMessage(() -> "authorize denied: " + denyDetail(identity)).isTrue();
 		NodeConnectionInfo connection = decision.nodeConnection();
 		assertThat(connection.connectorKind()).isEqualTo(NodeConnectionInfo.ConnectorModel.OUTBOUND_AGENT);
-		// The Agent dials out; a dial address on an agent node would be a lie the
-		// authorizer hands the data plane.
 		assertThat(connection.dialAddress()).isEmpty();
-		// The outcome the gap is about: without this the Gateway's HostVerifier holds
-		// an empty trust set and aborts the inner leg (no TOFU), agent node or not.
+		// Without this the Gateway's HostVerifier holds an empty trust set and aborts
+		// the inner leg (no TOFU), agent node or not.
 		assertThat(connection.hasHostVerification()).isTrue();
 		assertThat(connection.pinnedHostKeys()).singleElement().isEqualTo(wireBlobOf(pinnedLine));
 	}

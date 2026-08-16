@@ -7,12 +7,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
-/**
- * A misconfigured {@code sessionlayer.ca.aws.*} fails the application context
- * at startup, naming the property — never a listener that reaches the database
- * or network, which is how a blocking readiness check crash-loops a whole fleet
- * instead of refusing one bad config value.
- */
 class AwsKmsPropertiesTest {
 
 	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
@@ -119,10 +113,6 @@ class AwsKmsPropertiesTest {
 		assertThatCode(allowed::validate).doesNotThrowAnyException();
 	}
 
-	/**
-	 * The two flags are not interchangeable: allowing an override does not allow a
-	 * plaintext one, and a local KMS therefore needs both said out loud.
-	 */
 	@Test
 	void aPlaintextEndpointOverrideNeedsBothOptIns() {
 		AwsKmsProperties properties = enabled();
@@ -136,7 +126,6 @@ class AwsKmsPropertiesTest {
 		assertThatCode(properties::validate).doesNotThrowAnyException();
 	}
 
-	/** Neither flag alone is enough for plaintext. */
 	@Test
 	void allowInsecureEndpointAloneDoesNotAdmitAnOverride() {
 		AwsKmsProperties properties = enabled();
@@ -147,11 +136,6 @@ class AwsKmsPropertiesTest {
 				.hasMessageContaining("allow-endpoint-override");
 	}
 
-	/**
-	 * The opt-in covers plaintext HTTP and nothing else: a scheme the SDK cannot
-	 * speak would otherwise be waved through by the same flag and fail obscurely at
-	 * the first call.
-	 */
 	@Test
 	void allowInsecureEndpointDoesNotAdmitAnArbitraryScheme() {
 		AwsKmsProperties properties = enabled();

@@ -16,15 +16,6 @@ import reactor.core.publisher.Mono;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
-/**
- * OIDC device flow. The CP generates the device/user codes and hosts the
- * verification page as an auth-code + PKCE relying party (the anti-phishing
- * design — the CP page restores state/nonce/PKCE a raw device grant lacks).
- * Approval happens when the user completes the CP verification page; the
- * approving browser's source context is correlated with the SSH source IP as a
- * deny-only reducer and recorded. Fallback-only; the Gateway polls
- * {@link #poll} and moves this onto the auth gRPC plane.
- */
 @Service
 public class DeviceFlowService {
 
@@ -72,11 +63,6 @@ public class DeviceFlowService {
 				.filter(f -> "pending".equals(f.status()) && f.expiresAt().isAfter(Instant.now()));
 	}
 
-	/**
-	 * Approve a device flow from a completed verification-page login: resolve the
-	 * identity and record the source-context correlation. A mismatch is flagged (+
-	 * audited); it denies only when source-match enforcement is on.
-	 */
 	public Mono<DeviceFlow> approve(UUID deviceFlowId, String identity, String approverSourceIp) {
 		return deviceFlows.findById(deviceFlowId).filter(f -> "pending".equals(f.status())).flatMap(flow -> {
 			Boolean match = correlate(approverSourceIp, flow.sourceIp());
@@ -113,7 +99,6 @@ public class DeviceFlowService {
 		});
 	}
 
-	/** Signals a throttled poll (→ HTTP 429). */
 	public static final class RateLimited extends RuntimeException {
 	}
 

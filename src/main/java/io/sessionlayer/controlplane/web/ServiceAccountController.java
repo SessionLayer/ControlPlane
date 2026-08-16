@@ -18,10 +18,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-/**
- * Service-account definitions CRUD (RBAC + audited, idempotency-key guarded).
- * Resource NEVER carries a secret.
- */
 @RestController
 public class ServiceAccountController implements ServiceAccountsApi {
 

@@ -22,9 +22,6 @@ public class SessionSigningTokenService {
 		this.properties = properties;
 	}
 
-	/**
-	 * Mint a single-use session-signing token; returns the raw token (shown once).
-	 */
 	public Mono<String> mint(UUID gatewayId, UUID sessionId, UUID nodeId, String principal, List<String> capabilities,
 			String sourceAddress) {
 		SingleUseTokens.Minted minted = SingleUseTokens.mint();
@@ -33,12 +30,6 @@ public class SessionSigningTokenService {
 				capabilities, sourceAddress, expiresAt)).thenReturn(minted.raw());
 	}
 
-	/**
-	 * Validate the token is bound to {@code callerGatewayId} (and agrees with any
-	 * advisory {@code context}), then atomically mark it used. Any unknown /
-	 * cross-gateway / cross-session / expired / already-used token — or a lost
-	 * consume race — is rejected with one generic {@code PERMISSION_DENIED}.
-	 */
 	public Mono<SessionSigningToken> consume(String rawToken, UUID callerGatewayId, SignRequestContext context) {
 		if (rawToken == null || rawToken.isBlank() || callerGatewayId == null) {
 			return Mono.error(denied());
@@ -58,8 +49,6 @@ public class SessionSigningTokenService {
 		});
 	}
 
-	// The context is advisory: a field is checked only when the caller set it, and
-	// when set it MUST equal the token's authoritative value.
 	private static boolean contextDisagrees(SignRequestContext ctx, SessionSigningToken token) {
 		if (ctx.sessionId() != null && !ctx.sessionId().equals(token.sessionId())) {
 			return true;

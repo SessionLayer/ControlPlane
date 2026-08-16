@@ -1,19 +1,3 @@
--- V17 — Session recording: customer-key config + single-use recording token.
--- SessionLayer Control Plane. Forward-only, additive; V1-V16 unchanged.
---
--- Two concerns (Design §12/§12A/§15; FR-AUD-1/2/3/6/9, FR-DATA-2):
---   1. config.operator_settings gains the operator-configured CUSTOMER encryption
---      key material (PUBLIC half only — the CP never holds the private key, §15
---      crown-jewels) plus recording retention/mode knobs. When no customer key is
---      configured, BeginRecording fails closed (keystroke capture is always on, so
---      encryption is mandatory, FR-AUD-2).
---   2. runtime.recording_token — the SECOND single-use, session-bound authority
---      minted at Authorize ALLOW alongside session_signing_token, authorising
---      exactly one Recording.BeginRecording call (hash only; atomic single-use,
---      replay-rejected). A dedicated table (not a purpose column on
---      session_signing_token) keeps this additive and isolated from the
---      SessionSigning token entity/service.
-
 -- 1. ------------------------------------------------------------------------
 -- Customer encryption key + recording policy on the operator_settings singleton.
 --   * recording_customer_public_key: DER SubjectPublicKeyInfo of the customer EC
@@ -45,29 +29,23 @@ COMMENT ON COLUMN config.operator_settings.recording_key_seal_algorithm IS 'How 
 COMMENT ON COLUMN config.operator_settings.recording_key_ref IS 'Operator reference to the customer key (persisted into recording_ref.encryption_key_ref; never key material).';
 COMMENT ON COLUMN config.operator_settings.recording_retention_days IS 'FR-AUD-6: recording retention window (object-lock retain-until + recording_ref.retention_until).';
 
--- 2. ------------------------------------------------------------------------
--- runtime.recording_token — single-use BeginRecording authority (Design §12/§15,
--- FR-AUD-1). Bound to {gateway_id, session_id, node_id, principal, exp}, mirroring
--- session_signing_token. Stores the token HASH only; atomic single-use via `used`
--- under the @Version optimistic lock (replay loses the race).
 CREATE TABLE runtime.recording_token (
     id             uuid        PRIMARY KEY,
-    token_hash     text        NOT NULL UNIQUE,        -- hash of the token — the raw token is NEVER stored
-    gateway_id     uuid        NOT NULL,               -- snapshot of the owning gateway_identity.id (no FK: runtime->runtime snapshot)
-    session_id     uuid        NOT NULL,               -- the SessionLayer session this recording is for
-    node_id        uuid,                               -- the target node (advisory binding)
-    principal      text        NOT NULL,               -- the RBAC-resolved Linux login (advisory binding)
+    token_hash     text        NOT NULL UNIQUE,
+    gateway_id     uuid        NOT NULL,
+    session_id     uuid        NOT NULL,
+    node_id        uuid,
+    principal      text        NOT NULL,
     source_address text        CHECK (source_address IS NULL OR runtime.is_ip_or_cidr(source_address)),
     expires_at     timestamptz NOT NULL,
-    used           boolean     NOT NULL DEFAULT false, -- atomic mark-used (single-use, replay-rejected)
+    used           boolean     NOT NULL DEFAULT false,
     used_at        timestamptz,
-    version        bigint      NOT NULL DEFAULT 0,      -- @Version optimistic lock (guards the consume race)
+    version        bigint      NOT NULL DEFAULT 0,
     created_at     timestamptz NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE runtime.recording_token IS 'Design §12/§15 / FR-AUD-1: single-use BeginRecording token bound to {gateway,session,node,principal,exp}. Hash only; atomic single-use. Minted at Authorize ALLOW alongside session_signing_token.';
 CREATE INDEX idx_recording_token_gateway ON runtime.recording_token (gateway_id);
 
--- 3. ------------------------------------------------------------------------
 -- Hash-chain head-read index. AuditWriter reads the current chain head with
 -- `... WHERE record_hash IS NOT NULL ORDER BY seq DESC LIMIT 1` on every audit
 -- write (under the chain advisory lock), so this partial index keeps that O(1).

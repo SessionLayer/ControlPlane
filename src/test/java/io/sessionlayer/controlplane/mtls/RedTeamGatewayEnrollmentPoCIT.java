@@ -54,9 +54,6 @@ class RedTeamGatewayEnrollmentPoCIT extends AbstractMtlsIT {
 	@Autowired
 	private MtlsProperties mtlsProperties;
 
-	// ------------------------------------------------ the impersonation path
-	// gateway:enroll -> a CA-signed serverAuth cert for the CP's own hostname.
-
 	@Test
 	void cpHostnamesAreShapeValidButNotEnrollable() {
 		List<String> cpHostnames = mtlsProperties.getServer().getHostnames();
@@ -69,7 +66,6 @@ class RedTeamGatewayEnrollmentPoCIT extends AbstractMtlsIT {
 					.as("the CP's own hostname %s must not be enrollable as a Gateway", hostname).isFalse();
 		}
 		assertThat(GatewayNames.isEnrollable("controlplane", cpHostnames)).isFalse();
-		// An ordinary name is unaffected.
 		assertThat(GatewayNames.isEnrollable("gw-1", cpHostnames)).isTrue();
 		assertThat(GatewayNames.isEnrollable("sessionlayer-cp.svc.cluster.local", cpHostnames)).isTrue();
 	}
@@ -104,8 +100,7 @@ class RedTeamGatewayEnrollmentPoCIT extends AbstractMtlsIT {
 		// And that leaf does not impersonate the CP either, which is what made the name
 		// binding load-bearing in the first place. This mirrors the Gateway's real
 		// admission test: chain to the pinned internal mTLS CA, then RFC 6125 name
-		// match on the CP's server_name (gateway-core/src/mtls.rs,
-		// Tls13OnlyPinnedVerifier).
+		// match on the CP's server_name.
 		Throwable control = tlsHandshake(benignLeaf, benignKey.getPrivate(), caCertificate(), cpHostname);
 		assertThat(control).as("a leaf for an ordinary gateway name must not satisfy a client asking for the CP")
 				.isNotNull();
@@ -130,19 +125,14 @@ class RedTeamGatewayEnrollmentPoCIT extends AbstractMtlsIT {
 		}
 	}
 
-	// Adjacent paths that are already safe, asserted so "safe" has evidence
-	// rather than being an untested assumption.
-
 	@Test
 	void mintingForALiveGatewayNameCannotSupersedeIt() {
 		String name = "gw-live-" + unique();
 		EnrolledGateway live = enroll(name);
 
-		// The mint endpoint happily issues a token for an ALREADY-enrolled name...
 		String second = enrollmentTokens.mint(name, "attacker", Duration.ofMinutes(10)).block().rawToken();
 		assertThat(second).isNotBlank();
 
-		// ...but the enrollment consumer refuses it (already_enrolled).
 		Throwable refused = catchThrowable(() -> enrollWithToken(name, second));
 		System.out.println("[clean] re-enrolling a live name -> " + refused);
 		assertThat(refused).isInstanceOf(StatusRuntimeException.class);
@@ -239,11 +229,9 @@ class RedTeamGatewayEnrollmentPoCIT extends AbstractMtlsIT {
 		var attackerToken = enrollmentTokens.mint(attackerName, "operator", Duration.ofMinutes(10)).block();
 
 		enrollmentTokens.revoke(attackerToken.id()).block();
-		// Revoking the attacker's token does not touch the victim's.
 		assertThat(enrollmentTokens.isValid(victimToken.rawToken(), victim).block()).isTrue();
 		assertThat(enrollmentTokens.isValid(attackerToken.rawToken(), attackerName).block()).isFalse();
 
-		// Revoke is idempotent and a revoked token cannot enroll.
 		enrollmentTokens.revoke(attackerToken.id()).block();
 		enrollmentTokens.revoke(UUID.randomUUID()).block();
 		Throwable refused = catchThrowable(() -> enrollWithToken(attackerName, attackerToken.rawToken()));
@@ -301,14 +289,6 @@ class RedTeamGatewayEnrollmentPoCIT extends AbstractMtlsIT {
 		}
 	}
 
-	// ---------------------------------------------------------------- helpers
-
-	/**
-	 * The Gateway's server-certificate admission test, reproduced with JSSE: trust
-	 * ONLY the pinned internal mTLS CA, TLS 1.3, RFC 6125 endpoint identification
-	 * against {@code expectedName}. Returns null on a successful handshake, or the
-	 * rejection.
-	 */
 	private static Throwable tlsHandshake(X509Certificate leaf, PrivateKey key, X509Certificate pinnedCa,
 			String expectedName) throws Exception {
 		KeyStore serverStore = KeyStore.getInstance("PKCS12");

@@ -20,10 +20,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * Hand-wires the OpenTelemetry SDK for the CP: only the two decision spans
- * ({@code cp.authorize} and {@code cp.cert_sign}) are created.
- */
 @Configuration
 public class TracingConfiguration {
 
@@ -31,9 +27,8 @@ public class TracingConfiguration {
 	private static final AttributeKey<String> SERVICE_NAME = AttributeKey.stringKey("service.name");
 
 	/**
-	 * The self-managed SDK. {@code close()} flushes/shuts the exporter on context
-	 * stop. Not registered as the OTel global (per-context bean only) so multiple
-	 * test contexts never collide on {@code GlobalOpenTelemetry}.
+	 * Not registered as the OTel global (a per-context bean only) so multiple test
+	 * contexts never collide on {@code GlobalOpenTelemetry}.
 	 */
 	@Bean(destroyMethod = "close")
 	@ConditionalOnMissingBean(OpenTelemetry.class)
@@ -44,8 +39,6 @@ public class TracingConfiguration {
 			@Value("${management.tracing.sampling.probability:1.0}") double sampleProbability,
 			ObjectProvider<SpanProcessor> extraProcessors) {
 		Resource resource = Resource.getDefault().merge(Resource.create(Attributes.of(SERVICE_NAME, serviceName)));
-		// parentBased: honour the Gateway root's sampling decision when it propagates
-		// one; the ratio only governs a CP-ROOTED span (an RPC with no traceparent).
 		SdkTracerProviderBuilder tracerProvider = SdkTracerProvider.builder().setResource(resource)
 				.setSampler(Sampler.parentBased(Sampler.traceIdRatioBased(sampleProbability)));
 		if (exportEnabled) {
@@ -57,7 +50,6 @@ public class TracingConfiguration {
 			LOG.info("OTLP trace exporter disabled (management.otlp.tracing.export.enabled=false); "
 					+ "spans are created but not exported off-box");
 		}
-		// Tests attach an in-memory SpanProcessor to assert propagation + no-content.
 		extraProcessors.orderedStream().forEach(tracerProvider::addSpanProcessor);
 		return OpenTelemetrySdk.builder().setTracerProvider(tracerProvider.build())
 				.setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance())).build();

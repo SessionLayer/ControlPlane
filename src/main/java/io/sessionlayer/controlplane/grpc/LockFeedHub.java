@@ -38,7 +38,6 @@ public class LockFeedHub {
 		emit(LockEvent.newBuilder().setRemoved(LockRemoval.newBuilder().setLockId(lockId.toString()).build()).build());
 	}
 
-	/** The live add/remove multicast; a per-connection stream subscribes to it. */
 	Flux<LockEvent> liveEvents() {
 		return sink.asFlux();
 	}
@@ -47,10 +46,6 @@ public class LockFeedHub {
 		return sink.currentSubscriberCount();
 	}
 
-	/**
-	 * The authoritative current lock set (all UNEXPIRED locks), read at call time —
-	 * the RESYNC primitive a Gateway receives on connect/reconnect.
-	 */
 	Mono<LockEvent> snapshotEvent() {
 		Instant now = Instant.now();
 		return locks.findAll().filter(lock -> unexpired(lock, now)).map(LockCodec::toProto).collectList()

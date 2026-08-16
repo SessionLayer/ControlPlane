@@ -36,16 +36,9 @@ public final class Pkcs10Csrs {
 	private Pkcs10Csrs() {
 	}
 
-	/** A validated CSR: its certified public key and its subject CN. */
 	public record ParsedCsr(PublicKey publicKey, String commonName) {
 	}
 
-	/**
-	 * Parse a DER-encoded PKCS#10 CSR, verify proof of possession, require ECDSA
-	 * P-256, and extract the subject CN. Throws {@link CsrException} on any
-	 * malformed / unverifiable / wrong-key input (the caller maps it to a
-	 * fail-closed gRPC error).
-	 */
 	public static ParsedCsr parseAndVerify(byte[] der) {
 		if (der == null || der.length == 0) {
 			throw new CsrException("empty CSR");
@@ -90,7 +83,6 @@ public final class Pkcs10Csrs {
 		return cn;
 	}
 
-	/** A malformed, unverifiable, or wrong-key CSR (fail closed). */
 	public static final class CsrException extends RuntimeException {
 		public CsrException(String message) {
 			super(message);

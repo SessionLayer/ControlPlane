@@ -9,13 +9,6 @@ import java.util.TreeMap;
 import java.util.UUID;
 import tools.jackson.databind.JsonNode;
 
-/**
- * Hash chain for audit_event: record_hash = SHA-256(prev_hash ||
- * canonical(event)). Proves no row was altered, removed, or reordered on top of
- * the WORM store's own immutability. Canonical encoding is length-framed,
- * stable across jsonb key reordering, and excludes DB-assigned fields (seq,
- * hash, version, created_at).
- */
 public final class AuditRecordHash {
 
 	public static final String GENESIS = "0".repeat(64);
@@ -47,7 +40,6 @@ public final class AuditRecordHash {
 		return value == null ? null : value.toString();
 	}
 
-	// Present: 1-byte tag, then length-framed UTF-8 for non-null values.
 	private static void updateString(MessageDigest md, String value) {
 		if (value == null) {
 			md.update((byte) 0);
@@ -59,7 +51,6 @@ public final class AuditRecordHash {
 		md.update(bytes);
 	}
 
-	// Present: 1-byte tag, then count and elements.
 	private static void updateList(MessageDigest md, List<String> values) {
 		if (values == null) {
 			md.update((byte) 0);
@@ -120,7 +111,6 @@ public final class AuditRecordHash {
 		}
 	}
 
-	// Format digest as lowercase hex.
 	private static String hex(byte[] digest) {
 		StringBuilder out = new StringBuilder(digest.length * 2);
 		for (byte b : digest) {

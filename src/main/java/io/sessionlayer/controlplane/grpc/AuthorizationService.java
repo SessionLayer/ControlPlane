@@ -30,14 +30,6 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-/**
- * gRPC server for the connect-time decision. mTLS-required tier: the
- * {@link AuthInterceptor} authenticates the calling Gateway, and the minted
- * token is bound to <b>that</b> caller (never a request field). The handler
- * delegates to {@link ConnectAuthorizationService} and maps the outcome onto
- * the wire: on allow, the signed decision context + minted token; on deny, one
- * generic {@code DECISION_DENY} with nothing else populated.
- */
 @Service
 public class AuthorizationService extends AuthorizationGrpc.AuthorizationImplBase {
 
@@ -59,11 +51,7 @@ public class AuthorizationService extends AuthorizationGrpc.AuthorizationImplBas
 	@Override
 	public void authorize(AuthorizeRequest request, StreamObserver<AuthorizeResponse> observer) {
 		MtlsPeer peer = MtlsContext.peer();
-		// Read the extracted trace parent synchronously on the gRPC thread (it lives in
-		// the gRPC Context, not the reactive chain that runs off it).
 		io.opentelemetry.context.Context traceParent = CpTracing.OTEL_PARENT.get();
-		// The mTLS-required tier guarantees a resolved peer, but never NPE if it isn't:
-		// a null caller fails closed to a generic deny in the service (missing input).
 		UUID caller = peer == null ? null : peer.gatewayId();
 		// The presented client-cert fingerprint gates the caller Gateway's
 		// active/pinned
@@ -90,18 +78,12 @@ public class AuthorizationService extends AuthorizationGrpc.AuthorizationImplBas
 				blankToNull(request.getRequestedPrincipal()), blankToNull(request.getSourceIp()),
 				parseUuid(request.getSessionId()), blankToNull(request.getBreakglassToken()),
 				request.getCredentialPrincipalsList());
-		// The establishment SLO times the CP machine work; the span makes it a child
-		// of the Gateway root. Both carry correlation only — never content.
 		Mono<AuthorizeResponse> result = tracing.traceAuthorize(traceParent, blankToNull(request.getSessionId()),
 				blankToNull(request.getNodeId()), metrics.timeEstablishment(decision))
 				.map(AuthorizationService::toResponse);
 		ReactiveBridge.forward(result, observer, properties.getRpcTimeout(), "Authorize");
 	}
 
-	// The Gateway's reliable session-end signal — releases the concurrency lease
-	// (and stamps the session ended) on every teardown path, independent of
-	// FinalizeRecording. mTLS-required tier (any non-bootstrap method); the
-	// service enforces the caller-owns-session gate.
 	@Override
 	public void notifySessionEnd(NotifySessionEndRequest request, StreamObserver<NotifySessionEndResponse> observer) {
 		MtlsPeer peer = MtlsContext.peer();
@@ -116,8 +98,6 @@ public class AuthorizationService extends AuthorizationGrpc.AuthorizationImplBas
 		ReactiveBridge.forward(result, observer, properties.getRpcTimeout(), "NotifySessionEnd");
 	}
 
-	// Re-stamp a live session's lease expiry (RunToTtl exact
-	// accounting). The window is server-authoritative; the request carries none.
 	@Override
 	public void extendSessionLease(ExtendSessionLeaseRequest request,
 			StreamObserver<ExtendSessionLeaseResponse> observer) {
@@ -132,17 +112,10 @@ public class AuthorizationService extends AuthorizationGrpc.AuthorizationImplBas
 		ReactiveBridge.forward(result, observer, properties.getRpcTimeout(), "ExtendSessionLease");
 	}
 
-	// A deliberate service refusal (ownership/state) vs an unexpected failure —
-	// enum-only outcomes (the lease-partition / reaped-live-lease pattern
-	// becomes dashboard-visible without identity/session tags).
 	private static String lifecycleOutcome(Throwable error) {
 		return error instanceof GatewayRequestException ? "refused" : "error";
 	}
 
-	// The closed end_reason vocabulary stored on ssh_session (advisory
-	// diagnostics; the authoritative teardown "why" for a lock/expiry lives in
-	// the decision/lock audit chain). UNSPECIFIED/unknown maps to the orderly
-	// default.
 	private static String endReason(SessionEndReason reason) {
 		return switch (reason) {
 			case SESSION_END_REASON_EXPIRED -> "expired";

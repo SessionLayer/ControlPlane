@@ -17,19 +17,6 @@ import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-/**
- * Credential construction is exercised the way
- * {@code AzureCredentialsSmokeTest} proves the SDK tree is intact: build for
- * real, no network. {@code DEFAULT}/{@code MANAGED_IDENTITY} resolve their
- * chain lazily and never throw here; {@code WORKLOAD_IDENTITY} is the exception
- * (see {@link #workloadIdentityFailsClosedWithoutTheAksInjectedEnvironment}).
- * The Key Vault key validation
- * ({@link AzureKeyVaultSignerFactory#validateSigningKey}) and the
- * returned-key-id check
- * ({@link AzureKeyVaultSignerFactory#assertRequestedKeyReturned}) are both pure
- * and tested directly; only the network call in {@code fetchPublicKey} itself
- * is out of unit-test reach.
- */
 class AzureKeyVaultSignerFactoryTest {
 
 	private static AzureKeyVaultProperties properties(AzureKeyVaultProperties.Credential credential, String clientId) {

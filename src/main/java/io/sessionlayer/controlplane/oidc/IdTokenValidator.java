@@ -7,7 +7,6 @@ import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
-/** Fails closed on any validation error; never fallbacks to weaker proof. */
 @Component
 public class IdTokenValidator {
 

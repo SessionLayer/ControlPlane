@@ -2,8 +2,6 @@ apiVersion: v2
 name: sessionlayer-controlplane
 description: SessionLayer Control Plane, the API, policy, identity and certificate-authority service.
 type: application
-# Versions the chart, not the component. appVersion tracks the Control Plane
-# release the default image tag resolves to.
 version: 0.1.0
 appVersion: "v0.0.2"
 # policy/v1 PodDisruptionBudget.

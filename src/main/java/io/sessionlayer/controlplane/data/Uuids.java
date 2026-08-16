@@ -16,15 +16,15 @@ public final class Uuids {
 		RANDOM.nextBytes(rand);
 
 		long rand12 = (((long) (rand[0] & 0xFF) << 8) | (rand[1] & 0xFF)) & 0x0FFFL;
-		long msb = ((unixTsMs & 0xFFFFFFFFFFFFL) << 16) // 48-bit timestamp in the high bits
-				| 0x7000L // version 7 in bits 15..12
-				| rand12; // 12 random bits
+		long msb = ((unixTsMs & 0xFFFFFFFFFFFFL) << 16)
+				| 0x7000L
+				| rand12;
 
 		long lsb = 0L;
 		for (int i = 2; i < 10; i++) {
 			lsb = (lsb << 8) | (rand[i] & 0xFFL);
 		}
-		lsb &= 0x3FFFFFFFFFFFFFFFL; // clear the top two bits
+		lsb &= 0x3FFFFFFFFFFFFFFFL;
 		lsb |= 0x8000000000000000L; // variant 0b10
 
 		return new UUID(msb, lsb);

@@ -9,10 +9,6 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-/**
- * Caches trust manager; reload failure keeps serving cached anchor (degrades
- * safely).
- */
 @Component
 public class InternalCaTrustManagerProvider {
 

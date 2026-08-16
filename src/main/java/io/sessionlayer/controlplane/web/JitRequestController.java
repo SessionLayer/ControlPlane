@@ -27,9 +27,6 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import tools.jackson.databind.JsonNode;
 
-/**
- * JIT access requests (RBAC + audited). Self-approval is impossible.
- */
 @RestController
 public class JitRequestController implements JitRequestsApi {
 
@@ -120,7 +117,6 @@ public class JitRequestController implements JitRequestsApi {
 				.switchIfEmpty(Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).build()));
 	}
 
-	// Submit needs only authentication (any platform principal may request access).
 	private <T> Mono<ResponseEntity<T>> authenticated(Function<PlatformSubject, Mono<ResponseEntity<T>>> action) {
 		return currentAuthentication.subject().flatMap(action)
 				.switchIfEmpty(Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).build()));

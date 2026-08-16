@@ -14,13 +14,11 @@ import reactor.core.publisher.Mono;
 
 class AuthMaintenanceServiceTest {
 
-	// Regression for the startup crash-loop shape: pruneOnStartup()
-	// used to .block(Duration.ofSeconds(30)) off ApplicationReadyEvent, so a wedged
-	// query (lock contention, a rolling-upgrade instance racing another for the
-	// same rows) hung CP boot for 30s and then threw IllegalStateException out of
-	// the listener, crash-looping the whole process for an auth-maintenance
-	// problem. The listener must return immediately regardless of how long the
-	// prune takes.
+	// pruneOnStartup() runs off ApplicationReadyEvent, where a throw crash-loops
+	// the whole process — so blocking on a wedged query (lock contention, a
+	// rolling-upgrade instance racing another for the same rows) would take CP boot
+	// down for an auth-maintenance problem. The listener must return immediately
+	// regardless of how long the prune takes.
 	@SuppressWarnings("unchecked")
 	@Test
 	void startupPruneNeverBlocksTheCallingThreadEvenOnAWedgedQuery() {

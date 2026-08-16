@@ -39,7 +39,7 @@ public final class OpenSshCertificateAssembler {
 		w.writeString(encodeCriticalOptions(params));
 		w.writeString(encodeExtensions(params));
 		w.writeString(new byte[0]); // reserved
-		w.writeString(caPublicKeyBlob); // signature key
+		w.writeString(caPublicKeyBlob);
 		return w.toByteArray();
 	}
 

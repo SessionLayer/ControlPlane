@@ -4,12 +4,6 @@ import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
 import java.util.Optional;
 
-/**
- * Builds the OTLP/HTTP span exporter — but only when an endpoint is configured
- * (the exporter is OFF by default). A blank endpoint yields
- * {@link Optional#empty()}, so the SDK runs with no exporter and no network
- * traffic; the local Logback logging is unchanged.
- */
 final class OtlpTraceExporter {
 
 	private static final String TRACES_PATH = "/v1/traces";

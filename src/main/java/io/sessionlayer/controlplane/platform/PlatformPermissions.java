@@ -2,10 +2,6 @@ package io.sessionlayer.controlplane.platform;
 
 import java.util.Set;
 
-/**
- * Closed permission set; SCOPABLE permissions can be scoped by
- * node-label/user/time.
- */
 public final class PlatformPermissions {
 
 	public static final String RBAC_READ = "rbac:read";
@@ -36,10 +32,6 @@ public final class PlatformPermissions {
 			LOCK_WRITE, BREAKGLASS_MANAGE);
 
 	/**
-	 * Permissions whose scope narrows access (fail-closed for unscoped action on
-	 * scoped binding).
-	 *
-	 * <p>
 	 * {@link #METRICS_READ} is deliberately absent. The meter set is a fleet-wide
 	 * aggregate with no per-node or per-user dimension to narrow, so a scope could
 	 * only be a no-op or serve a silently PARTIAL meter set — and a scraper that

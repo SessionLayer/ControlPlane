@@ -26,14 +26,6 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 /**
- * The credential-only first-install path: an operator holding no database
- * credential authenticates with the
- * {@code sessionlayer.rest-security.basic-auth} escape hatch, claims the
- * printed bootstrap credential to bind that same username as the first admin,
- * and must then resolve the {@code platform-admin} role's permissions on the
- * config API.
- *
- * <p>
  * Needs a real socket: the escape hatch is CIDR-gated on the peer address,
  * which a mock exchange does not have.
  */

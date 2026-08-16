@@ -12,15 +12,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 
-/**
- * The Vault CA signer: unlike the raw-signer backends it does <b>not</b> use
- * the shared assembler — the Vault SSH engine assembles and signs the
- * certificate itself. It therefore overrides {@link #signCertificate}
- * wholesale, translating {@link CertificateParameters} into a
- * {@code POST /ssh/sign/:role} request (never {@code /ssh/issue}) and returning
- * the certificate Vault produced. {@link #rawSign} is unsupported (Vault does
- * not expose a raw-sign primitive).
- */
 public final class VaultCaCertSigner implements SshCertSigner {
 
 	private final CaKeyType keyType;
@@ -80,7 +71,7 @@ public final class VaultCaCertSigner implements SshCertSigner {
 			r.readString(); // nonce
 			r.readString(); // curve
 			r.readString(); // Q
-			return java.util.OptionalLong.of(r.readUint64()); // serial
+			return java.util.OptionalLong.of(r.readUint64());
 		} catch (RuntimeException e) {
 			return java.util.OptionalLong.empty();
 		}

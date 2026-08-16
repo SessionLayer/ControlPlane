@@ -112,7 +112,7 @@ class RecordingStoreSeamTest {
 		assertThat(recorded.action()).isEqualTo("recording.replay");
 		assertThat(recorded.outcome()).isEqualTo("success");
 		assertThat(recorded.sessionId()).isEqualTo(sessionId);
-		assertThat(recorded.correlationId()).isEqualTo(sessionId); // standing session
+		assertThat(recorded.correlationId()).isEqualTo(sessionId);
 		assertThat(recorded.accessModel()).isEqualTo("standing");
 		assertThat(recorded.nodeLabels()).containsEntry("env", "prod");
 	}
@@ -184,12 +184,10 @@ class RecordingStoreSeamTest {
 		when(audit.record(any(), any(), any(), any(), any(), any(), any())).thenReturn(Mono.empty());
 		stubClaim(objectKey, "governance", sessionId);
 
-		// The error is surfaced (no false success), not swallowed into a 204.
 		StepVerifier.create(failingRetention.governanceDelete("custodian", id)).expectError(IllegalStateException.class)
 				.verify();
 
-		// The delete was attempted, the failure was audited (outcome "error"), and a
-		// second db.sql (the compensating UNCLAIM) ran so the row is re-selectable.
+		// The second db.sql is the compensating UNCLAIM, so the row is re-selectable.
 		verify(failing).deleteObject(eq(objectKey), eq("governance"));
 		verify(audit).record(eq("custodian"), eq(id.toString()), eq("recording.delete"), eq("error"), eq(sessionId),
 				any(), any());
@@ -204,7 +202,7 @@ class RecordingStoreSeamTest {
 		store.seed(objectKey);
 		when(recordings.findById(id)).thenReturn(Mono.just(governanceRef(id, sessionId, objectKey)));
 		when(audit.record(any(), any(), any(), any(), any(), any(), any())).thenReturn(Mono.empty());
-		stubClaim(objectKey, "governance", sessionId); // the atomic claim UPDATE ... RETURNING
+		stubClaim(objectKey, "governance", sessionId);
 
 		retention.governanceDelete("custodian", id).block();
 

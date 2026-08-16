@@ -45,20 +45,11 @@ import org.springframework.context.annotation.Import;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
-/**
- * Spans carry correlation, never content. A Gateway-injected
- * {@code traceparent} makes the CP's {@code cp.authorize} and
- * {@code cp.cert_sign} spans children of the SAME trace — one trace across the
- * CP↔GW gRPC plane — and NO span attribute carries plaintext / key / token /
- * recording content (the no-content assertion). The SLO meters are emitted for
- * the same flow.
- */
 @Import(ObservabilityIT.SpanCapture.class)
 class ObservabilityIT extends AbstractMtlsIT {
 
 	private static final JsonNodeFactory JSON = JsonNodeFactory.instance;
 
-	// A fixed W3C traceparent the "Gateway" injects: 00-<trace32>-<span16>-01.
 	private static final String TRACE_ID = "0af7651916cd43dd8448eb211c80319c";
 	private static final String SPAN_ID = "b7ad6b7169203331";
 
@@ -96,8 +87,6 @@ class ObservabilityIT extends AbstractMtlsIT {
 				SignContext.newBuilder().setSessionId(sessionId.toString()).build());
 		assertThat(signed.getCertificateLine()).startsWith("ecdsa-sha2-nistp256-cert-v01@openssh.com");
 
-		// Both CP spans are children of the SAME Gateway-injected trace/span → one
-		// trace.
 		SpanData authorizeSpan = awaitSpan("cp.authorize");
 		assertThat(authorizeSpan.getTraceId()).isEqualTo(TRACE_ID);
 		assertThat(authorizeSpan.getParentSpanId()).isEqualTo(SPAN_ID);
@@ -155,12 +144,10 @@ class ObservabilityIT extends AbstractMtlsIT {
 		signWithTrace(gateway, authorized.getSessionToken(),
 				MtlsTestSupport.opensshPublicKeyBlob((ECPublicKey) inner.getPublic()), null);
 
-		// The CP-side session-establishment timer, tagged by outcome/model enum.
 		assertThat(meters.find("sessionlayer.session.establishment").tag("outcome", "allow")
 				.tag("access_model", "standing").timer()).isNotNull();
 		assertThat(meters.get("sessionlayer.session.establishment").tag("outcome", "allow").timer().count())
 				.isGreaterThan(0);
-		// The cert-sign leg timer.
 		assertThat(
 				meters.get("sessionlayer.cert.sign").tag("kind", "session").tag("outcome", "success").timer().count())
 				.isGreaterThan(0);
@@ -179,8 +166,6 @@ class ObservabilityIT extends AbstractMtlsIT {
 		assertThat(meters.get("sessionlayer.cert.sign").tag("kind", "session").tag("outcome", "success").timer()
 				.takeSnapshot().histogramCounts()).isNotEmpty();
 	}
-
-	// ----- helpers -----
 
 	private AuthorizeResponse authorizeWithTrace(EnrolledGateway gateway, AuthorizeRequest request) {
 		SslContext ssl = MtlsTestSupport.clientSslContext(caCertificate(), gateway.certificate(),
@@ -212,8 +197,6 @@ class ObservabilityIT extends AbstractMtlsIT {
 		}
 	}
 
-	// The Gateway would inject W3C context on every CP RPC; here a fixed
-	// traceparent.
 	private static ClientInterceptor traceparentInjector() {
 		return new ClientInterceptor() {
 			@Override

@@ -31,7 +31,7 @@ class SessionLeaseJobHardeningTest {
 		assertThat(registry.find("sessionlayer.session.lease.live").gauge().value()).isEqualTo(7.0);
 		assertThat(refreshFailures(registry)).isZero();
 
-		refresher.refresh(); // fails — counted, non-fatal, gauge keeps the last value
+		refresher.refresh();
 		assertThat(refreshFailures(registry)).isEqualTo(1.0);
 		assertThat(registry.find("sessionlayer.session.lease.live").gauge().value()).isEqualTo(7.0);
 	}

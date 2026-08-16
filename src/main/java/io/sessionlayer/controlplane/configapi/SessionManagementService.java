@@ -112,9 +112,6 @@ public class SessionManagementService {
 		}));
 	}
 
-	// The session's node label snapshot for its terminate audit event (one read;
-	// empty when the session has no node), so a node-label-scoped auditor's
-	// correlation_id search returns the teardown too.
 	private Mono<Map<String, String>> nodeLabels(UUID nodeId) {
 		if (nodeId == null) {
 			return Mono.just(Map.of());

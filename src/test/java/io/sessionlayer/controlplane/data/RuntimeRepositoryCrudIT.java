@@ -126,7 +126,7 @@ class RuntimeRepositoryCrudIT extends AbstractDataIT {
 				Instant.now().plus(1, ChronoUnit.HOURS), Instant.now())).block();
 		assertThat(session).isNotNull();
 		assertThat(session.matchedRuleId()).isEqualTo(phantomRuleId);
-		assertThat(session.matchedRuleName()).isEqualTo("rule-alpha"); // NAME snapshot legible after config GC
+		assertThat(session.matchedRuleName()).isEqualTo("rule-alpha");
 		assertThat(session.policyEpoch()).isEqualTo(7L);
 		assertThat(session.grantExpiry()).isNotNull();
 		assertThat(sessions.findByIdentity("alice@corp").collectList().block()).hasSize(1);
@@ -151,7 +151,7 @@ class RuntimeRepositoryCrudIT extends AbstractDataIT {
 		var bg = breakglass.save(BreakglassActivation.activate("root@corp", "root", "prod outage", "alert://1", null,
 				"bg-default", "203.0.113.9", null, "SHA256:cred", Instant.now())).block();
 		assertThat(bg).isNotNull();
-		assertThat(bg.breakglassPolicyName()).isEqualTo("bg-default"); // NAME snapshot
+		assertThat(bg.breakglassPolicyName()).isEqualTo("bg-default");
 		assertThat(bg.reviewStatus()).isEqualTo("pending");
 		assertThat(breakglass.findByReviewStatus("pending").collectList().block()).isNotEmpty();
 

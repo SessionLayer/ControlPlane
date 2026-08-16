@@ -29,11 +29,9 @@ class SessionLeaseReaperIT extends AbstractMtlsIT {
 		// Leaked: unreleased, expired well past the default 5m grace.
 		SessionLease leaked = leases.save(SessionLease.acquire(identity, null, "gw-x", Instant.now().minusSeconds(7200),
 				Instant.now().minusSeconds(3600))).block();
-		// Live: unreleased, grant window still in the future.
 		SessionLease live = leases
 				.save(SessionLease.acquire(identity, null, "gw-y", Instant.now(), Instant.now().plusSeconds(3600)))
 				.block();
-		// Already released (expired, but released_at is set).
 		SessionLease released = leases.save(SessionLease.acquire(identity, null, "gw-z",
 				Instant.now().minusSeconds(7200), Instant.now().minusSeconds(3600))).block();
 		leases.save(new SessionLease(released.id(), released.identity(), released.sessionId(), released.gatewayName(),

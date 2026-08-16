@@ -53,10 +53,6 @@ public class IdempotencyService {
 		this.properties = properties;
 	}
 
-	/**
-	 * Run {@code action} at most once per (principal, method, path, key). With no
-	 * key (or no resolvable principal) the action runs unguarded.
-	 */
 	public <T> Mono<ResponseEntity<T>> execute(String key, String principal, String method, String path,
 			Object requestBody, Class<T> responseType, Mono<ResponseEntity<T>> action) {
 		if (key == null || key.isBlank() || principal == null || principal.isBlank()) {
@@ -92,7 +88,6 @@ public class IdempotencyService {
 	private <T> Mono<Void> store(String key, String principal, String method, String path, String fingerprint,
 			ResponseEntity<T> response, Instant now) {
 		int status = response.getStatusCode().value();
-		// Never cache a server error: a 5xx is transient and must not pin a bad replay.
 		if (status >= 500) {
 			return Mono.empty();
 		}

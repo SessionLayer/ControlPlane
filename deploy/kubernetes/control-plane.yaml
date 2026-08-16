@@ -36,20 +36,19 @@ metadata:
   name: sessionlayer-controlplane-config
   labels: { app.kubernetes.io/name: sessionlayer-controlplane }
 data:
-  # Two Postgres roles, on purpose (see docs/installation/control-plane.md):
-  # Flyway migrates as the owner; the request path runs as the restricted
-  # cp_runtime role. Point both at your real Postgres; this default matches
-  # an in-cluster Postgres reachable as `postgres.sessionlayer.svc`.
+  # Two Postgres roles, on purpose: Flyway migrates as the owner; the request
+  # path runs as the restricted cp_runtime role. Point both at your real
+  # Postgres; this default matches an in-cluster Postgres reachable as
+  # `postgres.sessionlayer.svc`.
   SPRING_R2DBC_URL: "r2dbc:postgresql://postgres.sessionlayer.svc:5432/sessionlayer"
   SPRING_R2DBC_USERNAME: "cp_runtime"
   SPRING_FLYWAY_URL: "jdbc:postgresql://postgres.sessionlayer.svc:5432/sessionlayer"
   SPRING_FLYWAY_USER: "sessionlayer"
 
   # The mTLS gRPC plane Gateways and Agents dial. Port 9443 (not the built-in
-  # 9090 default) to match every other manifest in this project — see
-  # Documentation/docs/reference/ports.md. Hostnames land in the SANs of the
-  # server certificate this process mints at runtime from the internal mTLS
-  # CA; they must match what Gateway/Agent actually dial.
+  # 9090 default) to match every other manifest in this project. Hostnames land
+  # in the SANs of the server certificate this process mints at runtime from the
+  # internal mTLS CA; they must match what Gateway/Agent actually dial.
   #
   # These names assume the `sessionlayer` namespace. A manifest cannot template
   # its own namespace, so applied anywhere else this mints a certificate whose
@@ -59,15 +58,11 @@ data:
   SESSIONLAYER_MTLS_SERVER_PORT: "9443"
   SESSIONLAYER_MTLS_SERVER_HOSTNAMES: "controlplane.sessionlayer.svc,controlplane.sessionlayer.svc.cluster.local,controlplane,localhost"
 
-  # WORM recording store (S3-compatible). The Control Plane only ever issues
-  # presigned URLs to this endpoint; recording bytes never pass through it.
   SESSIONLAYER_RECORDING_WORM_ENDPOINT: "https://worm.example.com"
   SESSIONLAYER_RECORDING_WORM_REGION: "us-east-1"
   SESSIONLAYER_RECORDING_WORM_BUCKET: "sessionlayer-recordings"
   SESSIONLAYER_RECORDING_WORM_PATH_STYLE_ACCESS: "false"
 
-  # OIDC RP (disable by setting to "false" and dropping the rest, e.g. for an
-  # OTP/pins/machine-id-only deployment).
   SESSIONLAYER_OIDC_ENABLED: "true"
   SESSIONLAYER_OIDC_ISSUER: "https://idp.example.com"
   SESSIONLAYER_OIDC_CLIENT_ID: "sessionlayer-controlplane"
@@ -112,7 +107,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: controlplane
-          image: ghcr.io/sessionlayer/controlplane:v0.0.2 # pin by digest in production
+          image: ghcr.io/sessionlayer/controlplane:v0.0.2
           envFrom:
             - configMapRef: { name: sessionlayer-controlplane-config }
             - secretRef: { name: sessionlayer-controlplane-secrets }
@@ -120,7 +115,7 @@ spec:
             - { name: rest, containerPort: 8080 }
             - { name: mtls-grpc, containerPort: 9443 }
           securityContext:
-            allowPrivilegeEscalation: false # sets no_new_privs
+            allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
@@ -129,16 +124,9 @@ spec:
           resources:
             requests: { cpu: 250m, memory: 512Mi }
             limits: { cpu: "1", memory: 1Gi }
-          # /actuator/health/readiness is public (SecurityConfiguration's
-          # PUBLIC_PATHS) and reflects Boot's own ReadinessState, which does not
-          # flip to ACCEPTING_TRAFFIC until Flyway + both ApplicationRunners are
-          # done (see the top-of-file note).
           readinessProbe:
             httpGet: { path: /actuator/health/readiness, port: 8080 }
             periodSeconds: 5
-          # /actuator/health/liveness reflects LivenessState only (never a
-          # downstream dependency like Postgres/WORM/OIDC) — a slow Postgres
-          # must surface as a failed readiness/request, not a restart storm.
           livenessProbe:
             httpGet: { path: /actuator/health/liveness, port: 8080 }
             periodSeconds: 15
@@ -151,9 +139,6 @@ spec:
             periodSeconds: 5
             failureThreshold: 60
       volumes:
-        # Netty's native epoll transport unpacks a .so here at startup; if it
-        # can't (e.g. a noexec tmpfs) it falls back to NIO with a log warning,
-        # never a crash — verified against this exact image.
         - name: tmp
           emptyDir: { medium: Memory, sizeLimit: 256Mi }
 ---
@@ -161,9 +146,8 @@ apiVersion: v1
 kind: Service
 metadata:
   # Named to match the Gateway's own example `cp_mtls_endpoint`
-  # (controlplane.sessionlayer.svc:9443, see `deploy/kubernetes/gateway.yaml` in
-  # the `SessionLayer/Gateway` repo) out of the box; the pod label above, not
-  # this name, is what the Gateway's NetworkPolicy actually selects on.
+  # (controlplane.sessionlayer.svc:9443) out of the box; the pod label above,
+  # not this name, is what the Gateway's NetworkPolicy actually selects on.
   name: controlplane
   labels: { app.kubernetes.io/name: sessionlayer-controlplane }
 spec:

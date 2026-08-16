@@ -24,17 +24,11 @@
 # deploy/systemd/ establish is the whole defence here, not a second layer on
 # top of one.
 
-# ---- jar ----
 FROM --platform=$BUILDPLATFORM eclipse-temurin:25-jdk-noble@sha256:735baf2edc6cd6485240144a84fa4db142b9a6f47b4eb4080f31058d200f9813 AS jar
 WORKDIR /src
 
-# contracts/ is vendored (committed, pinned by contracts.lock) — codegen never
-# reaches the network for the spec itself, only Maven Central for deps.
 COPY . .
 
-# The BuildKit cache mount persists ~/.m2 across builds without baking it into a
-# layer. Tests are skipped: this stage has no Docker-in-Docker for the
-# Testcontainers ITs, and `verify` runs separately in CI.
 RUN --mount=type=cache,target=/root/.m2,sharing=locked \
     ./mvnw -B -ntp -DskipTests package \
  && cp target/controlplane-*.jar /controlplane.jar
@@ -74,8 +68,6 @@ COPY --from=jar /controlplane.jar /app/controlplane.jar
 # Postgres, KEK-wrapped, and logging is stdout only.
 VOLUME ["/tmp"]
 
-# REST + actuator, and the mTLS gRPC plane — the port convention every
-# deployment manifest in this project uses.
 EXPOSE 8080 9443
 
 # Numeric, so Kubernetes runAsNonRoot can enforce it without an /etc/passwd
@@ -85,6 +77,4 @@ EXPOSE 8080 9443
 # nothing in the image, which is fine because every writable path is mounted in.
 USER 65532:65532
 
-# JAVA_TOOL_OPTIONS is deliberately not baked in: heap and GC belong to the
-# deployment, which is what knows the memory limit.
 ENTRYPOINT ["/opt/java/bin/java", "-jar", "/app/controlplane.jar"]

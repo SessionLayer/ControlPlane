@@ -16,12 +16,6 @@ import org.springframework.beans.factory.ObjectProvider;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-/**
- * When no active CA of the requested kind exists, {@code activeSigner} fails
- * closed with {@link NoSignerAvailable} (never a wrong-key signer) AND the
- * availability SLI records the fail-closed as {@code outcome=unavailable} — the
- * "signer-down fails closed, measured" gate, without Docker.
- */
 class CaSignerMetricsTest {
 
 	@Test
@@ -40,8 +34,6 @@ class CaSignerMetricsTest {
 				noKmsFactory);
 
 		StepVerifier.create(service.activeSigner("session")).expectError(NoSignerAvailable.class).verify();
-		// A real request is measured under source=request (the availability SLI
-		// population).
 		assertThat(registry.get("sessionlayer.ca.signer").tag("kind", "session").tag("source", "request")
 				.tag("outcome", "unavailable").counter().count()).isEqualTo(1.0);
 

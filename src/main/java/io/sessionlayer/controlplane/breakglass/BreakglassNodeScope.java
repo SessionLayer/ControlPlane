@@ -3,10 +3,6 @@ package io.sessionlayer.controlplane.breakglass;
 import java.util.UUID;
 import tools.jackson.databind.JsonNode;
 
-/**
- * Node-scope check for a break-glass credential/code. Fail-closed: a scoped
- * credential against an unknown node does not match.
- */
 final class BreakglassNodeScope {
 
 	private BreakglassNodeScope() {

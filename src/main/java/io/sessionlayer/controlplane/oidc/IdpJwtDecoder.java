@@ -14,7 +14,6 @@ import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
-/** ID-token decoder with positive JWS-alg allow-list (alg:none rejected). */
 @Component
 public class IdpJwtDecoder implements ReactiveJwtDecoder {
 
@@ -29,8 +28,6 @@ public class IdpJwtDecoder implements ReactiveJwtDecoder {
 
 	@Override
 	public Mono<Jwt> decode(String token) {
-		// Bound the discovery/JWKS fetch + verification so a hung IdP cannot leave the
-		// request pending indefinitely; a timeout fails closed as an invalid token.
 		return resolve().flatMap(d -> d.decode(token)).timeout(java.time.Duration.ofSeconds(15), Mono
 				.error(new org.springframework.security.oauth2.jwt.BadJwtException("ID-token validation timed out")));
 	}

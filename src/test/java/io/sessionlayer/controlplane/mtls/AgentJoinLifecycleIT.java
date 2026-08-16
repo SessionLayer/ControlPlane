@@ -45,14 +45,6 @@ import org.springframework.test.context.DynamicPropertySource;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
-/**
- * Agent join &amp; renewable-identity lifecycle over the real mTLS gRPC plane.
- * Enrollment via each in-scope JoinMethod (token / delegated-OIDC /
- * operator-mTLS) issues a generation-0 identity bound to a distinct per-node
- * credential; renewal rotates the cert + increments the generation; a
- * generation mismatch auto-locks the identity + node (clone detection); a Lock
- * covering the node refuses enroll; a consumed token is single-use.
- */
 class AgentJoinLifecycleIT extends AbstractMtlsIT {
 
 	private static final String POP_PREFIX = "sessionlayer-mtls-join-pop-v1:";
@@ -165,7 +157,6 @@ class AgentJoinLifecycleIT extends AbstractMtlsIT {
 	void generationMismatchAutoLocksNodeAndAlerts() {
 		EnrolledAgent agent = enrollToken("node-clone");
 
-		// Declare a generation the store never issued — the clone-detection primitive.
 		StatusRuntimeException mismatch = catchThrowableOfType(StatusRuntimeException.class,
 				() -> renew(agent, "node-clone", 7));
 		assertThat(mismatch.getStatus().getCode()).isEqualTo(Status.Code.FAILED_PRECONDITION);
@@ -192,8 +183,6 @@ class AgentJoinLifecycleIT extends AbstractMtlsIT {
 				.bind("agent", agent.agentId().toString()).map(row -> row.get(0, Long.class)).one().block();
 		assertThat(alerts).isGreaterThanOrEqualTo(1L);
 
-		// The locked identity is refused even for a correct-generation renewal (no
-		// auto-clear).
 		StatusRuntimeException afterLock = catchThrowableOfType(StatusRuntimeException.class,
 				() -> renew(agent, "node-clone", 0));
 		assertThat(afterLock.getStatus().getCode()).isEqualTo(Status.Code.PERMISSION_DENIED);
@@ -234,8 +223,6 @@ class AgentJoinLifecycleIT extends AbstractMtlsIT {
 		assertThat(denials).isEqualTo(1L);
 	}
 
-	// The point of pre-registering: the Agent joins the node the operator already
-	// anchored, rather than creating a second, anchorless one.
 	@Test
 	void enrollAttachesToAPreRegisteredAgentNode() {
 		Node node = nodes.save(

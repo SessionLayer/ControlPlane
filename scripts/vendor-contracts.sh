@@ -1,17 +1,4 @@
 #!/usr/bin/env bash
-#
-# Vendor the frozen contracts from SessionLayer/Contracts, pinned by
-# contracts.lock (tag + resolved commit SHA). ControlPlane is a consumer
-# of this repo just like Gateway/Agent/Dashboard — contracts/ here is no
-# longer hand-edited; it's fetched + pinned from the canonical repo. This
-# script does a REAL git clone of the pinned tag and verifies the resolved
-# commit SHA matches contracts.lock before copying anything, so a moved or
-# re-pushed tag can't silently swap content. Git-only: no GitHub API token, no
-# hosted registry, works fully offline once the tag is fetched.
-#
-# Usage:
-#   scripts/vendor-contracts.sh          # fetch + re-vendor, then review + commit
-#   scripts/vendor-contracts.sh --check  # fetch + diff only; exit non-zero on drift
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

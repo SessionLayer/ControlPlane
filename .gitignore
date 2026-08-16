@@ -1,19 +1,13 @@
-# Maven build output
 target/
 
-# Compiled class file
 *.class
 
-# Log file
 *.log
 
-# BlueJ files
 *.ctxt
 
-# Mobile Tools for Java (J2ME)
 .mtj.tmp/
 
-# Package Files #
 *.jar
 *.war
 *.nar
@@ -22,20 +16,16 @@ target/
 *.tar.gz
 *.rar
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
 
-# jqwik property-test failure database (local, not committed)
 .jqwik-database
 
-# Release supply-chain artifacts: SBOM + cosign outputs, CI-produced
 bom.json
 *.cdx.json
 *.sig
 *.sigstore.json
 
-# Eclipse / JDT language-server artifacts (IDE-local, never committed).
 .classpath
 .factorypath
 .project

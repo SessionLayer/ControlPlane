@@ -1,8 +1,7 @@
--- Authorize looks up a usable JIT grant UNCONDITIONALLY on every
--- connect (not just when standing access fails outright), so the lookup query
--- needs an index that answers it directly rather than scanning every
--- historical row for the requester and filtering in the application. Partial
--- (state-scoped) + covering the exact predicate the query uses.
+-- Authorize looks up a usable JIT grant UNCONDITIONALLY on every connect (not just
+-- when standing access fails outright), so the lookup query needs an index that
+-- answers it directly rather than scanning every historical row for the requester
+-- and filtering in the application.
 CREATE INDEX idx_jit_request_usable ON runtime.jit_request (requester, target_node_id, principal, grant_expires_at)
     WHERE state IN ('APPROVED', 'ACTIVE');
 

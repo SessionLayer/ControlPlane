@@ -18,10 +18,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.r2dbc.core.DatabaseClient;
 import reactor.test.StepVerifier;
 
-/**
- * Audit partitioning: monthly range partitions, pruning, and legal-hold
- * compliance recording retention.
- */
 class AuditPartitioningIT extends AbstractDataIT {
 
 	@Autowired
@@ -94,9 +90,9 @@ class AuditPartitioningIT extends AbstractDataIT {
 		Instant cutoff = YearMonth.now(ZoneOffset.UTC).minusMonths(4).atDay(1).atStartOfDay(ZoneOffset.UTC).toInstant();
 		ownerClient().sql("SELECT runtime.audit_prune_before(:c)").bind("c", cutoff).fetch().one().block();
 
-		assertThat(partitionCount(partitionOf(-5))).isZero(); // partition dropped
-		assertThat(audits.findById(oldRow.id()).block()).isNull(); // its row is gone
-		assertThat(audits.findById(keepRow.id()).block()).isNotNull(); // in-window row survives
+		assertThat(partitionCount(partitionOf(-5))).isZero();
+		assertThat(audits.findById(oldRow.id()).block()).isNull();
+		assertThat(audits.findById(keepRow.id()).block()).isNotNull();
 
 		var fresh = audits.save(auditAt(midMonth(0), "fresh")).block();
 		assertThat(fresh).isNotNull();
@@ -112,9 +108,7 @@ class AuditPartitioningIT extends AbstractDataIT {
 		var s3 = sessions.save(session()).block();
 
 		recordings.save(recording(s1.id(), "k-prunable", expired, false, "governance")).block();
-		// past retention but legal hold -> NOT prunable
 		recordings.save(recording(s2.id(), "k-legalhold", expired, true, "governance")).block();
-		// compliance WORM (un-deletable) past retention -> NOT prunable
 		recordings.save(recording(s3.id(), "k-compliance", expired, false, "compliance")).block();
 
 		List<String> prunable = db.sql("SELECT object_key FROM runtime.recording_prunable(now())")

@@ -1,31 +1,9 @@
--- V7 — audit_event range partitioning + retention/prune. SessionLayer Control Plane.
---
--- An append-only audit_event heap has no path to ever expire rows for FR-AUD-6
--- operator-configured retention, and pruning by DELETE would fight the append-only
--- trigger and bloat. The table is empty (no writers yet), so converting it now is
--- the cheap, safe time.
---
--- Design: PARTITION BY RANGE (occurred_at), monthly partitions, prune by dropping
--- whole partitions older than the retention window — no per-row DELETE, so the
--- append-only trigger is never in tension with retention. Postgres requires the
--- partition key in every unique constraint, so the PK becomes composite
--- (id, occurred_at); the R2DBC mapping keeps a single logical @Id (id, globally
--- unique by UUIDv7 construction) since the table is insert-only (docs/reference/data-model.md
--- in the SessionLayer/Documentation repo).
---
--- The old (V3) unpartitioned table is empty; we drop and recreate it. All V3 columns,
--- the V4 append-only trigger, the seq identity and the V5 indexes are re-established
--- on the partitioned table below.
-
--- ---------------------------------------------------------------------------
--- 1. Recreate audit_event as a range-partitioned table.
--- ---------------------------------------------------------------------------
-DROP TABLE runtime.audit_event;    -- empty in S3; forward-only rebuild (see header)
+DROP TABLE runtime.audit_event;
 
 CREATE TABLE runtime.audit_event (
-    id             uuid        NOT NULL,                          -- UUIDv7 (time-ordered); globally unique
-    seq            bigint      GENERATED ALWAYS AS IDENTITY,      -- dense chain order (single shared sequence across partitions)
-    occurred_at    timestamptz NOT NULL,                         -- semantic event time (UTC, FR-BOOT-4) = partition key
+    id             uuid        NOT NULL,
+    seq            bigint      GENERATED ALWAYS AS IDENTITY,
+    occurred_at    timestamptz NOT NULL,
     actor          text        NOT NULL,
     subject        text,
     action         text        NOT NULL,
@@ -49,10 +27,9 @@ CREATE TABLE runtime.audit_event (
 ) PARTITION BY RANGE (occurred_at);
 COMMENT ON TABLE runtime.audit_event IS 'Design §12.2 / FR-AUD-9: single correlated audit stream. PARTITION BY RANGE(occurred_at) for FR-AUD-6 retention (drop old partitions, no DELETE). Append-only trigger + seq chain order re-applied. Composite PK (id, occurred_at); id alone is globally unique (UUIDv7). Hash-chain cols are application-populated.';
 
--- Append-only trigger (V4 function runtime.audit_event_immutable already exists,
--- CREATE OR REPLACE). BEFORE ROW triggers on a partitioned parent are cloned to every
--- current and future partition automatically (PG 13+), so a stray UPDATE/DELETE on any
--- partition — via the parent or directly — is rejected.
+-- BEFORE ROW triggers on a partitioned parent are cloned to every current and future
+-- partition automatically (PG 13+), so a stray UPDATE/DELETE on any partition — via the
+-- parent or directly — is rejected.
 CREATE TRIGGER audit_event_no_update_delete
     BEFORE UPDATE OR DELETE ON runtime.audit_event
     FOR EACH ROW EXECUTE FUNCTION runtime.audit_event_immutable();
@@ -61,10 +38,6 @@ CREATE TRIGGER audit_event_no_truncate
     BEFORE TRUNCATE ON runtime.audit_event
     FOR EACH STATEMENT EXECUTE FUNCTION runtime.audit_event_immutable();
 
--- Indexes re-established on the partitioned parent (propagated to all partitions).
--- The seq uniqueness is guaranteed by the single shared IDENTITY sequence; the unique
--- index must include the partition key (occurred_at) to be enforceable on a partitioned
--- table, which combined with the global sequence still makes gaps/forks detectable.
 CREATE UNIQUE INDEX uq_audit_seq        ON runtime.audit_event (seq, occurred_at);
 CREATE INDEX idx_audit_actor            ON runtime.audit_event (actor);
 CREATE INDEX idx_audit_subject          ON runtime.audit_event (subject);
@@ -77,13 +50,6 @@ CREATE INDEX idx_audit_session          ON runtime.audit_event (session_id);
 CREATE INDEX idx_audit_capabilities     ON runtime.audit_event USING gin (capabilities);
 CREATE INDEX idx_audit_node_labels      ON runtime.audit_event USING gin (node_labels);
 
--- ---------------------------------------------------------------------------
--- 2. Partition management. ensure_partition is SECURITY DEFINER so the restricted
---    runtime role (V11) can pre-create partitions without holding CREATE/DDL, and so
---    it can lock every new partition down to INSERT/SELECT for that role (defense in
---    depth: the append-only guarantee then holds even against a direct-partition write
---    by a compromised app credential, not just via the parent).
--- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION runtime.audit_ensure_partition(month_start date)
     RETURNS text
     LANGUAGE plpgsql SECURITY DEFINER
@@ -97,8 +63,6 @@ BEGIN
         EXECUTE format(
             'CREATE TABLE runtime.%I PARTITION OF runtime.audit_event FOR VALUES FROM (%L) TO (%L)',
             part_name, start_ts, end_ts);
-        -- Lock the partition to INSERT/SELECT for the runtime role (idempotent even
-        -- before the role exists on a fresh cluster: guard on the role catalog).
         IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'cp_runtime') THEN
             EXECUTE format('REVOKE ALL ON runtime.%I FROM cp_runtime', part_name);
             EXECUTE format('GRANT INSERT, SELECT ON runtime.%I TO cp_runtime', part_name);
@@ -109,7 +73,6 @@ END;
 $$;
 COMMENT ON FUNCTION runtime.audit_ensure_partition(date) IS 'Create-ahead a monthly audit_event partition (idempotent); locks it to INSERT/SELECT for cp_runtime. SECURITY DEFINER so the restricted role can pre-create without DDL rights.';
 
--- Create-ahead a window of monthly partitions starting at from_month.
 CREATE OR REPLACE FUNCTION runtime.audit_ensure_partitions(from_month date, num_months integer)
     RETURNS integer
     LANGUAGE plpgsql SECURITY DEFINER
@@ -130,10 +93,8 @@ END;
 $$;
 COMMENT ON FUNCTION runtime.audit_ensure_partitions(date, integer) IS 'Create-ahead num_months monthly audit_event partitions from from_month (idempotent).';
 
--- Prune: DETACH + DROP every dated monthly partition whose whole range is older than
--- cutoff. The DEFAULT partition and any partition still overlapping cutoff are kept.
--- SECURITY DEFINER (owner) so the runtime role can trigger retention (gated by
--- platform-RBAC settings:write at the app layer) without holding DROP.
+-- SECURITY DEFINER (owner) so the runtime role can trigger retention without holding
+-- DROP; authorization for it is the app layer's settings:write check.
 CREATE OR REPLACE FUNCTION runtime.audit_prune_before(cutoff timestamptz)
     RETURNS text[]
     LANGUAGE plpgsql SECURITY DEFINER
@@ -152,8 +113,6 @@ BEGIN
         WHERE n.nspname = 'runtime' AND p.relname = 'audit_event'
           AND c.relname ~ '^audit_event_[0-9]{6}$'
     LOOP
-        -- audit_event_YYYYMM covers [YYYY-MM-01, +1 month); drop only if that whole
-        -- range precedes the cutoff.
         upper_ts := (to_date(right(part.relname, 6), 'YYYYMM') + interval '1 month')::timestamptz;
         IF upper_ts <= cutoff THEN
             EXECUTE format('ALTER TABLE runtime.audit_event DETACH PARTITION runtime.%I', part.relname);
@@ -166,12 +125,6 @@ END;
 $$;
 COMMENT ON FUNCTION runtime.audit_prune_before(timestamptz) IS 'FR-AUD-6 retention: DETACH+DROP audit_event monthly partitions entirely older than cutoff. Returns dropped partition names.';
 
--- ---------------------------------------------------------------------------
--- 3. Seed partitions: a generous window around the current month plus a DEFAULT
---    catch-all so an append-only insert is NEVER rejected for a missing partition
---    (operators should keep ensuring ahead so the default stays empty and prunable
---    ranges land in dated partitions).
--- ---------------------------------------------------------------------------
 CREATE TABLE runtime.audit_event_default PARTITION OF runtime.audit_event DEFAULT;
 COMMENT ON TABLE runtime.audit_event_default IS 'Catch-all audit partition: guarantees an append-only insert never fails for a missing range. Keep empty by create-ahead; not dropped by audit_prune_before.';
 

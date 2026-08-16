@@ -30,20 +30,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
-/**
- * The adoption path for {@code aws_kms}, end to end and with nothing faked: a
- * real Postgres, the real
- * {@code CaConfigService}/{@code CaRotationService}/{@code AwsKmsCaProvisioner}
- * dispatch, and a real KMS ({@link LocalStackKms}) resolving and signing with a
- * key it genuinely holds. An operator moving a live CA onto KMS runs exactly
- * this, so a green unit suite over a seam nobody can reach is not what is being
- * claimed here.
- *
- * <p>
- * {@code KmsSdkContractIT} owns the wire contract and the fail-closed cases at
- * the signer; this class owns what the database ends up holding and what
- * {@code CaSignerService} hands out afterwards.
- */
 class AwsKmsRotationIT extends AbstractAuthIT {
 
 	private static final String ACTOR = "svc-awskms-it";
@@ -109,11 +95,6 @@ class AwsKmsRotationIT extends AbstractAuthIT {
 		assertThat(material.publicKey()).isEqualTo(kmsPublicKey(keyArn).getEncoded());
 	}
 
-	/**
-	 * The claim the whole backend exists for: a certificate this Control Plane
-	 * issued verifies under the public half of a key it never held, because KMS did
-	 * the signing.
-	 */
 	@Test
 	void theRotatedCaIssuesCertificatesSignedByTheKmsHeldKey() throws Exception {
 		String keyArn = LocalStackKms.createSigningKey();
@@ -130,9 +111,8 @@ class AwsKmsRotationIT extends AbstractAuthIT {
 	}
 
 	/**
-	 * A KMS outage is a CA that cannot sign, never a CA that signs from the
-	 * database instead. The signer is still built — construction is I/O-free by
-	 * design — and it is still the KMS one, so the failure surfaces as a refused
+	 * The signer is still built — construction is I/O-free by design — and it is
+	 * still the KMS one, so a key that stops signing surfaces as a refused
 	 * certificate rather than as a certificate no node trusts.
 	 */
 	@Test
@@ -152,10 +132,6 @@ class AwsKmsRotationIT extends AbstractAuthIT {
 		assertThat(caConfigs.findByCaKindAndRotationState("session", "active").block().backend()).isEqualTo("aws_kms");
 	}
 
-	/**
-	 * An alias is refused at the write path, before any KMS call — the same refusal
-	 * {@code KmsSdkContractIT} shows KMS itself would have honoured.
-	 */
 	@Test
 	void anAliasReferenceIsRefusedAtRotationAndWritesNothing() {
 		String alias = LocalStackKms.createAlias(LocalStackKms.createSigningKey());
@@ -171,11 +147,6 @@ class AwsKmsRotationIT extends AbstractAuthIT {
 		assertThat(stillActive.backend()).isEqualTo("local");
 	}
 
-	/**
-	 * The allow-list anchor lives in process configuration, so a {@code ca_config}
-	 * row naming another account cannot redirect signing even if it reaches the
-	 * database by some other route.
-	 */
 	@Test
 	void anArnInAnotherAccountIsRefusedAtRotationAndWritesNothing() {
 		String foreign = "arn:aws:kms:" + LocalStackKms.region()

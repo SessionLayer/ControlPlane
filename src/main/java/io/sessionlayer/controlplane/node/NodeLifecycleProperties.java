@@ -2,9 +2,6 @@ package io.sessionlayer.controlplane.node;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/**
- * Node lifecycle configuration.
- */
 @ConfigurationProperties(prefix = "sessionlayer.node")
 public class NodeLifecycleProperties {
 

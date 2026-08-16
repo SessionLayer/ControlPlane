@@ -95,7 +95,6 @@ class AzureKeyVaultSignerTest {
 				.hasMessageContaining("32 bytes");
 	}
 
-	/** Pinning is enforced here, not merely documented. */
 	@Test
 	void aSignatureMadeByADifferentKeyFailsTheLocalVerificationGuard() throws Exception {
 		KeyPair pinned = ecKeyPair();
@@ -114,8 +113,8 @@ class AzureKeyVaultSignerTest {
 	}
 
 	/**
-	 * C.2: a DER-shaped signature in the P1363 position must fail — a test that
-	 * passes on either shape proves the normalization is not load-bearing.
+	 * A DER-shaped signature in the P1363 position must fail — a test that passes
+	 * on either shape proves the normalization is not load-bearing.
 	 */
 	@Test
 	void aDerShapedSignatureInTheP1363PositionFails() throws Exception {
@@ -133,7 +132,6 @@ class AzureKeyVaultSignerTest {
 				.hasMessageContaining("does not verify against the pinned public key");
 	}
 
-	/** The seam's own message never forwards the SDK exception's own detail. */
 	@Test
 	void aVaultFailureIsWrappedWithoutTheUnderlyingMessage() {
 		CryptographyClient client = mock(CryptographyClient.class);

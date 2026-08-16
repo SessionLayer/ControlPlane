@@ -220,8 +220,6 @@ public class AgentRenewalService {
 				&& (presented.equals(identity.fingerprint()) || presented.equals(identity.prevFingerprint()));
 	}
 
-	// Audit the fail-closed denial (generic to the client, specific reason
-	// server-side).
 	private Mono<IssuedAgentIdentity> denied(AgentIdentity identity, String reason) {
 		return audit
 				.record(identity.id().toString(), identity.id().toString(), "agent.renew", "denied", null,

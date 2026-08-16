@@ -31,9 +31,6 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import tools.jackson.databind.JsonNode;
 
-/**
- * Incident-response lock resource (runtime deny, not config; RBAC + audited).
- */
 @RestController
 public class LockController implements LocksApi {
 
@@ -59,14 +56,11 @@ public class LockController implements LocksApi {
 	public Mono<ResponseEntity<LockResource>> createLock(Mono<CreateLockRequest> createLockRequest,
 			ServerWebExchange exchange) {
 		return createLockRequest.flatMap(req -> withPermission(PlatformPermissions.LOCK_WRITE, subject -> {
-			// Validate before touching the datastore; an invalid target/TTL/reason is a
-			// 400 (LockExceptionHandler), never a persisted or pushed lock.
 			LockIngestValidation.checkReason(req.getReason());
 			var selector = LockIngestValidation.toSelector(req.getTarget());
 			Integer ttlSeconds = LockIngestValidation.normalizeTtl(req.getTtlSeconds());
 			Instant now = Instant.now();
 			Instant expiresAt = ttlSeconds == null ? null : now.plusSeconds(ttlSeconds);
-			// Absent mode defaults to strict (backward-compatible with pre-mode clients).
 			String mode = req.getMode() == null ? "strict" : req.getMode().getValue();
 			AccessLock lock = AccessLock.create(selector, mode, ttlSeconds, expiresAt, req.getReason(),
 					subject.identity());

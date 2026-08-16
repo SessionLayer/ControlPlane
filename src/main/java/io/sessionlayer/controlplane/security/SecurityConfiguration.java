@@ -47,13 +47,10 @@ public class SecurityConfiguration {
 	static final String[] PUBLIC_PATHS = {"/v1/healthz", "/v1/version", "/actuator/health", "/actuator/health/**",
 			"/actuator/info", "/v1/auth/verify", "/v1/auth/callback"};
 
-	// Authenticated was never enough here: these carry fleet-wide operational
-	// counts, and every machine identity the platform has issued could read them,
-	// including a service account with no role binding at all. Both shapes are
-	// listed because management.endpoints.web.exposure.include exposes metrics AND
-	// prometheus — the same meters by two routes, so gating one alone closes
-	// nothing. The health and info endpoints stay public above, so Kubernetes
-	// probes are untouched.
+	// Both shapes are listed because management.endpoints.web.exposure.include
+	// exposes metrics AND prometheus — the same meters by two routes, so gating one
+	// alone closes nothing. The health and info endpoints stay public above, so
+	// Kubernetes probes are untouched.
 	static final String[] METRICS_PATHS = {"/actuator/prometheus", "/actuator/prometheus/**", "/actuator/metrics",
 			"/actuator/metrics/**"};
 
@@ -126,7 +123,6 @@ public class SecurityConfiguration {
 	private ReactiveAuthenticationManager cpMachineTokenManager(MachineTokenSigner signer,
 			MachineTokenProperties machine) {
 		NimbusReactiveJwtDecoder decoder = NimbusReactiveJwtDecoder.withPublicKey(signer.publicKey()).build();
-		// Defense-in-depth: validate iss + aud + token_type, not just exp.
 		org.springframework.security.oauth2.core.OAuth2TokenValidator<org.springframework.security.oauth2.jwt.Jwt> audience = jwt -> jwt
 				.getAudience() != null && jwt.getAudience().contains(machine.getAudience())
 						? org.springframework.security.oauth2.core.OAuth2TokenValidatorResult.success()

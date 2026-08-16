@@ -26,12 +26,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-/**
- * {@code /v1/gateways} closes the runbook's raw
- * {@code DELETE FROM runtime.gateway_identity}. The read must stay
- * metadata-only, and the removal must be reachable only by its own permission
- * and refuse a Gateway that still owns node control channels.
- */
 class GatewayDirectoryIT extends AbstractConfigApiIT {
 
 	@Autowired
@@ -68,10 +62,6 @@ class GatewayDirectoryIT extends AbstractConfigApiIT {
 		seededGateways.clear();
 	}
 
-	/**
-	 * The listing is fleet-targeting metadata, so it sits behind the Gateway-admin
-	 * verb — the generic config-read permission must NOT reach it.
-	 */
 	@Test
 	void listRequiresGatewayEnrollAndRefusesEveryOtherBinding() {
 		String none = tokenWith("svc-gw-none-" + UUID.randomUUID());
@@ -168,10 +158,6 @@ class GatewayDirectoryIT extends AbstractConfigApiIT {
 				.expectStatus().isNotFound();
 	}
 
-	/**
-	 * Removal carries its own verb. {@code gateway:enroll} — the permission that
-	 * admits a Gateway — must not retire one.
-	 */
 	@Test
 	void removeIsGatedByGatewayRemoveAndNotByGatewayEnroll() {
 		GatewayIdentity gateway = seedGateway("gw-perm-" + suffix(), "mtls:" + UUID.randomUUID(), "active", null);
@@ -286,8 +272,6 @@ class GatewayDirectoryIT extends AbstractConfigApiIT {
 		SshSession ended = sshSessions.findById(session.id()).block();
 		assertThat(ended.endedAt()).isNotNull();
 		assertThat(ended.endReason()).isEqualTo("gateway_removed");
-		// The residual state must say the recording was lost, not that it is still
-		// being written by a Gateway that can no longer authenticate.
 		assertThat(recordings.findById(recording.id()).block().status()).isEqualTo("failed");
 
 		assertThat(actionsFor(name)).containsExactly("gateway.remove_forced");
