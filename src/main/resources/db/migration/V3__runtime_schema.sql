@@ -5,7 +5,7 @@
 -- the live side of the config-vs-runtime boundary; there is deliberately no
 -- `origin` provenance column here.
 --
--- Referential rules (docs/reference/data-model.md in the SessionLayer/Documentation repo):
+-- Referential rules:
 --   * runtime->runtime: real FKs (ON DELETE SET NULL where history must outlive the
 --     referenced row; CASCADE only for the 1:1 recording_ref).
 --   * runtime->config: NEVER a hard FK — decision *snapshots* (plain uuid + copied
