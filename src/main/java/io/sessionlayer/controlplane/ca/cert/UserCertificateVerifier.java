@@ -171,7 +171,8 @@ public final class UserCertificateVerifier {
 				continue;
 			}
 			try {
-				// Only ECDSA user CAs are verifiable; a non-ECDSA key-type name throws → skip.
+				// Only ECDSA user CAs are verifiable; a non-ECDSA key-type name throws, and
+				// the catch below ends the search with no trusted CA (fail closed).
 				CaKeyType keyType = CaKeyType.fromKeyTypeName(parts[0]);
 				return new TrustedCa(keyType, SshEcdsaPublicKeys.parse(trustedBlob));
 			} catch (RuntimeException unsupported) {

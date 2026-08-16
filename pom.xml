@@ -46,7 +46,7 @@
 		  KeyUsage / EKU / SAN / BasicConstraints). We do NOT hand-roll X.509 DER and do
 		  NOT reuse the SSH OpenSshCertificateAssembler (that stays SSH-only). BC's
 		  licence (MIT-style) is GPL-3.0-compatible. Pinned explicitly because the BOM
-		  does not manage it; 1.84 is the latest bc-jdk18on release.
+		  does not manage it.
 		-->
 		<bouncycastle.version>1.85</bouncycastle.version>
 

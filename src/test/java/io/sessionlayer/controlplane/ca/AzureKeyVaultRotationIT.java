@@ -61,7 +61,9 @@ class AzureKeyVaultRotationIT extends AbstractAuthIT {
 
 	@AfterEach
 	void resetCas() {
-		// ca_key_material rows cascade with their ca_config row (V2/V30).
+		// runtime.ca_key_material has NO FK to config.ca_config (V12: a snapshot ref
+		// across the runtime/config boundary), so its rows do not cascade — they are
+		// left behind and each test seeds its own ids.
 		caConfigs.deleteAll().block();
 		Mockito.reset(azureFactory);
 	}

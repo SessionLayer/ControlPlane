@@ -126,9 +126,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # No QEMU: the jar is architecture-neutral and the runtime is copied from
-      # the JRE image, which resolves per target platform, so neither stage
-      # executes anything for the foreign architecture.
+      # Nothing is emulated to BUILD: the jar is architecture-neutral and the
+      # runtime is copied from the JRE image, which resolves per target platform.
+      # QEMU is registered only so the published arm64 child can be executed
+      # during verification.
       # Registering binfmt lets the arm64 child manifest be executed on this
       # amd64 runner. Without it the arm64 half of every published index would be
       # a platform nobody has ever run — a manifest that claims more than was

@@ -3,7 +3,7 @@ package io.sessionlayer.controlplane.node;
 /**
  * A fail-closed rejection from {@link NodeLifecycleService}. Carries a
  * {@link Reason} the REST layer maps to an RFC-9457 status
- * ({@code 400}/{@code 404}/{@code 409}). The message is operator-facing (an
+ * ({@code 400}/{@code 404}/{@code 409}/{@code 422}). The message is operator-facing (an
  * admin API); it never reaches the SSH user.
  */
 public class NodeRequestException extends RuntimeException {
