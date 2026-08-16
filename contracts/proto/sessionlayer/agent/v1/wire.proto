@@ -34,8 +34,6 @@ message AgentHello {
   sessionlayer.controlplane.v1.ComponentInfo component = 1;
 }
 
-// GatewayHelloAck (0x02) accepts the control channel and fixes the session's
-// negotiated parameters. The Agent MUST honour the returned bounds.
 message GatewayHelloAck {
   sessionlayer.controlplane.v1.ComponentInfo component = 1;
 
@@ -70,7 +68,6 @@ message Ping {
 }
 
 message Pong {
-  // MUST echo the nonce of the Ping being answered.
   uint64 nonce = 1;
 }
 
@@ -91,8 +88,6 @@ message DialBackRequest {
   // certificate) — a Gateway must not be able to task an Agent for another node.
   string node_name = 2;
 
-  // The Gateway session this dial-back serves. Carried for binding + audit
-  // correlation; it also appears inside the token, where it is signed.
   string session_id = 3;
 
   // The resolved Linux principal for the session (audit + token binding). The
@@ -100,7 +95,6 @@ message DialBackRequest {
   // certificate the node's sshd validates, never by the Agent.
   string principal = 4;
 
-  // The issuing Gateway's identity id.
   string gateway_id = 5;
 
   // The wss:// URL the Agent MUST dial back to. The address travels in this
@@ -126,19 +120,12 @@ message DialBackRequest {
 enum DialBackErrorCode {
   DIAL_BACK_ERROR_CODE_UNSPECIFIED = 0;
 
-  // The Agent could not reach its own node's sshd on the configured loopback
-  // address (the node's sshd is down).
   DIAL_BACK_ERROR_CODE_LOCAL_DIAL_FAILED = 1;
 
-  // The Agent could not establish the dial-back connection to the Gateway.
   DIAL_BACK_ERROR_CODE_TRANSPORT_FAILED = 2;
 
-  // The Gateway refused the dial-back (bad/expired/replayed token, identity
-  // mismatch). Fail closed.
   DIAL_BACK_ERROR_CODE_TOKEN_REJECTED = 3;
 
-  // The Agent declined the request itself (e.g. node_name is not this node, or
-  // the Agent is draining / at its concurrency limit).
   DIAL_BACK_ERROR_CODE_REFUSED = 4;
 }
 
@@ -161,37 +148,25 @@ message DialBackAuth {
   string request_id = 2;
 }
 
-// DialBackAccept (0x23, Gateway -> Agent) confirms the token was accepted and
-// atomically consumed. It carries no secrets and echoes nothing back.
 message DialBackAccept {}
 
 // StreamOpen (0x30, Agent -> Gateway) signals that the Agent has connected to
 // its node's local sshd and the splice is live; the Gateway hands the connection
 // to the inner leg as a ByteStream at this point and not before.
-//
-// Direction note: this type travels Agent->Gateway only, never the reverse —
-// the Agent is the only party that knows when the loopback connection came up.
 message StreamOpen {}
 
-// StreamCloseReason distinguishes an orderly end-of-stream from a fault, for the
-// operator log. The user-facing outcome is unchanged.
 enum StreamCloseReason {
   STREAM_CLOSE_REASON_UNSPECIFIED = 0;
 
-  // Orderly close: the spliced peer sent EOF / closed.
   STREAM_CLOSE_REASON_EOF = 1;
 
-  // The Agent could not connect to the node's local sshd.
   STREAM_CLOSE_REASON_LOCAL_DIAL_FAILED = 2;
 
-  // An I/O error on either half of the splice.
   STREAM_CLOSE_REASON_IO_ERROR = 3;
 
-  // The sender is shutting down or draining.
   STREAM_CLOSE_REASON_SHUTDOWN = 4;
 }
 
-// StreamClose (0x32, either direction) ends a spliced stream.
 message StreamClose {
   StreamCloseReason reason = 1;
 }
@@ -203,20 +178,13 @@ message StreamClose {
 enum WireErrorCode {
   WIRE_ERROR_CODE_UNSPECIFIED = 0;
 
-  // Malformed frame, unknown type, oversized payload, or a frame sent out of
-  // order for the connection's role.
   WIRE_ERROR_CODE_PROTOCOL = 1;
 
-  // The peer is not authorized: invalid/locked identity, or a dial-back token
-  // that failed any binding check. Deliberately does not say which.
   WIRE_ERROR_CODE_UNAUTHORIZED = 2;
 
-  // The Gateway is temporarily unable to serve the request.
   WIRE_ERROR_CODE_UNAVAILABLE = 3;
 }
 
-// WireError (0x7E, either direction) reports a typed protocol error; the sender
-// closes the connection immediately afterwards.
 message WireError {
   WireErrorCode code = 1;
 
