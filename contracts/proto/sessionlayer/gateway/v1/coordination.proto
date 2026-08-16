@@ -29,12 +29,9 @@ option java_outer_classname = "CoordinationProto";
 // ingress's relay address so the owner can establish the DIRECT relay connection,
 // plus a single-use relay token the owner presents on that connection.
 message DialBackSignal {
-  // The target node (runtime.node.id, uuid) and its stable enrollment name (the
-  // join key the owner matches against its agent registry).
   string node_id = 1;
   string node_name = 2;
 
-  // The ingress Gateway's session id (its own owned session + recording).
   string session_id = 3;
 
   // The ingress Gateway's id (gateway_identity.name) and the peer-relay address
@@ -50,15 +47,10 @@ message DialBackSignal {
   string owner_gateway_id = 6;
   uint64 owner_nonce = 7;
 
-  // The resolved Linux principal (for the owner's local dial-back token binding /
-  // audit correlation; the inner-leg cert is still minted at the ingress).
   string principal = 8;
 
-  // The single-use relay token (SLGW1) minted by the ingress and presented by the
-  // owner on the direct relay connection (RELAY_OPEN). Opaque to the bus.
   string relay_token = 9;
 
-  // Absolute expiry (unix epoch milliseconds) after which the signal is stale.
   int64 exp_epoch_ms = 10;
 }
 
@@ -69,7 +61,7 @@ message DialBackSignal {
 // bearer credential for exactly one peer-relay connection: single-use, bound to
 // the ingress that minted it, and accepted only from the owner it names.
 message RelayTokenPayload {
-  string jti = 1;               // unique id; single-use ledger key at the ingress
+  string jti = 1;
   string node_id = 2;
   string node_name = 3;
   string session_id = 4;
@@ -78,7 +70,7 @@ message RelayTokenPayload {
   string principal = 7;
   uint64 owner_nonce = 8;
   int64 exp_epoch_ms = 9;
-  string signer_fingerprint = 10; // the ingress per-process signing key fp
+  string signer_fingerprint = 10;
 }
 
 // RELAY_OPEN (0x24, owner -> ingress) presents the SLGW1 token to bind the direct

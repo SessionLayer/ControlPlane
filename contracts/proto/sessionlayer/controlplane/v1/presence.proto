@@ -6,21 +6,17 @@ option java_multiple_files = true;
 option java_package = "io.sessionlayer.controlplane.grpc.v1";
 option java_outer_classname = "PresenceProto";
 
-// Presence is the CP-owned authority for node ownership in HA. runtime.presence
-// (node -> owning_gateway, addr, monotonic nonce) is authoritative in Postgres in
-// BOTH single-instance and HA modes (mode-symmetry — only the signalling
-// transport differs). The Gateway has no database access; it heartbeats and
-// releases ownership through this service so the datastore boundary — the CP is
-// the sole Postgres owner — is preserved. `LISTEN/NOTIFY` is NOT used (global
-// commit-lock) (additive; protocol 1.1).
+// runtime.presence (node -> owning_gateway, addr, monotonic nonce) is authoritative
+// in Postgres in BOTH single-instance and HA modes — only the signalling transport
+// differs. The Gateway has no database access; it heartbeats and releases ownership
+// through this service so the CP stays the sole Postgres owner. `LISTEN/NOTIFY` is
+// NOT used (global commit-lock).
 //
-// TIER. mTLS-required (gateway-identity): the OWNER is the authenticated mTLS peer
-// (gateway_id), NEVER a request field — a Gateway can only claim/refresh/release
-// ownership for itself, exactly as with the minted session/recording tokens.
+// The OWNER is the authenticated mTLS peer, NEVER a request field — a Gateway can
+// only claim/refresh/release ownership for itself.
 //
-// The routing READ path is folded into Authorization.Authorize (NodeConnection
-// owner fields) because the CP already does the authz round-trip there; this
-// service is the WRITE path (heartbeat/claim + release).
+// The routing READ path is folded into Authorization.Authorize (NodeConnection owner
+// fields); this service is the WRITE path (heartbeat/claim + release).
 service Presence {
   // Heartbeat claims or refreshes ownership of a node whose agent control channel
   // this Gateway currently holds. Semantics (applied transactionally, honouring
@@ -42,12 +38,10 @@ service Presence {
 
 message PresenceHeartbeatRequest {
   // The node whose ownership is being claimed/refreshed, identified by its stable
-  // enrollment NAME (runtime.node.name) — NOT its UUID. The Gateway has no database
+  // enrollment NAME (runtime.node.name) — NOT its UUID: the Gateway has no database
   // and knows its owned nodes only by the name it reads from each agent's mTLS
-  // dNSName SAN (the agent registry is keyed by name), so it can only address a node
-  // by name. The CP resolves the name to the node row and keys runtime.presence by
-  // the resolved runtime.node.id; an unknown name is refused (fail closed). Node
-  // names are unique (runtime.node.name UNIQUE). Field number stable.
+  // dNSName SAN. The CP resolves the name to the node row and keys runtime.presence
+  // by the resolved runtime.node.id; an unknown name is refused (fail closed).
   string node_name = 1;
 
   // The caller's peer-relay advertise address (host:port) that a peer ingress
@@ -61,22 +55,16 @@ message PresenceHeartbeatResponse {
   // The authoritative owner after applying this heartbeat (gateway_identity.name).
   string owning_gateway_id = 1;
   string gateway_addr = 2;
-  // The authoritative monotonic nonce + nonce_id after this heartbeat.
   uint64 nonce = 3;
   string nonce_id = 4;
-  // Owner last_seen as unix epoch milliseconds (domain time).
   int64 last_seen_epoch_ms = 5;
-  // True iff the caller is the owner after this heartbeat (claimed or refreshed).
   bool is_self_owner = 6;
 }
 
 message PresenceReleaseRequest {
-  // The node's stable enrollment NAME (see PresenceHeartbeatRequest.node_name);
-  // the CP resolves it to the runtime.node.id keying runtime.presence.
   string node_name = 1;
 }
 
 message PresenceReleaseResponse {
-  // True iff this call actually relinquished ownership (caller was the owner).
   bool released = 1;
 }

@@ -35,20 +35,13 @@ service Handshake {
   rpc Negotiate(ClientHello) returns (ServerHello);
 }
 
-// ClientHello is sent by the connecting component (the Gateway)
-// and advertises who it is and which protocol versions it can speak. Named
-// after the TLS ClientHello it mirrors in spirit.
 message ClientHello {
   ComponentInfo client = 1;
 }
 
-// ServerHello is the Control Plane's response. It echoes the server's own
-// identity/range and returns the resolved common version.
 message ServerHello {
   ComponentInfo server = 1;
 
-  // The resolved highest common protocol version. Guaranteed to lie within
-  // both peers' [protocol_min, protocol_max] ranges.
   ProtocolVersion selected = 2;
 }
 

@@ -1,14 +1,3 @@
-//! Emit the golden wire-frame conformance vectors (`../frames.json`).
-//!
-//! Each vector is one framed message — `VER(1) | TYPE(1) | LENGTH(u32 BE) | PAYLOAD` — where
-//! the payload is the prost serialization of the message named in the frozen catalogue
-//! (`agent-gateway-v1.md` §4 / `gateway-relay-v1.md` §4), except `STREAM_DATA` whose payload
-//! is raw opaque bytes. The bytes are authoritative because prost is deterministic over the
-//! same frozen proto both consumer repos generate from; the framing is the trivially-checked
-//! 6-byte header. Every emitted frame is decoded again here as a self-check, and a couple of
-//! hand-computable frames are asserted against their known bytes.
-
-// The generated proto modules carry types this tool doesn't construct (e.g. token payloads).
 #![allow(dead_code)]
 
 use prost::Message;
@@ -43,21 +32,14 @@ const WIRE_VER: u8 = 1;
 #[derive(Serialize)]
 struct Frame {
     name: &'static str,
-    /// Which protocol profile the frame belongs to (shared framing; `gateway-relay` for the
-    /// HA relay-only types).
     profile: &'static str,
     ver: u8,
     #[serde(rename = "type")]
     type_byte: u8,
     type_name: &'static str,
-    /// The fully-qualified protobuf message the payload decodes as, or `null` for the raw
-    /// `STREAM_DATA` payload.
     message: Option<&'static str>,
-    /// Human description of the pinned field values (so a reader knows what was encoded).
     fields: &'static str,
-    /// The prost payload bytes alone (hex, lower, no separators).
     payload_hex: String,
-    /// The complete framed message (hex): `header || payload`.
     frame_hex: String,
 }
 
@@ -95,8 +77,6 @@ fn frame_bytes(ver: u8, type_byte: u8, payload: &[u8]) -> Vec<u8> {
     out
 }
 
-/// Build one framed vector from a protobuf payload, self-checking that the header parses
-/// back to the same `(ver, type, len)`.
 fn pb_frame<M: Message>(
     name: &'static str,
     profile: &'static str,
@@ -122,7 +102,6 @@ fn pb_frame<M: Message>(
     }
 }
 
-/// A raw-payload frame (`STREAM_DATA`): the payload is opaque bytes, not protobuf.
 fn raw_frame(name: &'static str, type_byte: u8, type_name: &'static str, payload: &[u8]) -> Frame {
     let frame = frame_bytes(WIRE_VER, type_byte, payload);
     self_check(&frame, type_byte, payload);
@@ -139,8 +118,6 @@ fn raw_frame(name: &'static str, type_byte: u8, type_name: &'static str, payload
     }
 }
 
-/// Decode the framing back out and assert it matches — a golden frame that does not parse to
-/// its own header is a worse-than-useless oracle.
 fn self_check(frame: &[u8], type_byte: u8, payload: &[u8]) {
     assert!(frame.len() >= HEADER_LEN, "frame shorter than the header");
     assert_eq!(frame[0], WIRE_VER, "ver byte");
@@ -166,7 +143,6 @@ fn main() {
     // framing ever drifts, this assert fails before anything is written.
     let ping = apb::Ping { nonce: 42 };
     assert_eq!(ping.encode_to_vec(), vec![0x08, 0x2a], "prost Ping{{42}} anchor");
-    // ver=01, type=10, len=00000002, payload=082a
     assert_eq!(
         hex(&frame_bytes(WIRE_VER, 0x10, &ping.encode_to_vec())),
         "011000000002082a",
@@ -347,9 +323,6 @@ fn main() {
         ),
     ];
 
-    // Negative decode cases: a conformant decoder MUST reject each with the named error
-    // (mapping to `agent/wire.rs::FrameError`). `max_frame_bytes` for the oversized case is
-    // the 65536 baseline; the length header alone triggers the rejection (no buffering).
     let decode_negatives = vec![
         DecodeNegative {
             name: "short_header",
@@ -361,7 +334,7 @@ fn main() {
             name: "length_gt_body",
             hex: hex(&{
                 let mut v = frame_bytes(1, 0x31, &[1, 2, 3, 4]);
-                v.pop(); // body one byte short of LENGTH
+                v.pop();
                 v
             }),
             expect: "LengthMismatch",
@@ -371,7 +344,7 @@ fn main() {
             name: "trailing_garbage",
             hex: hex(&{
                 let mut v = frame_bytes(1, 0x31, &[1, 2, 3, 4]);
-                v.push(0xff); // one byte past LENGTH
+                v.push(0xff);
                 v
             }),
             expect: "LengthMismatch",
@@ -382,7 +355,7 @@ fn main() {
             hex: hex(&{
                 let mut v = vec![0x01u8, 0x31];
                 v.extend_from_slice(&(65536u32 + 1).to_be_bytes());
-                v // no body: the LENGTH field alone must be rejected, without buffering
+                v
             }),
             expect: "TooLarge",
             note: "LENGTH exceeds the negotiated max_frame_bytes (65536); rejected at the header",

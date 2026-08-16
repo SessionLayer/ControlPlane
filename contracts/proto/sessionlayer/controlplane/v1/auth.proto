@@ -90,16 +90,9 @@ service OuterLegAuth {
   rpc ResolveBreakglassCode(ResolveBreakglassCodeRequest) returns (ResolveBreakglassCodeResponse);
 }
 
-// ResolvedIdentity is the CP's authentication result: the identity a credential
-// resolved to, plus the principal/group context that feeds Authorize. It is the
-// ONLY source of principal for the connection (the client never chooses one).
 message ResolvedIdentity {
-  // Whether the credential resolved. false is the single, generic non-resolution
-  // outcome — the caller is told nothing more.
   bool resolved = 1;
 
-  // The resolved subject identity (e.g. an OIDC subject / username). Empty when
-  // resolved = false. Fed to Authorize.identity.
   string identity = 2;
 
   // The Linux logins this CREDENTIAL is scoped to (cert principals / the OTP or
@@ -108,12 +101,9 @@ message ResolvedIdentity {
   // May be empty (e.g. device flow, where RBAC alone decides the logins).
   repeated string principals = 3;
 
-  // The identity's SSO/OIDC groups, for group-based RBAC selectors. Fed to
-  // Authorize.identity_groups. May be empty.
   repeated string groups = 4;
 }
 
-// ResolveUserCertRequest carries the presented outer-leg certificate.
 message ResolveUserCertRequest {
   // The OpenSSH user certificate the client presented on the outer leg, as the
   // raw OpenSSH wire blob (the base64 body of an `...-cert-v01@openssh.com`
@@ -121,7 +111,6 @@ message ResolveUserCertRequest {
   // validates it fully before trusting anything in it.
   bytes certificate_blob = 1;
 
-  // The client source IP (single address). Deny-only reducer.
   string source_ip = 2;
 }
 
@@ -131,77 +120,55 @@ message ResolveUserCertResponse {
   ResolvedIdentity identity = 1;
 }
 
-// ResolvePinRequest carries the offered public key's fingerprint.
 message ResolvePinRequest {
   // SHA-256 fingerprint of the public key the client offered (OpenSSH
   // `SHA256:...` form). The pin store is keyed by this; the raw key is not sent.
   string public_key_fingerprint = 1;
 
-  // The client source IP. The pin is source-CIDR bound (deny-only).
   string source_ip = 2;
 }
 
-// ResolvePinResponse wraps the authentication result.
 message ResolvePinResponse {
   ResolvedIdentity identity = 1;
 }
 
-// ResolveOtpRequest carries the presented OTP. The `otp` field is a SECRET
-// (delivered over keyboard-interactive with echo off) — NEVER log it.
 message ResolveOtpRequest {
   // The one-time code the user typed. Secret; validated constant-time and
   // single-use, then consumed. Must never appear in a log or trace.
   string otp = 1;
 
-  // The client source IP. The OTP is source-CIDR bound (deny-only).
   string source_ip = 2;
 }
 
-// ResolveOtpResponse wraps the authentication result.
 message ResolveOtpResponse {
   ResolvedIdentity identity = 1;
 }
 
-// BeginDeviceFlowRequest starts a device flow bound to the SSH source.
 message BeginDeviceFlowRequest {
-  // The client source IP, bound into the flow for the approving-browser
-  // correlation (deny-only) and the poll rate-limit key.
   string source_ip = 1;
 }
 
-// BeginDeviceFlowResponse carries what the Gateway needs to drive the flow: the
-// user-facing prompt material and the secret device_code it polls with.
 message BeginDeviceFlowResponse {
   // The secret code the Gateway polls PollDeviceFlow with. NOT shown to the
   // user; correlates 1:1 with this SSH connection (anti-phishing binding).
   string device_code = 1;
 
-  // The short code the user reads and enters on the verification page. Shown in
-  // the keyboard-interactive instruction.
   string user_code = 2;
 
-  // The CP verification page URL the user opens (the CP-hosted auth-code+PKCE
-  // RP). Shown in the keyboard-interactive instruction.
   string verification_uri = 3;
 
   // Minimum seconds between polls (RFC 8628 interval). The Gateway honours this;
   // a faster poll is throttled (RESOURCE_EXHAUSTED).
   int32 interval_seconds = 4;
 
-  // Seconds until the flow expires. After this the flow reports EXPIRED and the
-  // Gateway surfaces the generic "authentication timed out" outcome.
   int32 expires_in_seconds = 5;
 }
 
-// PollDeviceFlowRequest carries the secret device_code.
 message PollDeviceFlowRequest {
-  // The device_code returned by BeginDeviceFlow. Secret; identifies the flow.
   string device_code = 1;
 }
 
-// PollDeviceFlowResponse reports the flow status and, on APPROVED, the identity.
 message PollDeviceFlowResponse {
-  // The current status of the flow.
   DeviceFlowStatus status = 1;
 
   // The resolved identity + principal/group context. Populated (resolved = true)
@@ -209,18 +176,11 @@ message PollDeviceFlowResponse {
   ResolvedIdentity identity = 2;
 }
 
-// DeviceFlowStatus is the device-flow lifecycle state the Gateway acts on.
 enum DeviceFlowStatus {
   DEVICE_FLOW_STATUS_UNSPECIFIED = 0;
-  // The user has not yet completed the verification page. Keep polling +
-  // heartbeat.
   DEVICE_FLOW_STATUS_PENDING = 1;
-  // The user approved on the verification page; `identity` is populated.
   DEVICE_FLOW_STATUS_APPROVED = 2;
-  // The flow was denied (e.g. enforced source-context mismatch). Generic denial.
   DEVICE_FLOW_STATUS_DENIED = 3;
-  // The flow expired (timed out) or the device_code is unknown; the user sees
-  // the generic timeout outcome.
   DEVICE_FLOW_STATUS_EXPIRED = 4;
 }
 
@@ -231,8 +191,6 @@ enum DeviceFlowStatus {
 // forced-strict/Lock-checked authorization all happen at Authorize (on actual use),
 // symmetric with how the other Resolve* RPCs authenticate without granting access.
 message BreakglassResolution {
-  // The resolved identity. resolved = false is the single generic non-resolution
-  // outcome; no token is minted on failure (fail closed).
   ResolvedIdentity identity = 1;
 
   // A single-use, short-lived break-glass token bound to {gateway (the authenticated
@@ -245,14 +203,12 @@ message BreakglassResolution {
   string breakglass_token = 2;
 }
 
-// ResolveBreakglassKeyRequest carries the offered break-glass FIDO2 sk-ecdsa key.
 message ResolveBreakglassKeyRequest {
   // The OpenSSH `sk-ecdsa-sha2-nistp256@openssh.com` PUBLIC key the client offered,
   // as the raw OpenSSH wire blob (the base64 body of the authorized-keys entry).
   // PUBLIC material — the CP matches it to a registered break-glass credential.
   bytes sk_public_key_blob = 1;
 
-  // The client source IP (single address). Deny-only reducer.
   string source_ip = 2;
 
   // The fixed target node id (UUID) this break-glass connection is for. Scopes the
@@ -265,15 +221,12 @@ message ResolveBreakglassKeyResponse {
   BreakglassResolution resolution = 1;
 }
 
-// ResolveBreakglassCodeRequest carries the presented break-glass offline code. The
-// `code` field is a SECRET (keyboard-interactive, echo off) — NEVER log it.
 message ResolveBreakglassCodeRequest {
   // The one-time break-glass code the user typed. Secret; matched by SHA-256 hash
   // (never compared in the clear) and consumed single-use. Must never appear in a
   // log or trace.
   string code = 1;
 
-  // The client source IP. The code is source-bound (deny-only).
   string source_ip = 2;
 
   // The fixed target node id (UUID) this break-glass connection is for (scope + token

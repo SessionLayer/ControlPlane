@@ -50,7 +50,6 @@ fn golden_frames_decode_and_reencode_byte_exact() {
         let got_payload: String = decoded.payload.iter().map(|b| format!("{b:02x}")).collect();
         assert_eq!(got_payload, payload_hex, "{name}: payload bytes");
 
-        // Re-frame from the pieces the codec exposes → byte-identical to the golden frame.
         let reframed = wire::encode(ver, decoded.msg_type, &decoded.payload);
         let reframed_hex: String = reframed.iter().map(|b| format!("{b:02x}")).collect();
         assert_eq!(reframed_hex, frame_hex, "{name}: re-encode must match the golden frame");

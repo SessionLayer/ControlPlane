@@ -29,9 +29,6 @@ option java_outer_classname = "AuthzProto";
 // lock / no-allow reason is written only to the decision log (audit_event) for
 // the Admin/Auditor. The caller is never told WHY it was denied.
 service Authorization {
-  // Authorize makes the one connect-time decision (fail-closed). ALLOW returns a
-  // signed decision context + the minted session token; DENY returns the generic
-  // decision and no token.
   rpc Authorize(AuthorizeRequest) returns (AuthorizeResponse);
 
   // NotifySessionEnd is the Gateway's reliable session-end signal: it releases
@@ -42,8 +39,7 @@ service Authorization {
   // byte path are unchanged. Idempotent (a repeat, or one racing
   // FinalizeRecording, is a no-op). Same tier as Authorize: mTLS-required, and
   // the CP acts only when the AUTHENTICATED caller is the gateway that brokered
-  // the session — one Gateway can never free another's slot (additive; protocol
-  // stays 1.1).
+  // the session — one Gateway can never free another's slot.
   rpc NotifySessionEnd(NotifySessionEndRequest) returns (NotifySessionEndResponse);
 
   // ExtendSessionLease re-stamps a live session's concurrency-lease expiry so
@@ -54,7 +50,7 @@ service Authorization {
   // in use. The extension window is SERVER-authoritative (the request carries
   // no duration — a client can never push a lease arbitrarily far out).
   // Caller-bound exactly like NotifySessionEnd; extending an ended or
-  // already-released lease is refused (additive; protocol stays 1.1).
+  // already-released lease is refused.
   rpc ExtendSessionLease(ExtendSessionLeaseRequest) returns (ExtendSessionLeaseResponse);
 }
 
@@ -72,7 +68,6 @@ enum Capability {
   CAPABILITY_X11 = 8;
 }
 
-// The generic connect-time outcome. No reason is disclosed to the caller.
 enum Decision {
   DECISION_UNSPECIFIED = 0;
   DECISION_ALLOW = 1;
@@ -92,17 +87,9 @@ enum AccessModel {
   ACCESS_MODEL_BREAKGLASS = 3;
 }
 
-// AuthorizeRequest is the resolved connect-time decision input. Identity
-// resolution (OIDC/OTP/pins) is upstream; here the identity is already
-// resolved. Source IP is a DENY-ONLY reducer — never positive evidence of
-// identity.
 message AuthorizeRequest {
-  // The resolved subject identity (e.g. an OIDC subject / username). Matched
-  // against dp_rule identity selectors; the user never chooses a raw principal.
   string identity = 1;
 
-  // The identity's SSO/OIDC groups, for group-based identity selectors. Advisory
-  // input resolved upstream; empty is fine.
   repeated string identity_groups = 2;
 
   // The fixed target node id (UUID). The CP resolves its labels from inventory;
@@ -137,7 +124,7 @@ message AuthorizeRequest {
   // standing dp_rule deny) SUBJECT TO the top-tier Lock — a matching Lock still denies
   // (deny wins; a locked target refuses break-glass). Empty for a standing/JIT connect.
   // JIT needs NO request field: the CP resolves an ACTIVE jit_request grant for
-  // {identity, node} server-side (additive; protocol stays 1.1).
+  // {identity, node} server-side.
   string breakglass_token = 8;
 
   // The target node's HUMAN NAME (the `node` half of the SSH username encoding, or
@@ -146,8 +133,7 @@ message AuthorizeRequest {
   // runtime.node.id via findByName — server-side and AUTHORITATIVE — and IGNORES
   // node_id, so a client can never smuggle an id past the resolved name. An
   // unknown name yields the SAME generic deny as any other no-match (no existence
-  // disclosure). Empty ⇒ the CP falls back to node_id (UUID) for direct-id callers
-  // (additive; protocol stays 1.1).
+  // disclosure). Empty ⇒ the CP falls back to node_id (UUID) for direct-id callers.
   string node_name = 9;
 
   // The logins the presented outer-leg credential is scoped to, as OuterLegAuth
@@ -157,16 +143,11 @@ message AuthorizeRequest {
   // It can never widen a decision — a login the RBAC evaluation did not already
   // allow does not become allowable by appearing here. The Gateway ALSO applies
   // the same reduction locally, so a Gateway that omits the field cannot obtain
-  // an out-of-scope allow; sending it is what makes the refusal auditable
-  // (additive; protocol stays 1.1).
+  // an out-of-scope allow; sending it is what makes the refusal auditable.
   repeated string credential_principals = 10;
 }
 
-// AuthorizeResponse carries the generic decision and, on ALLOW, the signed
-// decision context + the minted single-use session token.
 message AuthorizeResponse {
-  // The generic outcome. On DENY (including a matching Lock) nothing below is
-  // populated except this field.
   Decision decision = 1;
 
   // The decision context (populated on ALLOW). A convenience DECODE of
@@ -192,9 +173,6 @@ message AuthorizeResponse {
   // The signer's issuing CA chain (DER; issuing CA first). Present on ALLOW.
   repeated bytes signer_ca_chain = 6;
 
-  // The minted single-use session-signing token (bearer, shown once). The
-  // Gateway presents it to SessionSigning.SignSessionCertificate. Empty on DENY
-  // (fail closed — no token is minted for a denied or locked decision).
   string session_token = 7;
 
   // How the Gateway reaches the fixed target node and how it verifies the node's
@@ -209,24 +187,17 @@ message AuthorizeResponse {
   // {gateway_id, session_id, node, principal, exp} as session_token, that
   // authorises exactly one Recording.BeginRecording call for this session. Empty
   // on DENY (fail closed — a denied session is never recorded because it never
-  // runs) (additive; protocol stays 1.1).
+  // runs).
   string recording_token = 9;
 }
 
-// ConnectorKind selects how the Gateway reaches a node's sshd. The model is
-// selectable per node; a fleet may mix both: AGENTLESS is one; OUTBOUND_AGENT
-// (dial-back) is the other.
 enum ConnectorKind {
   CONNECTOR_KIND_UNSPECIFIED = 0;
   CONNECTOR_KIND_AGENTLESS = 1;
   CONNECTOR_KIND_OUTBOUND_AGENT = 2;
 }
 
-// NodeConnection is the CP's per-node connectivity + host-identity answer for a
-// resolved, authorized target. Read from inventory (node / node_host_key).
-// Carried unsigned on the ALLOW path (see the field doc).
 message NodeConnection {
-  // The connector model for this node (agentless dial vs outbound agent).
   ConnectorKind connector_kind = 1;
 
   // The dial address of the node's sshd for the agentless model: "host:port"
@@ -249,7 +220,7 @@ message NodeConnection {
   // It is carried explicitly rather than reusing the Gateway's node_id because
   // node_id is whatever the Gateway's target resolver produced — an identifier
   // whose relationship to node.name is the resolver's business, not this
-  // contract's (additive; protocol stays 1.1).
+  // contract's.
   string node_name = 4;
 
   // HA presence/ownership answer for an OUTBOUND_AGENT node. The CP reads
@@ -258,7 +229,7 @@ message NodeConnection {
   // empty means no live Gateway holds the node's agent control channel: the
   // Gateway fails closed to "node offline". For AGENTLESS they are always empty
   // (any Gateway dials the node directly; no ownership). Carried UNSIGNED for the
-  // same reason as the rest of this message. (additive; protocol stays 1.1).
+  // same reason as the rest of this message.
   //
   // The gateway_id (matching gateway_identity.name) of the Gateway that currently
   // owns this node's agent channel. If it equals the requesting Gateway's own id
@@ -318,19 +289,13 @@ message HostVerification {
 // verifies it, caches it, and runs per-channel-open local checks against it:
 // capability match, grant_expiry vs clock, local lock-set.
 message DecisionContext {
-  // The fixed target node (the decision is bound to it).
   string node_id = 1;
   string node_name = 2;
 
-  // The RBAC-resolved set of allowed Linux logins for this identity on this node.
   repeated string allowed_logins = 3;
 
-  // The granted capability set for this decision (union of the applicable allow
-  // grants; AND-of-denies). Default shell+exec; agent-forward only if granted.
   repeated Capability capabilities = 4;
 
-  // The chosen inner-leg cert principal for THIS connect (the requested login,
-  // confirmed within allowed_logins). The minted token is bound to it.
   string principal = 5;
 
   // grant_expiry = min(standing/JIT grant TTL, access-cred TTL) as Unix epoch
@@ -354,17 +319,13 @@ message DecisionContext {
   // channel-open from a different source is refused locally.
   string source_address = 11;
 
-  // When the decision was issued (Unix epoch seconds, UTC).
   int64 issued_at_epoch_seconds = 12;
 
   // The resolved subject identity this decision was made for. SIGNED into the
   // context so the Gateway matches identity-targeted locks against TRUSTED data
-  // (it can never be told an identity it did not authorize under) (additive;
-  // protocol stays 1.1).
+  // (it can never be told an identity it did not authorize under).
   string identity = 13;
 
-  // The identity's SSO/OIDC groups, for group-targeted locks (membership match).
-  // Signed alongside identity.
   repeated string identity_groups = 14;
 
   // The fixed node's inventory labels ("key=value"), for node-label-targeted
@@ -373,9 +334,8 @@ message DecisionContext {
 
   // Which access model produced this decision (standing / JIT / break-glass). SIGNED so
   // the Gateway, against trusted data, selects the per-model mid-session-expiry
-  // behaviour and forces strict recording for break-glass (additive; protocol
-  // stays 1.1). Absent/UNSPECIFIED is treated as STANDING by an older Gateway
-  // (N-1), which is the safe default.
+  // behaviour and forces strict recording for break-glass. Absent/UNSPECIFIED is
+  // treated as STANDING by an older Gateway (N-1), which is the safe default.
   AccessModel access_model = 16;
 
   // The resolved per-identity idle timeout for THIS session, in seconds: the most
@@ -387,15 +347,10 @@ message DecisionContext {
   // max_session_idle_secs (the smaller wins — the context can shorten, never
   // extend, the idle window). An N-1 Gateway ignores the field and keeps the
   // static bound: safe (the CP-side max-duration ceiling still holds).
-  // Additive; protocol stays 1.1.
   int64 idle_timeout_seconds = 17;
 }
 
-// NotifySessionEndRequest identifies the ended session. The caller is the mTLS
-// gateway identity, never a request field (the CP releases the lease only when
-// that caller brokered session_id).
 message NotifySessionEndRequest {
-  // The SessionLayer session id (UUID) whose session ended.
   string session_id = 1;
 
   // Why the session ended, for the lifecycle audit trail. Advisory diagnostics
@@ -415,24 +370,17 @@ message NotifySessionEndResponse {
 // as low-cardinality metric tags; no identity/session data belongs here.
 enum SessionEndReason {
   SESSION_END_REASON_UNSPECIFIED = 0;
-  SESSION_END_REASON_CLOSED = 1;         // orderly close (client disconnect / EOF)
-  SESSION_END_REASON_EXPIRED = 2;        // grant_expiry teardown (mid-session expiry)
-  SESSION_END_REASON_IDLE_TIMEOUT = 3;   // idle bound hit (static or per-identity)
-  SESSION_END_REASON_LOCKED = 4;         // lock-driven teardown
-  SESSION_END_REASON_ERROR = 5;          // abnormal teardown (I/O error, abort)
+  SESSION_END_REASON_CLOSED = 1;
+  SESSION_END_REASON_EXPIRED = 2;
+  SESSION_END_REASON_IDLE_TIMEOUT = 3;
+  SESSION_END_REASON_LOCKED = 4;
+  SESSION_END_REASON_ERROR = 5;
 }
 
-// ExtendSessionLeaseRequest identifies the live session whose lease to
-// re-stamp. Deliberately NO duration field: the extension window is the CP's
-// (server-authoritative), so a compromised Gateway cannot park a lease in the
-// far future.
 message ExtendSessionLeaseRequest {
-  // The SessionLayer session id (UUID) whose lease to extend.
   string session_id = 1;
 }
 
 message ExtendSessionLeaseResponse {
-  // The lease's new expiry (Unix epoch seconds, UTC). The Gateway re-extends
-  // ahead of this while a RunToTtl session keeps running past grant_expiry.
   int64 expires_at_epoch_seconds = 1;
 }

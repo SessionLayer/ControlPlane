@@ -188,9 +188,6 @@ tags:
     description: >-
       Correlated audit-stream search (`runtime.audit_event`).
       Gated (`audit:read`), RBAC-scope-filtered, read-only.
-# Default security applied to operations that do not override it. The public
-# meta probes below explicitly opt out with `security: []`. Declaring the three
-# first-class schemes here fixes them in the contract.
 security:
   - oidcBearer: []
   - clientCredentials: []
@@ -1425,12 +1422,6 @@ paths:
           $ref: '#/components/responses/Problem'
         default:
           $ref: '#/components/responses/Problem'
-  # ===================================================================
-  # Config resource CRUD. Contract-first; each
-  # resource is platform-RBAC gated + audited, invalid config rejected
-  # pre-commit (422). Config resources carry read-only `origin` provenance
-  # and an optimistic-concurrency `version`.
-  # ===================================================================
   /v1/rules:
     get:
       operationId: listRules
@@ -2956,12 +2947,6 @@ paths:
           $ref: '#/components/responses/Problem'
         default:
           $ref: '#/components/responses/Problem'
-  # ===================================================================
-  # Session-limit policies — the write surface.
-  # Per-identity overrides for the three session-limit knobs; every stored
-  # value is ENFORCED (no dead config): cap + duration at Authorize, idle
-  # via the signed decision context at the Gateway.
-  # ===================================================================
   /v1/session-limit-policies:
     get:
       operationId: listSessionLimitPolicies
@@ -3100,13 +3085,6 @@ paths:
           $ref: '#/components/responses/Problem'
         default:
           $ref: '#/components/responses/Problem'
-  # ===================================================================
-  # Cluster operator settings (`config.operator_settings`). A DB-enforced
-  # singleton, so this is GET/PUT on one resource with no collection and
-  # no id in the path. The customer recording key is a sub-resource with
-  # its own permission because it is the only setting whose holder can
-  # make future recordings readable to themselves.
-  # ===================================================================
   /v1/operator-settings:
     get:
       operationId: getOperatorSettings
@@ -3298,11 +3276,6 @@ paths:
           $ref: '#/components/responses/Problem'
         default:
           $ref: '#/components/responses/Problem'
-  # ===================================================================
-  # Runtime session management (list + terminate).
-  # `sessions` is RUNTIME (never config); terminate reuses the Lock
-  # teardown path.
-  # ===================================================================
   /v1/sessions:
     get:
       operationId: listSessions
@@ -5513,7 +5486,6 @@ components:
         note:
           type: string
       additionalProperties: false
-    # ============ shared enums & value types ============
     Origin:
       type: string
       title: Config Provenance
@@ -5720,7 +5692,6 @@ components:
       description: A string->string label map.
       additionalProperties:
         type: string
-    # ============ rules (dp_rule) ============
     RuleResource:
       type: object
       title: Data-Plane Rule
@@ -5867,7 +5838,6 @@ components:
           type: string
           description: Cursor for the next page; absent on the last page.
       additionalProperties: false
-    # ============ roles (platform_role) ============
     RoleResource:
       type: object
       title: Platform Role
@@ -5948,7 +5918,6 @@ components:
         nextCursor:
           type: string
       additionalProperties: false
-    # ============ role-bindings (role_binding) ============
     RoleBindingResource:
       type: object
       title: Role Binding
@@ -6028,7 +5997,6 @@ components:
         nextCursor:
           type: string
       additionalProperties: false
-    # ============ cas (ca_config) ============
     CaResource:
       type: object
       title: CA Configuration
@@ -6210,7 +6178,6 @@ components:
             `ssh-keygen -l` prints it, so an operator can verify what they
             installed matches what the Control Plane serves.
       additionalProperties: false
-    # ============ service-accounts (service_account) ============
     ServiceAccountResource:
       type: object
       title: Service Account
@@ -6301,7 +6268,6 @@ components:
         nextCursor:
           type: string
       additionalProperties: false
-    # ============ node-policies (node_policy) ============
     NodePolicyResource:
       type: object
       title: Node Policy
@@ -6389,7 +6355,6 @@ components:
         nextCursor:
           type: string
       additionalProperties: false
-    # ============ capability-defs (capability_def) ============
     CapabilityDefResource:
       type: object
       title: Capability Definition
@@ -6454,7 +6419,6 @@ components:
         nextCursor:
           type: string
       additionalProperties: false
-    # ============ jit-policies (jit_policy) ============
     JitPolicyResource:
       type: object
       title: JIT Policy
@@ -6564,7 +6528,6 @@ components:
         nextCursor:
           type: string
       additionalProperties: false
-    # ============ breakglass-policies (breakglass_policy) ============
     BreakglassPolicyResource:
       type: object
       title: Break-glass Policy
@@ -6656,7 +6619,6 @@ components:
         nextCursor:
           type: string
       additionalProperties: false
-    # ============ session-limit-policies (session_limit_policy) ============
     SessionLimitPolicyResource:
       type: object
       title: Session-Limit Policy
@@ -6770,7 +6732,6 @@ components:
           type: string
           description: Cursor for the next page; absent on the last page.
       additionalProperties: false
-    # ============ operator-settings (operator_settings, singleton) ============
     OperatorSettings:
       type: object
       title: Operator Settings
@@ -7031,7 +6992,6 @@ components:
           format: int64
           description: The current operator-settings version; required and must match (optimistic concurrency — a stale version is a `409`).
       additionalProperties: false
-    # ============ sessions (ssh_session, runtime) ============
     SessionResource:
       type: object
       title: SSH Session
@@ -7116,7 +7076,6 @@ components:
         nextCursor:
           type: string
       additionalProperties: false
-    # ============ session-leases (session_lease, runtime) ============
     SessionLeaseResource:
       type: object
       title: Concurrency Lease

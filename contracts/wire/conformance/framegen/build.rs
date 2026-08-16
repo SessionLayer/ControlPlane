@@ -1,6 +1,3 @@
-//! Generate the wire payload types from the vendored contracts protos (the same frozen
-//! `.proto` both consumer repos generate from, so the prost encoding is byte-identical).
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // gen/ -> conformance/ -> wire/ -> contracts/ ; the protos live under contracts/proto.
     let proto_root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
