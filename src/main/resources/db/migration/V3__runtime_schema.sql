@@ -1,12 +1,11 @@
 -- V3 — RUNTIME schema (live operational state). SessionLayer Control Plane.
 --
--- Design §12A "Core data model" (RUNTIME group) + §13. These entities are the
--- live operational state: registrations, presence, issued identities, sessions,
--- recordings, locks, JIT/break-glass state, pins/OTPs, audit. RUNTIME is the live
--- side of the config-vs-runtime boundary (FR-DATA-1); there is deliberately no
+-- The live operational state: registrations, presence, issued identities,
+-- sessions, recordings, locks, JIT/break-glass state, pins/OTPs, audit. RUNTIME is
+-- the live side of the config-vs-runtime boundary; there is deliberately no
 -- `origin` provenance column here.
 --
--- Referential rules (docs/reference/data-model.md in the SessionLayer/Documentation repo):
+-- Referential rules:
 --   * runtime->runtime: real FKs (ON DELETE SET NULL where history must outlive the
 --     referenced row; CASCADE only for the 1:1 recording_ref).
 --   * runtime->config: NEVER a hard FK — decision *snapshots* (plain uuid + copied

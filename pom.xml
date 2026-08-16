@@ -194,7 +194,6 @@
 		</dependency>
 
 		<!--
-
 		  The `netty-nio-client` exclusion is the same hazard the Azure block below
 		  describes: it is Netty-4.1-compiled and this service runs the Boot-managed
 		  Netty 4.2, whose `netty-codec` split would break it on first use. Nothing
@@ -221,7 +220,6 @@
 		</dependency>
 
 		<!--
-
 		  The three exclusions are load-bearing, not tidying:
 
 		  * `azure-core-http-netty` is built against Netty 4.1 and reactor-netty
@@ -278,7 +276,6 @@
 		</dependency>
 
 		<!--
-
 		  `apache5-client` arrives transitively already, but at runtime scope and by
 		  accident of another module's dependencies. AwsKmsSignerFactory names the
 		  class directly to pin the transport, so it is declared here: a compile-scope
