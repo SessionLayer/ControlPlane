@@ -1,12 +1,9 @@
--- V2 — CONFIG schema (operator-authored desired state). SessionLayer Control Plane.
+-- Every table here lives in the `config` schema and carries an `origin` column
+-- recording which admin surface last wrote the row (originally git|api|ui|default;
+-- V21 drops the legacy 'git' value once external config automation was descoped).
+-- CONFIG is desired state; RUNTIME (V3) is live operational state.
 --
--- Design §12A "Core data model" (CONFIG group) + §13 (config-vs-runtime boundary)
--- + FR-DATA-1. Every table here lives in the `config` schema and carries an `origin`
--- column recording which admin surface last wrote the row (originally git|api|ui|
--- default; V21 drops the legacy 'git' value once external config automation was
--- descoped). CONFIG is desired state; RUNTIME (V3) is live operational state.
---
--- Conventions (see docs/reference/data-model.md in the SessionLayer/Documentation repo):
+-- Conventions:
 --   * PK = uuid, app-generated UUIDv7 (no DB extension needed).
 --   * version bigint = the R2DBC @Version column (solves the is-new problem for a
 --     client-assigned id; also optimistic-concurrency).
@@ -20,12 +17,9 @@
 
 CREATE SCHEMA IF NOT EXISTS config;
 
--- ---------------------------------------------------------------------------
--- node_policy — desired labels, connector kind, declared host trust references.
--- ---------------------------------------------------------------------------
 CREATE TABLE config.node_policy (
     id              uuid        PRIMARY KEY,
-    name            text        NOT NULL UNIQUE,                 -- stable policy key for matching
+    name            text        NOT NULL UNIQUE,
     desired_labels  jsonb       NOT NULL DEFAULT '{}'
                                 CHECK (jsonb_typeof(desired_labels) = 'object'),
     connector_kind  text        NOT NULL CHECK (connector_kind IN ('agent', 'agentless')),
@@ -39,10 +33,6 @@ CREATE TABLE config.node_policy (
 );
 COMMENT ON TABLE config.node_policy IS 'Design §12A CONFIG: NodePolicy — desired node labels + connector + host trust refs.';
 
--- ---------------------------------------------------------------------------
--- dp_rule — data-plane grant (identity × node-label × source-IP -> principals,
--- ttl, capabilities, allow|deny). Design §6.1, FR-AUTHZ-1. Lock is NOT here.
--- ---------------------------------------------------------------------------
 CREATE TABLE config.dp_rule (
     id                  uuid    PRIMARY KEY,
     name                text    NOT NULL UNIQUE,
@@ -65,9 +55,6 @@ CREATE TABLE config.dp_rule (
 );
 COMMENT ON TABLE config.dp_rule IS 'Design §6.1 / FR-AUTHZ-1: data-plane RBAC grant (typed policy-as-data). Evaluated by the application.';
 
--- ---------------------------------------------------------------------------
--- platform_role — named set of granular platform permissions. FR-PADM-1.
--- ---------------------------------------------------------------------------
 CREATE TABLE config.platform_role (
     id          uuid    PRIMARY KEY,
     name        text    NOT NULL UNIQUE,
@@ -85,10 +72,6 @@ CREATE TABLE config.platform_role (
 );
 COMMENT ON TABLE config.platform_role IS 'FR-PADM-1: platform RBAC role = granular permission set.';
 
--- ---------------------------------------------------------------------------
--- role_binding — subject (user/group) -> platform_role, optionally scoped. FR-PADM-2.
--- config->config FK is allowed (same class).
--- ---------------------------------------------------------------------------
 CREATE TABLE config.role_binding (
     id           uuid   PRIMARY KEY,
     role_id      uuid   NOT NULL REFERENCES config.platform_role (id) ON DELETE CASCADE,
@@ -104,15 +87,12 @@ CREATE TABLE config.role_binding (
 );
 COMMENT ON TABLE config.role_binding IS 'FR-PADM-2: binds a subject to a platform_role; scope for recording:replay/export.';
 
--- ---------------------------------------------------------------------------
--- ca_config — per-CA backend + key REFERENCE (never private material). FR-CA-1/4.
--- ---------------------------------------------------------------------------
 CREATE TABLE config.ca_config (
     id            uuid   PRIMARY KEY,
-    name          text   NOT NULL UNIQUE,                        -- stable config name (a kind may have >1 row during rotation)
+    name          text   NOT NULL UNIQUE,
     ca_kind       text   NOT NULL CHECK (ca_kind IN ('user', 'session', 'host')),
     backend       text   NOT NULL CHECK (backend IN ('local', 'aws_kms', 'azure_keyvault', 'vault')),
-    key_reference text   NOT NULL                                -- reference/handle only — NEVER private key material
+    key_reference text   NOT NULL
                          CHECK (key_reference NOT LIKE '%PRIVATE KEY%' AND key_reference NOT LIKE '%BEGIN %'),
     algorithm     text   NOT NULL DEFAULT 'ecdsa-p256'
                          CHECK (algorithm IN ('ecdsa-p256', 'ecdsa-p384', 'ed25519', 'rsa-2048', 'rsa-4096')),
@@ -130,9 +110,6 @@ CREATE TABLE config.ca_config (
 );
 COMMENT ON TABLE config.ca_config IS 'FR-CA-1/4/7: per-CA (user|session|host) backend + key reference; multiple rows per kind support rotation overlap (one active). Default ECDSA P-256. Never stores private key material.';
 
--- ---------------------------------------------------------------------------
--- capability_def — the requestable-capability catalogue.
--- ---------------------------------------------------------------------------
 CREATE TABLE config.capability_def (
     id          uuid   PRIMARY KEY,
     name        text   NOT NULL UNIQUE
@@ -147,9 +124,6 @@ CREATE TABLE config.capability_def (
 );
 COMMENT ON TABLE config.capability_def IS 'Design §12A CONFIG: requestable-capability catalogue.';
 
--- ---------------------------------------------------------------------------
--- jit_policy — what is JIT-requestable + approval-chain config (0-3 levels). FR-ACC-3.
--- ---------------------------------------------------------------------------
 CREATE TABLE config.jit_policy (
     id              uuid    PRIMARY KEY,
     name            text    NOT NULL UNIQUE,
@@ -159,7 +133,7 @@ CREATE TABLE config.jit_policy (
                                 'port_forward_local', 'port_forward_remote',
                                 'agent_forward', 'x11']::text[]),
     max_ttl_seconds integer NOT NULL CHECK (max_ttl_seconds > 0),
-    -- approval_chain: ordered array of levels, each {kind: email|oidc_group, value}. 0-3 levels (FR-ACC-3).
+    -- Ordered array of levels, each {kind: email|oidc_group, value}.
     approval_chain  jsonb   NOT NULL DEFAULT '[]'
                             CHECK (jsonb_typeof(approval_chain) = 'array'
                                    AND jsonb_array_length(approval_chain) <= 3),
@@ -171,17 +145,14 @@ CREATE TABLE config.jit_policy (
 );
 COMMENT ON TABLE config.jit_policy IS 'FR-ACC-3: JIT-requestable targets + 0-3 level approval chain (email/OIDC-group).';
 
--- ---------------------------------------------------------------------------
--- breakglass_policy — break-glass config. FR-ACC-6.
--- ---------------------------------------------------------------------------
 CREATE TABLE config.breakglass_policy (
     id                uuid    PRIMARY KEY,
     name              text    NOT NULL UNIQUE,
     recording_strict  boolean NOT NULL DEFAULT true,             -- session dies if recording fails
-    alert_target      text    NOT NULL,                          -- high-priority alert destination (reference)
+    alert_target      text    NOT NULL,
     review_required   boolean NOT NULL DEFAULT true,
     auth_path         text    NOT NULL DEFAULT 'fido2'
-                              CHECK (auth_path IN ('fido2', 'offline_code')),  -- IdP-independent path
+                              CHECK (auth_path IN ('fido2', 'offline_code')),
     origin            text    NOT NULL DEFAULT 'default'
                               CHECK (origin IN ('git', 'api', 'ui', 'default')),
     version           bigint  NOT NULL DEFAULT 0,
@@ -190,18 +161,15 @@ CREATE TABLE config.breakglass_policy (
 );
 COMMENT ON TABLE config.breakglass_policy IS 'FR-ACC-6: break-glass — recording-strict, alert, review, IdP-independent auth path.';
 
--- ---------------------------------------------------------------------------
--- service_account — machine-consumer DEFINITION (issued creds are runtime). FR-AUTH-12.
--- ---------------------------------------------------------------------------
 CREATE TABLE config.service_account (
     id                uuid    PRIMARY KEY,
     name              text    NOT NULL UNIQUE,
     description       text,
     auth_method       text    NOT NULL DEFAULT 'private_key_jwt'
                               CHECK (auth_method IN ('private_key_jwt', 'mtls', 'client_secret')),
-    -- public key / JWKS reference, never a secret. An issued client_secret (if that method
-    -- is used) is a RUNTIME credential (a hash in runtime.service_account_credential),
-    -- never stored here. Content guard blocks a private key at rest.
+    -- public key / JWKS reference, never a secret. An issued client_secret (if that
+    -- method is used) is a RUNTIME credential (a hash in
+    -- runtime.service_account_credential), never stored here.
     key_reference     text    CHECK (key_reference IS NULL OR key_reference NOT LIKE '%PRIVATE KEY%'),
     token_ttl_seconds integer CHECK (token_ttl_seconds IS NULL OR token_ttl_seconds > 0),
     origin            text    NOT NULL DEFAULT 'default'

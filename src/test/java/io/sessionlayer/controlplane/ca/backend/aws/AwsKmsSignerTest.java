@@ -28,11 +28,6 @@ import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 
-/**
- * The pinned-key verification is the guard: a signature KMS attributes to the
- * right key still has to verify against the public half this Control Plane
- * adopted, or nothing leaves this class.
- */
 class AwsKmsSignerTest {
 
 	private static final String ACCOUNT_ID = "111122223333";
@@ -138,7 +133,6 @@ class AwsKmsSignerTest {
 				.hasMessageContaining("32 bytes");
 	}
 
-	/** Pinning is enforced here, not merely documented. */
 	@Test
 	void aSignatureMadeByADifferentKeyFailsTheLocalVerificationGuard() throws Exception {
 		KeyPair pinned = ecKeyPair();
@@ -234,9 +228,7 @@ class AwsKmsSignerTest {
 		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(response), (ECPublicKey) ca.getPublic(), KEY);
 
 		assertThatThrownBy(() -> signer.signDigestDer(digest)).isInstanceOf(KmsSigningException.class)
-				.hasMessageContaining("attributed to a different key")
-				// The id that answered is not echoed — only the pinned ARN is.
-				.hasMessageNotContaining("99998888");
+				.hasMessageContaining("attributed to a different key").hasMessageNotContaining("99998888");
 	}
 
 	@Test

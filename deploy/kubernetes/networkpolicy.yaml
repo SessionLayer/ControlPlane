@@ -1,11 +1,6 @@
-# SessionLayer Control Plane — default-deny + the specific ingress/egress the
-# process actually needs, matching the Gateway's approach
-# (`deploy/kubernetes/networkpolicy.yaml` in the `SessionLayer/Gateway` repo).
-#
 # Two of the four egress peers here (the WORM object store, your OIDC issuer)
 # are typically OUTSIDE the cluster and often behind a CDN/shared IP range
-# that a CIDR block cannot scope tightly — the same limitation the Gateway's
-# own policy notes for its WORM-upload rule. Where the peer is a real
+# that a CIDR block cannot scope tightly. Where the peer is a real
 # CIDR-stable endpoint, replace the placeholder below; where it isn't (e.g.
 # public SaaS IdP, AWS S3), prefer your CNI's FQDN-based policy support (e.g.
 # Cilium CiliumNetworkPolicy toFQDNs) or a VPC-level control (security group /
@@ -23,11 +18,9 @@ spec:
   policyTypes: ["Ingress", "Egress"]
 
   ingress:
-    # The mTLS gRPC plane: Gateways (enroll/renew, Authorize, cert-sign, lock
-    # feed, presence, recording lifecycle) and Agents (join, renew). Agents
-    # often run on fleet nodes outside this cluster; widen with an ipBlock for
-    # your node subnet if so — the podSelector below only covers in-cluster
-    # callers.
+    # Agents reach this port too, and often run on fleet nodes outside this
+    # cluster; widen with an ipBlock for your node subnet if so — the
+    # podSelector below only covers in-cluster callers.
     - from:
         - podSelector:
             matchLabels: { app.kubernetes.io/name: sessionlayer-gateway }
@@ -35,14 +28,12 @@ spec:
         - { protocol: TCP, port: 9443 }
     # REST + OIDC pages: browsers via the Dashboard, admins, automation. This
     # is deliberately broad — it is meant to sit behind a TLS-terminating L7
-    # load balancer/ingress (docs/installation/control-plane.md), which can be
-    # anywhere in the cluster or outside it; the load balancer + OIDC/mTLS auth
-    # are the real gate, not this rule.
+    # load balancer/ingress, which can be anywhere in the cluster or outside
+    # it; the load balancer + OIDC/mTLS auth are the real gate, not this rule.
     - ports:
         - { protocol: TCP, port: 8080 }
 
   egress:
-    # Cluster DNS.
     - to:
         - namespaceSelector: {}
           podSelector:
@@ -50,18 +41,13 @@ spec:
       ports:
         - { protocol: UDP, port: 53 }
         - { protocol: TCP, port: 53 }
-    # Postgres — the single source of truth. Scoped to an in-cluster Postgres
-    # by label; for a managed/external database replace this with an ipBlock
-    # for its endpoint.
     - to:
         - podSelector:
             matchLabels: { app.kubernetes.io/name: postgresql }
       ports:
         - { protocol: TCP, port: 5432 }
-    # WORM object store: presigned PUT/GET issuance only (bytes never proxy
-    # through the Control Plane) plus the bucket-provisioning warm-up on boot.
-    # Placeholder CIDR — scope to your object store's real range, or see the
-    # FQDN note above for public S3.
+    # WORM object store. Placeholder CIDR — scope to your object store's real
+    # range, or see the FQDN note above for public S3.
     - to:
         - ipBlock: { cidr: 10.30.0.0/16 }
       ports:
@@ -72,14 +58,11 @@ spec:
         - ipBlock: { cidr: 10.40.0.0/16 }
       ports:
         - { protocol: TCP, port: 443 }
-    # Vault, if the `vault` CA backend is configured (optional — drop if using
-    # the local or a cloud-KMS backend instead).
     - to:
         - podSelector:
             matchLabels: { app.kubernetes.io/name: vault }
       ports:
         - { protocol: TCP, port: 8200 }
-    # OTel collector (optional — only reached when OTLP export is enabled).
     - to:
         - podSelector:
             matchLabels: { app.kubernetes.io/name: otel-collector }

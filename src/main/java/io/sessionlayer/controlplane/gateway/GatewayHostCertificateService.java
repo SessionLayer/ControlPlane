@@ -71,8 +71,6 @@ public class GatewayHostCertificateService {
 			Instant now = Instant.now();
 			Instant notBefore = now.minus(properties.getCertBackdate());
 			Instant notAfter = now.plus(properties.getHostCertTtl());
-			// OpenSSH cert assembly + ECDSA sign is CPU-bound — off the reactive event
-			// loop.
 			return Mono.fromCallable(() -> mint(signer, identity.name(), hostKey, principals, notBefore, notAfter))
 					.subscribeOn(
 							Schedulers.boundedElastic())
@@ -80,17 +78,13 @@ public class GatewayHostCertificateService {
 							null, null, Map.of("principals", String.join(",", principals), "not_after",
 									Long.toString(notAfter.getEpochSecond())))
 							.thenReturn(cert));
-		})
-				// A fail-closed signer-unavailable is not a GatewayRequestException;
-				// audit it distinctly so a CA-availability incident is forensically visible.
-				.onErrorResume(CaSignerService.NoSignerAvailable.class,
-						unavailable -> audit.record(identity.name(), identity.name(), "gateway.host_cert.sign",
-								"denied", null, null, Map.of("reason", "ca_unavailable")).then(Mono.error(unavailable)))
-				// A key service that was reached and then refused is neither an absent CA nor
-				// a client fault, so without its own branch it escaped both and this path
-				// produced no audit record at all — while the identical failure on the session
-				// path produced one. The reason is a fixed constant: a key service's response
-				// text must not reach the audit trail.
+		}).onErrorResume(CaSignerService.NoSignerAvailable.class,
+				unavailable -> audit.record(identity.name(), identity.name(), "gateway.host_cert.sign", "denied", null,
+						null, Map.of("reason", "ca_unavailable")).then(Mono.error(unavailable)))
+				// A key service that was reached and then refused is neither an absent CA
+				// nor a client fault, so it needs its own audited branch. The reason is a
+				// fixed constant: a key service's response text must not reach the audit
+				// trail.
 				.onErrorResume(CaSigningFailedException.class,
 						failed -> audit.record(identity.name(), identity.name(), "gateway.host_cert.sign", "denied",
 								null, null, Map.of("reason", "ca_signing_failed")).then(Mono.error(failed)));

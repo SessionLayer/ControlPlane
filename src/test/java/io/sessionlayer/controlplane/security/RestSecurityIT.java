@@ -35,7 +35,6 @@ class RestSecurityIT extends AbstractAuthIT {
 	@Test
 	void publicProbeIsOpenAndProtectedEndpointFailsClosed() {
 		client.get().uri("/v1/healthz").exchange().expectStatus().isOk();
-		// No credential → 401 (fail closed), never open.
 		client.post().uri("/v1/otp").contentType(MediaType.APPLICATION_JSON)
 				.bodyValue(Map.of("identity", "x", "allowedPrincipals", List.of("deploy"))).exchange().expectStatus()
 				.isUnauthorized();

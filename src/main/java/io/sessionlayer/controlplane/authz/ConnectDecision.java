@@ -2,11 +2,6 @@ package io.sessionlayer.controlplane.authz;
 
 import java.util.UUID;
 
-/**
- * Orchestrated connect-time outcome. On allow,
- * signedContext/tokens/nodeConnection are present; on deny they are null
- * (fail-closed). trace carries non-content correlation for allow; null on deny.
- */
 public record ConnectDecision(boolean allowed, SignedDecisionContext signedContext, String sessionToken,
 		String recordingToken, NodeConnectionInfo nodeConnection, TraceInfo trace) {
 

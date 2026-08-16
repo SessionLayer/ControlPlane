@@ -15,24 +15,14 @@ import java.util.Map;
  */
 public interface VaultSshEngine {
 
-	/** Parameters for {@code POST /ssh/sign/:role} (no key generation). */
 	record SignRequest(String keyId, List<String> validPrincipals, long ttlSeconds, Map<String, String> criticalOptions,
 			List<String> extensions) {
 	}
 
-	/** The Vault-issued certificate (the {@code signed_key} field). */
 	record SignedCertificate(String certificateLine) {
 	}
 
-	/**
-	 * The engine's configured CA public key ({@code GET /ssh/config/ca}, public
-	 * material).
-	 */
 	String caPublicKeyLine();
 
-	/**
-	 * Sign the presented public key via {@code POST /ssh/sign/:role} and return the
-	 * signed certificate. MUST throw on failure (fail closed).
-	 */
 	SignedCertificate sign(String role, String publicKeyOpenSshLine, SignRequest request);
 }

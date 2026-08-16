@@ -68,8 +68,6 @@ class CaLifecycleIT {
 
 	@Test
 	void activeSignerFailsClosedWithNoCa() {
-		// Clean slate (this class's own container): no active session CA -> fail
-		// closed.
 		// ca_key_material is INSERT/SELECT-only for the runtime role, so clean up as
 		// owner.
 		OwnerDb.of(POSTGRES).sql("DELETE FROM runtime.ca_key_material").then()
@@ -90,41 +88,31 @@ class CaLifecycleIT {
 
 		ECPublicKey caPublicKey = SshEcdsaPublicKeys.parse(signer.caPublicKeyBlob());
 		assertThat(CertTestSupport.verifyEcdsaCert(cert.blob(), caPublicKey)).isTrue();
-		// the CA advertises a TrustedUserCAKeys line for the node fleet.
 		assertThat(signer.caAuthorizedKey("session-ca")).startsWith("ecdsa-sha2-nistp256 ");
 	}
 
 	@Test
 	void rotationOverlapThenDrainKeepsTrustContinuous() {
 		provisioning.provisionAll().block(Duration.ofSeconds(20));
-		// Steady state: one active session CA is trusted.
 		assertThat(trusted()).hasSize(1);
 
-		// Begin rotation: an incoming CA is pre-published -> both trusted (overlap
-		// starts).
 		rotationService.beginRotation("session", "session-ca-2", "local", null, "ecdsa-p256")
 				.block(Duration.ofSeconds(10));
 		assertThat(trusted()).hasSize(2);
 
-		// Promote: old active -> outgoing, incoming -> active. Still both trusted (no
-		// downtime).
 		rotationService.promote("session").block(Duration.ofSeconds(10));
 		assertThat(trusted()).hasSize(2);
-		assertThat(activeName()).isEqualTo("session-ca-2"); // the new CA is now the signer
+		assertThat(activeName()).isEqualTo("session-ca-2");
 
-		// Drain: outgoing -> expired -> only the new CA remains trusted.
 		rotationService.drain("session").block(Duration.ofSeconds(10));
 		assertThat(trusted()).hasSize(1);
 	}
 
 	/**
-	 * A rotation that names a stronger curve must produce that curve, not silently
-	 * keep the default P-256 the local factory used to hard-code — and a later
-	 * rotation that omits the algorithm must inherit the CA's now-current curve,
-	 * not reset to it either. Both are checked against the actual generated key
-	 * (its EC field size), not just the {@code ca_config.algorithm} label, so a fix
-	 * that only relabels the row without generating a real stronger key would still
-	 * fail here.
+	 * Both rotations are checked against the actual generated key (its EC field
+	 * size), not just the {@code ca_config.algorithm} label, so a fix that only
+	 * relabels the row without generating a real stronger key would still fail
+	 * here.
 	 *
 	 * <p>
 	 * Exercised on {@code host}, not {@code session}: two rotations with no drain
@@ -148,7 +136,6 @@ class CaLifecycleIT {
 
 	@Test
 	void backendAlgorithmMismatchRejectedAtValidation() {
-		// ed25519 is not producible by our ECDSA assembler -> rejected at validation.
 		CaConfig ed = new CaConfig(io.sessionlayer.controlplane.data.Uuids.v7(), "bad-ed25519", "user", "local",
 				"local:x", "ed25519", "active", "default", null, null, null);
 		StepVerifier.create(signerService.signerFor(ed)).verifyError(CaBackendCapabilities.AlgorithmNotSupported.class);

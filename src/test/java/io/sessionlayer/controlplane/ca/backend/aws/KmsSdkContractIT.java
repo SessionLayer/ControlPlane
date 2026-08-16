@@ -33,20 +33,6 @@ import software.amazon.awssdk.services.kms.model.KmsException;
 import software.amazon.awssdk.services.kms.model.KmsInvalidStateException;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 
-/**
- * The {@code aws_kms} seam driven against {@link LocalStackKms} — a KMS that
- * really generates keys and really signs, reached over the real AWS protocol by
- * the genuine SDK. {@code AwsKmsSignerTest} covers the same guards with a
- * mocked {@code KmsClient}, which never touches request signing, endpoint
- * resolution, the credential chain, or the SDK's response unmarshalling; this
- * class proves the wire contract those guards are written against.
- *
- * <p>
- * The failures a real KMS cannot be made to produce are the exceptions, and
- * each one says so where it is used: LocalStack's community edition evaluates
- * no IAM policy, and no service returns a signature in the wrong encoding or a
- * truncated one.
- */
 class KmsSdkContractIT {
 
 	private static AwsKmsSignerFactory factory;
@@ -86,11 +72,6 @@ class KmsSdkContractIT {
 		assertVerifies(factory.signerFor(key, publicKey).signDigestDer(digest), digest, publicKey);
 	}
 
-	/**
-	 * The encoding claim, made against the bytes KMS really sent: a DER
-	 * {@code SEQUENCE} that round-trips through the strict reader
-	 * {@code KmsCaBackend} normalizes with.
-	 */
 	@Test
 	void theSignatureRealKmsReturnsIsDer() throws Exception {
 		byte[] digest = digestOf("aws-kms-happy-path");
@@ -293,12 +274,6 @@ class KmsSdkContractIT {
 				.hasMessageNotContaining(LocalStackKms.ACCOUNT_ID);
 	}
 
-	/**
-	 * KMS resolves the alias perfectly well, which is what makes refusing it a
-	 * decision rather than a limitation: {@code kms:UpdateAlias} repoints it at
-	 * another key with nothing SessionLayer can see changing, while every node's
-	 * {@code TrustedUserCAKeys} still carries the old public half.
-	 */
 	@Test
 	void anAliasIsRefusedEvenThoughKmsWouldServeIt() {
 		String arn = LocalStackKms.createSigningKey();
@@ -336,14 +311,12 @@ class KmsSdkContractIT {
 		System.arraycopy(raw, start, out, offset + (32 - len), len);
 	}
 
-	/** A port nothing is listening on, for the KMS-unreachable case. */
 	private static String closedEndpoint() throws IOException {
 		try (ServerSocket socket = new ServerSocket(0, 1, InetAddress.getLoopbackAddress())) {
 			return "http://" + urlHost(socket.getInetAddress()) + ":" + socket.getLocalPort();
 		}
 	}
 
-	/** An IPv6 loopback has to be bracketed before it is a URL host. */
 	private static String urlHost(InetAddress address) {
 		String literal = address.getHostAddress();
 		return literal.contains(":") ? "[" + literal + "]" : literal;

@@ -47,8 +47,6 @@ final class GrpcErrors {
 			return status.withDescription(request.getMessage()).asRuntimeException();
 		}
 		if (error instanceof DeviceFlowService.RateLimited) {
-			// A throttled device-flow poll — the Gateway backs off and
-			// keeps its num-prompts=0 heartbeat alive.
 			return Status.RESOURCE_EXHAUSTED.withDescription("rate limited").asRuntimeException();
 		}
 		if (error instanceof InternalMtlsCaService.NoMtlsCaAvailable
@@ -66,11 +64,9 @@ final class GrpcErrors {
 					.asRuntimeException();
 		}
 		if (error instanceof TimeoutException) {
-			// Server-side deadline hit — a saturated DB / R2DBC pool, not a client fault.
 			LOG.warn("gRPC {} exceeded the server deadline", operation);
 			return Status.DEADLINE_EXCEEDED.withDescription("request deadline exceeded").asRuntimeException();
 		}
-		// Unexpected: log the real cause server-side, return a generic error.
 		LOG.warn("gRPC {} failed", operation, error);
 		return Status.INTERNAL.withDescription("internal error").asRuntimeException();
 	}

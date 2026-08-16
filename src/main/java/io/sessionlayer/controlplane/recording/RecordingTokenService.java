@@ -50,8 +50,6 @@ public class RecordingTokenService {
 		});
 	}
 
-	// The context is advisory: a field is checked only when the caller set it, and
-	// when set it MUST equal the token's authoritative value.
 	private static boolean contextDisagrees(RecordingRequestContext ctx, RecordingToken token) {
 		if (ctx.sessionId() != null && !ctx.sessionId().equals(token.sessionId())) {
 			return true;

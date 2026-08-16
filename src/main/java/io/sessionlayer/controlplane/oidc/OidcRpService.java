@@ -13,15 +13,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
-/** Auth-code + PKCE flow with single-use state consumption. */
 @Service
 public class OidcRpService {
 
 	private static final Duration LOGIN_TTL = Duration.ofMinutes(10);
 
-	// Single-use consume of the login state — a replayed/forged/expired state
-	// matches nothing (CSRF + replay protection). RETURNING carries the purpose +
-	// device linkage the callback needs.
 	private static final String CONSUME_STATE = """
 			UPDATE runtime.oidc_login SET consumed_at = now()
 			WHERE state_hash = :hash AND consumed_at IS NULL AND expires_at > now()

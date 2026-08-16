@@ -60,7 +60,6 @@ class AgentRenewalServiceTest {
 				new AgentJoinProperties(), audit, tx, JsonMapper.builder().build(), renewalReceipts);
 		when(audit.record(any(), any(), any(), any(), any(), any(), any())).thenReturn(Mono.empty());
 		when(tx.transactional(any(Mono.class))).thenAnswer(inv -> inv.getArgument(0));
-		// Default: no prior receipt — the mismatch tests below exercise clone-lock.
 		when(renewalReceipts.findByAgentIdAndPriorGenerationAndCsrPublicKeyHash(any(),
 				org.mockito.ArgumentMatchers.anyLong(), any())).thenReturn(Mono.empty());
 		when(renewalReceipts.save(any())).thenAnswer(inv -> Mono.just(inv.getArgument(0)));
@@ -97,7 +96,6 @@ class AgentRenewalServiceTest {
 				org.mockito.ArgumentMatchers.anyLong())).thenReturn(Mono.empty());
 		byte[] csr = MtlsTestSupport.csr(MtlsTestSupport.generateEcKeyPair(), "node-x");
 
-		// Declares generation 5 while the store holds 0 — a clone signal.
 		StepVerifier.create(service.renew(AGENT, "fp0", csr, 5))
 				.verifyErrorSatisfies(e -> assertThat(((AgentJoinException) e).reason())
 						.isEqualTo(AgentJoinException.Reason.FAILED_PRECONDITION));
@@ -110,7 +108,7 @@ class AgentRenewalServiceTest {
 		ArgumentCaptor<AccessLock> lock = ArgumentCaptor.forClass(AccessLock.class);
 		verify(accessLocks).save(lock.capture());
 		assertThat(lock.getValue().mode()).isEqualTo("strict");
-		assertThat(lock.getValue().ttlSeconds()).isNull(); // never auto-clears
+		assertThat(lock.getValue().ttlSeconds()).isNull();
 		assertThat(lock.getValue().expiresAt()).isNull();
 		assertThat(lock.getValue().targetSelector().get("node_ids").get(0).stringValue()).isEqualTo(NODE.toString());
 		// The lock must also name the agent IDENTITY: an agent peer is matched by its
@@ -121,14 +119,14 @@ class AgentRenewalServiceTest {
 		verify(lockFeedHub).publishAdded(any(AccessLock.class));
 		verify(alerts).cloneDetected(AGENT, NODE, 0L, 5L);
 		verify(audit).record(any(), any(), eq("agent.renew.generation_mismatch"), eq("failure"), any(), any(), any());
-		verify(mtlsCa, never()).activeBackend(); // never reached issuance
+		verify(mtlsCa, never()).activeBackend();
 	}
 
-	// Regression: a lost/late RenewAgentIdentity response makes the Agent retry
-	// with the SAME stale generation and CSR. Before the fix this always fell into
-	// generationMismatchAutoLocksNodeAndAlerts' path above (false clone-lock,
-	// permanent outage). The receipt committed alongside the first renewal must let
-	// the identical retry replay the already-issued cert instead.
+	// A lost or late RenewAgentIdentity response makes the Agent retry with the
+	// SAME stale generation and CSR, which is otherwise indistinguishable from a
+	// clone: locking there is a false positive and a permanent outage. The receipt
+	// committed alongside the first renewal lets the identical retry replay the
+	// already-issued cert instead.
 	@Test
 	void retryAfterCommittedRenewalReplaysInsteadOfLocking() {
 		byte[] csr = MtlsTestSupport.csr(MtlsTestSupport.generateEcKeyPair(), "node-x");
@@ -143,10 +141,6 @@ class AgentRenewalServiceTest {
 		verify(renewalReceipts).save(receiptCaptor.capture());
 		AgentRenewalReceipt savedReceipt = receiptCaptor.getValue();
 
-		// The store now reflects the committed renewal (generation 1, prevFingerprint
-		// pinned to the old cert), but the Agent never adopted it — it retries with the
-		// same declared generation 0 and the same CSR, authenticating with the same old
-		// (still-pinned) fingerprint.
 		when(agentIdentities.findById(AGENT)).thenReturn(Mono.just(new AgentIdentity(AGENT, NODE,
 				"mtls:" + AGENT + ":1", "fp1", "fp0", 1, "token", "active", Instant.now(),
 				Instant.now().plusSeconds(3600), null, null, null, 0L, Instant.now(), Instant.now())));

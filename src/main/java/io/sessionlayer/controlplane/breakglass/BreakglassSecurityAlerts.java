@@ -8,11 +8,6 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-/**
- * Fans a break-glass alert out to every registered
- * {@link BreakglassSecurityAlertSink}. A failing sink is logged loudly — a
- * dropped security alert must never be silent.
- */
 @Component
 public class BreakglassSecurityAlerts {
 

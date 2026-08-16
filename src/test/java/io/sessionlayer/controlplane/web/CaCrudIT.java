@@ -77,8 +77,6 @@ class CaCrudIT extends AbstractConfigApiIT {
 	void privateKeyMaterialRejectedPreCommit() {
 		String token = tokenWith("svc-ca-priv-" + UUID.randomUUID(), PlatformPermissions.CA_MANAGE);
 
-		// A PEM private key in keyReference is a semantic (pre-commit) violation ->
-		// 422.
 		client.post().uri("/v1/cas").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON)
 				.bodyValue(caBody("ca-" + UUID.randomUUID(), "user", "local",
 						"-----BEGIN PRIVATE KEY-----\nMIIB...\n-----END PRIVATE KEY-----", "ecdsa-p256"))
@@ -114,7 +112,6 @@ class CaCrudIT extends AbstractConfigApiIT {
 		client.get().uri("/v1/cas").header("Authorization", "Bearer " + noneToken).exchange().expectStatus()
 				.isForbidden();
 
-		// ca:rotate alone does not grant create/read (which need ca:manage).
 		String rotateOnly = tokenWith("svc-ca-rot-" + UUID.randomUUID(), PlatformPermissions.CA_ROTATE);
 		client.post().uri("/v1/cas").header("Authorization", "Bearer " + rotateOnly)
 				.contentType(MediaType.APPLICATION_JSON)
@@ -129,14 +126,6 @@ class CaCrudIT extends AbstractConfigApiIT {
 				.contentType(MediaType.APPLICATION_JSON).bodyValue(Map.of()).exchange().expectStatus().isForbidden();
 	}
 
-	/**
-	 * update() can no longer change an active CA's backend/keyReference/algorithm
-	 * at all — those describe the key, and only rotate() may change a key — so
-	 * flipping an active CA's backend used to return 200 here and now must return
-	 * 409 naming the rotate path, with the row provably untouched. The half of the
-	 * old coverage worth keeping is that a non-active row is unaffected by that
-	 * guard and still round-trips through PUT with optimistic concurrency intact.
-	 */
 	@Test
 	void getUpdateRoundTripWithOptimisticConcurrency() {
 		String token = tokenWith("svc-ca-rt-" + UUID.randomUUID(), PlatformPermissions.CA_MANAGE);
@@ -146,9 +135,6 @@ class CaCrudIT extends AbstractConfigApiIT {
 		client.get().uri("/v1/cas/" + id).header("Authorization", "Bearer " + token).exchange().expectStatus().isOk()
 				.expectBody().jsonPath("$.backend").isEqualTo("local").jsonPath("$.algorithm").isEqualTo("ecdsa-p256");
 
-		// The CA created above is active (create() only ever mints active rows), so
-		// this is the rule under test: a key-describing field change is refused
-		// outright, not merely re-validated.
 		client.put().uri("/v1/cas/" + id).header("Authorization", "Bearer " + token)
 				.contentType(MediaType.APPLICATION_JSON)
 				.bodyValue(Map.of("backend", "local", "keyReference", "local:rotated", "algorithm", "ecdsa-p384",
@@ -156,7 +142,6 @@ class CaCrudIT extends AbstractConfigApiIT {
 				.exchange().expectStatus().isEqualTo(409).expectBody().jsonPath("$.detail")
 				.value(detail -> assertThat((String) detail).contains("/v1/cas/{caId}/rotate"));
 
-		// The row is untouched: same values, same version, as the refusal promises.
 		client.get().uri("/v1/cas/" + id).header("Authorization", "Bearer " + token).exchange().expectStatus().isOk()
 				.expectBody().jsonPath("$.backend").isEqualTo("local").jsonPath("$.keyReference")
 				.isEqualTo("local:seed").jsonPath("$.algorithm").isEqualTo("ecdsa-p256").jsonPath("$.version")
@@ -178,7 +163,6 @@ class CaCrudIT extends AbstractConfigApiIT {
 				.isEqualTo("local:outgoing-rotated").jsonPath("$.rotationState").isEqualTo("outgoing")
 				.jsonPath("$.origin").isEqualTo("api").jsonPath("$.version").isEqualTo(1);
 
-		// A stale version on that same (still non-active) row is still a 409.
 		client.put().uri("/v1/cas/" + outgoing.id()).header("Authorization", "Bearer " + token)
 				.contentType(MediaType.APPLICATION_JSON)
 				.bodyValue(
@@ -186,15 +170,6 @@ class CaCrudIT extends AbstractConfigApiIT {
 				.exchange().expectStatus().isEqualTo(409);
 	}
 
-	/**
-	 * The write-path guarantee, over the real API: a version-less or wrong-vault
-	 * azure_keyvault keyReference is refused at create, before anything is written
-	 * — not left to fail only when a signature is attempted. This targets
-	 * CaConfigService.validate's KeyVaultKeyReference.parse call, the write path;
-	 * AzureKeyVaultRotationIT covers the same parser reached from CaSignerService
-	 * at sign time, which is defense-in-depth once this gate exists, not the first
-	 * line.
-	 */
 	@Test
 	void azureKeyvaultKeyReferenceRejectedAtTheWritePath() {
 		String token = tokenWith("svc-ca-azkv-ref-" + UUID.randomUUID(), PlatformPermissions.CA_MANAGE);
@@ -207,8 +182,6 @@ class CaCrudIT extends AbstractConfigApiIT {
 				.exchange().expectStatus().isEqualTo(422).expectBody().jsonPath("$.detail")
 				.value(detail -> assertThat((String) detail).contains("version"));
 
-		// A different (unconfigured) vault host -> refused by the allow-list anchor,
-		// not accepted and redirected to whatever vault the row happens to name.
 		client.post().uri("/v1/cas").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON)
 				.bodyValue(caBody("ca-" + UUID.randomUUID(), "host", "azure_keyvault",
 						"https://someone-elses-vault.vault.azure.net/keys/k/0123456789abcdef0123456789abcdef",
@@ -217,12 +190,6 @@ class CaCrudIT extends AbstractConfigApiIT {
 				.value(detail -> assertThat((String) detail).contains("not the configured Key Vault"));
 	}
 
-	/**
-	 * The two ends of the algorithm rule, over the real API: ecdsa-p521 is
-	 * implemented and was unreachable until the contract enum, the CHECK and the
-	 * service agreed on it, and ed25519 is admitted by both of those and by no
-	 * signer.
-	 */
 	@Test
 	void p521IsCreatableAndAnUnsignableAlgorithmIsRefused() {
 		String token = tokenWith("svc-ca-alg-" + UUID.randomUUID(), PlatformPermissions.CA_MANAGE);
@@ -241,19 +208,15 @@ class CaCrudIT extends AbstractConfigApiIT {
 	void deleteRefusesActiveButDeletesNonActive() {
 		String token = tokenWith("svc-ca-del-" + UUID.randomUUID(), PlatformPermissions.CA_MANAGE);
 
-		// A non-active row may be deleted (seeded directly; the API only mints active
-		// CAs).
 		CaConfig expired = caConfigs.save(CaConfig.create("ca-exp-" + UUID.randomUUID(), "host", "local", "local:old",
 				"ecdsa-p256", "expired", "default")).block();
 		String activeId = create(token, caBody("ca-" + UUID.randomUUID(), "host", "local", "local:new", "ecdsa-p256"));
 
-		// The active CA of a kind must retain a signer -> 409.
 		client.delete().uri("/v1/cas/" + activeId).header("Authorization", "Bearer " + token).exchange().expectStatus()
 				.isEqualTo(409);
 
 		client.delete().uri("/v1/cas/" + expired.id()).header("Authorization", "Bearer " + token).exchange()
 				.expectStatus().isNoContent();
-		// Idempotent delete + gone.
 		client.delete().uri("/v1/cas/" + expired.id()).header("Authorization", "Bearer " + token).exchange()
 				.expectStatus().isNoContent();
 		client.get().uri("/v1/cas/" + expired.id()).header("Authorization", "Bearer " + token).exchange().expectStatus()
@@ -278,7 +241,6 @@ class CaCrudIT extends AbstractConfigApiIT {
 				.expectStatus().isCreated().returnResult(Map.class).getResponseBody().blockFirst().get("id").toString();
 		assertThat(replayId).isEqualTo(firstId);
 
-		// Same key + DIFFERENT body -> 422 idempotency conflict.
 		client.post().uri("/v1/cas").header("Authorization", "Bearer " + token).header("Idempotency-Key", key)
 				.contentType(MediaType.APPLICATION_JSON)
 				.bodyValue(caBody(name, "user", "local", "local:different", "ecdsa-p256")).exchange().expectStatus()
@@ -325,18 +287,14 @@ class CaCrudIT extends AbstractConfigApiIT {
 		client.post().uri("/v1/cas/" + id + "/rotate").header("Authorization", "Bearer " + token)
 				.contentType(MediaType.APPLICATION_JSON).bodyValue(Map.of()).exchange().expectStatus().isOk()
 				.expectBody().jsonPath("$.caKind").isEqualTo("session").jsonPath("$.rotationState").isEqualTo("active")
-				// the new active CA is a different row from the one that was rotated
-				.jsonPath("$.id").value(newId -> assertThat(newId).isNotEqualTo(id))
-				// keyReference is a handle, never private material
-				.jsonPath("$.keyReference").value(ref -> assertThat((String) ref).doesNotContain("PRIVATE KEY"));
+				.jsonPath("$.id").value(newId -> assertThat(newId).isNotEqualTo(id)).jsonPath("$.keyReference")
+				.value(ref -> assertThat((String) ref).doesNotContain("PRIVATE KEY"));
 
-		// The original active CA is now outgoing (still trusted during the overlap).
 		client.get().uri("/v1/cas/" + id).header("Authorization", "Bearer " + token).exchange().expectStatus().isOk()
 				.expectBody().jsonPath("$.rotationState").isEqualTo("outgoing");
 		List<AuditEvent> audit = auditEvents.findByActor(admin).collectList().block();
 		assertThat(audit).anySatisfy(e -> assertThat(e.action()).isEqualTo("ca.rotate"));
 
-		// rotate needs ca:rotate: ca:manage alone is forbidden.
 		String manageOnly = tokenWith("svc-ca-mng2-" + UUID.randomUUID(), PlatformPermissions.CA_MANAGE);
 		client.post().uri("/v1/cas/" + id + "/rotate").header("Authorization", "Bearer " + manageOnly)
 				.contentType(MediaType.APPLICATION_JSON).bodyValue(Map.of()).exchange().expectStatus().isForbidden();

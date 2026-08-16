@@ -9,11 +9,6 @@ import java.util.List;
 import java.util.Map;
 import tools.jackson.databind.JsonNode;
 
-/**
- * Single-event audit scope matching. Fail-closed: a malformed scope covers
- * nothing. Mirrors {@link PlatformScopes} facet semantics: node-label
- * containment, actor-or-subject user match, time window.
- */
 public final class AuditScopeMatcher {
 
 	private AuditScopeMatcher() {

@@ -15,10 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-/**
- * OIDC back-channel logout (public, rate-limited). Revokes the subject's pins
- * on logout so authN shortcuts do not outlive the session.
- */
 @RestController
 public class BackchannelLogoutController {
 

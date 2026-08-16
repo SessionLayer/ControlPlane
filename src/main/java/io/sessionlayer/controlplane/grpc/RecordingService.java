@@ -58,7 +58,6 @@ public class RecordingService extends RecordingGrpc.RecordingImplBase {
 	public void requestUpload(RequestUploadRequest request, StreamObserver<RequestUploadResponse> observer) {
 		MtlsPeer peer = MtlsContext.peer();
 		UUID caller = peer == null ? null : peer.gatewayId();
-		// A blank/malformed id parses to null, which the service rejects (fail closed).
 		Mono<RequestUploadResponse> result = registration.requestUpload(caller, parseUuid(request.getRecordingId()))
 				.map(upload -> RequestUploadResponse.newBuilder().setUpload(toUpload(upload)).build());
 		ReactiveBridge.forward(result, observer, properties.getRpcTimeout(), "RequestUpload");
@@ -143,7 +142,7 @@ public class RecordingService extends RecordingGrpc.RecordingImplBase {
 			case RECORDING_STATUS_FINALIZED -> "finalized";
 			case RECORDING_STATUS_TRUNCATED -> "truncated";
 			case RECORDING_STATUS_FAILED -> "failed";
-			default -> null; // UNSPECIFIED / UNRECOGNIZED → fail closed at the service
+			default -> null;
 		};
 	}
 
@@ -167,7 +166,6 @@ public class RecordingService extends RecordingGrpc.RecordingImplBase {
 		}
 	}
 
-	// A set-but-malformed advisory UUID cannot match the token, so fail closed.
 	private static UUID optionalUuid(String value) {
 		if (value == null || value.isBlank()) {
 			return null;

@@ -2,9 +2,6 @@ package io.sessionlayer.controlplane.web;
 
 import java.util.UUID;
 
-/**
- * Carries no secret/entity material — only short human-readable detail.
- */
 public class ApiProblemException extends RuntimeException {
 
 	private final transient ApiProblemType type;

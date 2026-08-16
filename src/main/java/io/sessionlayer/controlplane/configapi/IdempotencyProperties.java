@@ -3,7 +3,6 @@ package io.sessionlayer.controlplane.configapi;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/** TTL determines the replay window; expired keys re-execute. */
 @ConfigurationProperties(prefix = "sessionlayer.idempotency")
 public class IdempotencyProperties {
 

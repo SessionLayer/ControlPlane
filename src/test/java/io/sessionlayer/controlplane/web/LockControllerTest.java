@@ -88,7 +88,7 @@ class LockControllerTest {
 	@Test
 	void anInvalidTargetFailsClosedBeforeAnyWrite() {
 		allowPermission();
-		CreateLockRequest request = new CreateLockRequest(new LockTarget(), "incident"); // empty target
+		CreateLockRequest request = new CreateLockRequest(new LockTarget(), "incident");
 
 		StepVerifier.create(controller.createLock(Mono.just(request), null)).verifyError(LockValidationException.class);
 

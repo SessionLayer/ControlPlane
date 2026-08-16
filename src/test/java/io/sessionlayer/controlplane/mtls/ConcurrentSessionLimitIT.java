@@ -82,7 +82,6 @@ class ConcurrentSessionLimitIT extends AbstractMtlsIT {
 		assertThat(third.getSessionToken()).isEmpty();
 		assertThat(third.hasContext()).isFalse();
 
-		// Exactly two live leases were acquired; the refused one took none (deny wins).
 		assertThat(countLive(identity)).isEqualTo(2);
 
 		AuditEvent deny = deniedDecision(identity);
@@ -135,7 +134,7 @@ class ConcurrentSessionLimitIT extends AbstractMtlsIT {
 					allows++;
 				}
 			}
-			assertThat(allows).isEqualTo(limit); // EXACTLY the cap — the race never overshoots
+			assertThat(allows).isEqualTo(limit);
 			assertThat(countLive(identity)).isEqualTo(limit);
 		} finally {
 			pool.shutdownNow();
@@ -178,8 +177,6 @@ class ConcurrentSessionLimitIT extends AbstractMtlsIT {
 		EnrolledGateway peer = enroll("gw-ha-peer-" + unique());
 		EnrolledGateway caller = enroll("gw-ha-caller-" + unique());
 
-		// A live session + lease for this identity owned by a DIFFERENT Gateway (as if
-		// written by another HA instance to the shared CP DB).
 		SshSession peerSession = sshSessions.save(SshSession.create(identity, nodeId, node.name(), "deploy",
 				peer.gatewayId(), "gw-ha-peer", "standing", List.of("shell"), null, "peer-rule", null, null, 0L,
 				Instant.now().plusSeconds(3600), Instant.now())).block();
@@ -218,7 +215,6 @@ class ConcurrentSessionLimitIT extends AbstractMtlsIT {
 		seedPolicy(identity, 1);
 		EnrolledGateway gateway = enroll("gw-leak-" + unique());
 
-		// A leaked lease: unreleased but past its expires_at grant window.
 		SshSession stale = sshSessions.save(SshSession.create(identity, nodeId, node.name(), "deploy",
 				gateway.gatewayId(), "gw-leak", "standing", List.of("shell"), null, "stale-rule", null, null, 0L,
 				Instant.now().minusSeconds(60), Instant.now().minusSeconds(3600))).block();
@@ -230,10 +226,6 @@ class ConcurrentSessionLimitIT extends AbstractMtlsIT {
 		assertThat(authorize(gateway, identity, nodeId, "deploy").getDecision()).isEqualTo(Decision.DECISION_DENY);
 	}
 
-	// Break-glass is exempt: even with the identity already at its cap, a
-	// break-glass
-	// Authorize still allows AND consumes no lease (emergency access is neither
-	// throttled by the cap nor eats into the normal budget).
 	@Test
 	void breakGlassIsExemptFromTheCapAndConsumesNoLease() throws Exception {
 		String identity = "bg-cap-" + unique();
@@ -253,8 +245,6 @@ class ConcurrentSessionLimitIT extends AbstractMtlsIT {
 		assertThat(authorizeBreakglass(gateway, identity, nodeId, resolution.getBreakglassToken()).getDecision())
 				.isEqualTo(Decision.DECISION_ALLOW);
 
-		// The break-glass session took no lease — the count is still just the two
-		// standing sessions.
 		assertThat(countLive(identity)).isEqualTo(2);
 	}
 
@@ -289,8 +279,6 @@ class ConcurrentSessionLimitIT extends AbstractMtlsIT {
 		assertThat(session).isNotNull();
 		assertThat(session.grantExpiry().getEpochSecond()).isEqualTo(second.getContext().getGrantExpiryEpochSeconds());
 
-		// Exactly one live lease for this identity/session — the re-auth refreshed the
-		// original lease in place rather than acquiring a second one (no double-count).
 		assertThat(countLive(identity)).isEqualTo(1);
 		SessionLease lease = sessionLeases.findBySessionId(sessionId).block();
 		assertThat(lease).isNotNull();

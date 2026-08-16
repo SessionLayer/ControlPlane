@@ -20,14 +20,6 @@ import java.security.interfaces.ECPublicKey;
 import java.security.spec.ECGenParameterSpec;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link AzureKeyVaultCaProvisioner} is the rotation-time bridge between
- * {@link KeyVaultKeyReference} (write-path pinning/allow-list) and
- * {@link AzureKeyVaultSignerFactory#fetchPublicKey} (the one vault read). The
- * SDK/wire contract itself is proven by {@code KeyVaultSdkContractTest}; this
- * class proves the wiring — parse, validate, fetch, build — with the factory
- * mocked, matching how {@code CaSignerServiceTest} proves the sign-time half.
- */
 class AzureKeyVaultCaProvisionerTest {
 
 	private static final String VAULT_URI = "https://myvault.vault.azure.net";

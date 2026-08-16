@@ -7,7 +7,10 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import tools.jackson.databind.JsonNode;
 
-/** Lazy-loaded with issuer mismatch defense. Rejects alg:none. */
+/**
+ * Lazy-loaded, with the issuer-mismatch defence. (`alg:none` is rejected in
+ * {@code IdpJwtDecoder}, not here.)
+ */
 @Service
 public class OidcMetadataService {
 
@@ -29,7 +32,6 @@ public class OidcMetadataService {
 			return Mono.just(cached.discovery());
 		}
 		return fetch().doOnNext(d -> cache.set(new Cached(d, System.currentTimeMillis())))
-				// If a refresh fails but we hold a cached copy, keep serving it (degrade).
 				.onErrorResume(err -> cached != null ? Mono.just(cached.discovery()) : Mono.error(err));
 	}
 

@@ -7,14 +7,6 @@ import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-/**
- * A durable fixed-window rate limiter backed by
- * {@code runtime.auth_rate_limit}. Unlike an in-memory limiter it holds across
- * HA instances and restarts. Each call increments the current window's counter
- * with one atomic upsert; a request whose resulting count exceeds {@code max}
- * is denied. Fail-closed: a limiter error denies (never silently allows an
- * unbounded auth endpoint).
- */
 @Service
 public class RateLimiter {
 

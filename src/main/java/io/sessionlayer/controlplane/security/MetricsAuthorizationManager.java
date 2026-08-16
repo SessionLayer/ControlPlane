@@ -10,20 +10,6 @@ import org.springframework.security.web.server.authorization.AuthorizationContex
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
-/**
- * Platform-RBAC for the metrics endpoints, which were authenticated but not
- * authorized: any token the platform had ever issued — including a service
- * account with no role binding at all — could read the whole meter set, which
- * carries fleet-wide live-session counts, authorization error rates, CA-signer
- * activity and session-limit denials.
- *
- * <p>
- * The actuator endpoints are not our controllers, so they cannot go through the
- * per-handler permission check the REST surface uses; this is the same decision
- * taken one layer up, in the filter chain. Fail-closed by construction: an
- * unresolvable principal, a missing binding, or a failure inside the
- * authorization service all end as a denial rather than an allow.
- */
 @Component
 public class MetricsAuthorizationManager implements ReactiveAuthorizationManager<AuthorizationContext> {
 

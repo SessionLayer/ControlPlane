@@ -1,16 +1,3 @@
--- V8 — recording_ref retention + status/digest. SessionLayer Control Plane.
---
--- Covers the recording half of FR-AUD-3/6:
---   * retention_until + legal_hold — a recording is prunable only once retention_until
---     has passed AND no legal hold is set AND it is not compliance-WORM (which is truly
---     un-deletable). recording_ref is 1:1 with a session and not partitioned, so its
---     prune is row-based and recording-aware (docs/reference/data-model.md in the
---     SessionLayer/Documentation repo).
---   * worm_mode default from operator_settings.default_worm_mode is applied by the
---     writer at recording-finalize time; the column keeps its CHECK.
---   * status/format/content_digest — finalized-vs-truncated lifecycle + integrity
---     digest (NFR-6). content_digest is write-once once set (extends the V4 trigger).
-
 ALTER TABLE runtime.recording_ref
     ADD COLUMN retention_until timestamptz,
     ADD COLUMN legal_hold      boolean     NOT NULL DEFAULT false,
@@ -19,16 +6,15 @@ ALTER TABLE runtime.recording_ref
     ADD COLUMN format          text        NOT NULL DEFAULT 'asciicast-v2'
                                CHECK (format IN ('asciicast-v2')),
     ADD COLUMN content_digest  text        CHECK (content_digest IS NULL
-                               OR content_digest ~ '^sha256:[0-9a-f]{64}$');   -- streaming SHA-256 (FR-AUD-1)
+                               OR content_digest ~ '^sha256:[0-9a-f]{64}$');
 
 COMMENT ON COLUMN runtime.recording_ref.retention_until IS 'FR-AUD-6: earliest time this recording may be pruned (governance mode only; compliance is never prunable; legal_hold overrides).';
 COMMENT ON COLUMN runtime.recording_ref.legal_hold IS 'FR-AUD-6: when true the recording is exempt from retention pruning regardless of retention_until.';
 COMMENT ON COLUMN runtime.recording_ref.status IS 'NFR-6: recording lifecycle — recording -> finalized|truncated|failed.';
 COMMENT ON COLUMN runtime.recording_ref.content_digest IS 'NFR-6 integrity digest (sha256:<hex>); write-once once set (V8 trigger).';
 
--- Extend the write-once provenance guard (V4) to cover content_digest: NULL -> value is
--- allowed (set at finalize), value -> different value is rejected (evidence tampering).
--- CREATE OR REPLACE keeps the existing trigger binding.
+-- Extends the write-once provenance guard to content_digest. CREATE OR REPLACE and no
+-- new CREATE TRIGGER: the existing trigger binding survives a function replacement.
 CREATE OR REPLACE FUNCTION runtime.enforce_recording_ref_write_once()
     RETURNS trigger
     LANGUAGE plpgsql AS $$
@@ -45,9 +31,6 @@ BEGIN
 END;
 $$;
 
--- Prune helper: recordings eligible for retention pruning (governance mode, past
--- retention_until, no legal hold). Compliance-mode and legal-held recordings are never
--- returned. A recording-aware pruner uses this to select object keys to expire.
 CREATE OR REPLACE FUNCTION runtime.recording_prunable(cutoff timestamptz)
     RETURNS TABLE (id uuid, object_key text)
     LANGUAGE sql STABLE AS $$

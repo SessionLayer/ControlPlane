@@ -23,7 +23,6 @@
 	<module name="NewlineAtEndOfFile"/>
 
 	<module name="TreeWalker">
-		<!-- Imports -->
 		<module name="AvoidStarImport"/>
 		<module name="RedundantImport"/>
 		<module name="UnusedImports">
@@ -31,7 +30,6 @@
 		</module>
 		<module name="IllegalImport"/>
 
-		<!-- Naming -->
 		<module name="PackageName"/>
 		<module name="TypeName"/>
 		<module name="MethodName"/>
@@ -40,7 +38,6 @@
 		<module name="LocalVariableName"/>
 		<module name="ConstantName"/>
 
-		<!-- Blocks / braces -->
 		<module name="NeedBraces"/>
 		<module name="EmptyBlock">
 			<property name="option" value="text"/>
@@ -49,7 +46,6 @@
 		<module name="LeftCurly"/>
 		<module name="RightCurly"/>
 
-		<!-- Common bug patterns -->
 		<module name="EqualsHashCode"/>
 		<module name="MissingSwitchDefault"/>
 		<module name="FallThrough"/>
@@ -58,11 +54,9 @@
 		<module name="SimplifyBooleanReturn"/>
 		<module name="OneStatementPerLine"/>
 
-		<!-- Modifiers -->
 		<module name="ModifierOrder"/>
 		<module name="RedundantModifier"/>
 
-		<!-- Structure -->
 		<module name="OneTopLevelClass"/>
 		<module name="OuterTypeFilename"/>
 		<module name="UpperEll"/>

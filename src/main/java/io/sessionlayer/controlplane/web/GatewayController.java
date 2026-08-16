@@ -12,12 +12,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-/**
- * Gateway identity directory + removal (RBAC + audited). Removal frees the name
- * for re-enrollment, replacing the raw {@code DELETE FROM
- * runtime.gateway_identity} the disaster-recovery runbook required. Metadata
- * only: no certificate, no key reference.
- */
 @RestController
 public class GatewayController implements GatewaysApi {
 

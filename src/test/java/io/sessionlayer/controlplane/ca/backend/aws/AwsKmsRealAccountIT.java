@@ -12,12 +12,7 @@ import java.security.interfaces.ECPublicKey;
 import org.junit.jupiter.api.Test;
 
 /**
- * The same seam against a real AWS account. Nothing here runs unless
- * {@code SESSIONLAYER_AWS_KMS_KEY_ARN} names a key ARN, so an ordinary build
- * skips it; {@link KmsSdkContractIT} is what runs everywhere. What this adds is
- * the two things a local KMS cannot answer: whether AWS's own endpoint
- * resolution, TLS and SigV4 accept the request this Control Plane builds, and
- * whether a genuine KMS signature verifies against the key AWS reports.
+ * The same seam against a real AWS account, run by hand:
  *
  * <pre>
  * export SESSIONLAYER_AWS_KMS_KEY_ARN=arn:aws:kms:eu-west-1:111122223333:key/&lt;key-id&gt;
@@ -46,10 +41,6 @@ import org.junit.jupiter.api.Test;
  *   ]
  * }
  * </pre>
- *
- * No {@code kms:DescribeKey}, and no wildcard resource: a disabled or
- * pending-deletion key fails closed at the first signature anyway, so widening
- * the required IAM surface to learn it earlier is the wrong trade.
  */
 class AwsKmsRealAccountIT {
 
@@ -84,11 +75,6 @@ class AwsKmsRealAccountIT {
 		}
 	}
 
-	/**
-	 * A deployment configures the anchor and the key reference independently; an
-	 * operator running this supplies one ARN, so the anchor is read back out of it
-	 * rather than asked for three more times.
-	 */
 	private static AwsKmsProperties propertiesAnchoredOn(String keyArn) {
 		String[] fields = keyArn.split(":", -1);
 		assumeTrue(fields.length == 6, KEY_ARN_ENV + " must be a full KMS key ARN");

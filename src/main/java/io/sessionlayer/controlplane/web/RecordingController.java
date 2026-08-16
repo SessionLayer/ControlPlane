@@ -23,11 +23,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-/**
- * Session-recording admin surface (scope-gated + audited). Bytes never proxy
- * through CP (which cannot decrypt them). Legal hold + governance delete are
- * the audited custody surface.
- */
 @RestController
 public class RecordingController implements RecordingsApi {
 
@@ -105,8 +100,6 @@ public class RecordingController implements RecordingsApi {
 						}));
 	}
 
-	// Replay/export: resolve the caller, run the scoped access (which loads the
-	// recording, builds its scope, authorizes + audits), and render the signed URL.
 	// An out-of-scope deny completes empty → a bodiless 403 (no
 	// existence/permission
 	// disclosure), matching the platform-RBAC gate.

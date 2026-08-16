@@ -53,8 +53,6 @@ public class SessionLimitProperties {
 
 	private final Reaper reaper = new Reaper();
 
-	// Startup floors: clamp + warn to prevent operator combo from breaking
-	// reap-safety.
 	@PostConstruct
 	void applyFloors() {
 		if (leaseExtension == null || leaseExtension.compareTo(MIN_LEASE_EXTENSION) < 0) {
@@ -112,8 +110,6 @@ public class SessionLimitProperties {
 
 	public static class Reaper {
 
-		// null = follow lease-extension (applyFloors resolves it); default boots
-		// WARN-free.
 		private Duration grace;
 
 		public Duration getGrace() {

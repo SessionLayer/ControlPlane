@@ -14,10 +14,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-/**
- * Default-deny platform-RBAC: permission + scope must both match binding's
- * role.
- */
 @Service
 public class PlatformAuthorizationService implements PlatformAuthorization {
 
@@ -70,7 +66,7 @@ public class PlatformAuthorizationService implements PlatformAuthorization {
 			granted = true;
 			var scope = binding.scope();
 			if (scope == null || scope.isNull() || scope.isEmpty()) {
-				return ScopeGrant.all(); // an unscoped grant sees everything
+				return ScopeGrant.all();
 			}
 			scopes.add(scope);
 		}

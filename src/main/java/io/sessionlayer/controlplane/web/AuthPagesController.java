@@ -16,10 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-/**
- * CP-hosted browser OIDC pages (verify page is rate-limited to prevent
- * user-code enumeration). Server-rendered HTML / redirects, not JSON API.
- */
 @RestController
 public class AuthPagesController {
 

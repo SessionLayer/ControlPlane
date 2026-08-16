@@ -11,10 +11,6 @@ import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Table;
 import tools.jackson.databind.JsonNode;
 
-/**
- * FIDO2 sk-ecdsa PUBLIC break-glass key. PUBLIC material only; no private key
- * at rest.
- */
 @Table(schema = "runtime", name = "breakglass_credential")
 public record BreakglassCredential(@Id UUID id, String keyFingerprint, byte[] publicKey, String skApplication,
 		String identity, List<String> allowedPrincipals, JsonNode nodeSelector, Instant expiresAt, Instant revokedAt,

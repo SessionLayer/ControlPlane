@@ -62,8 +62,6 @@ class MetricsAuthorizationIT extends AbstractAuthIT {
 		client.get().uri("/actuator/prometheus").header("Authorization", "Bearer " + scraper).exchange().expectStatus()
 				.isOk().expectBody(String.class).value(body -> assertThat(body).isNotBlank());
 
-		// The exact identity the endpoint was open to: a service account with a valid
-		// token and ZERO role bindings.
 		String unbound = tokenWith("svc-metrics-none-" + unique());
 		client.get().uri("/actuator/prometheus").header("Authorization", "Bearer " + unbound).exchange().expectStatus()
 				.isForbidden();
@@ -88,8 +86,6 @@ class MetricsAuthorizationIT extends AbstractAuthIT {
 				.value(status -> assertThat(status).isNotIn(401, 403));
 		client.get().uri("/actuator/info").exchange().expectStatus()
 				.value(status -> assertThat(status).isNotIn(401, 403));
-		// The metrics endpoints are not merely unauthenticated-friendly: no token is a
-		// 401, not an accidental allow.
 		client.get().uri("/actuator/prometheus").exchange().expectStatus().isUnauthorized();
 	}
 

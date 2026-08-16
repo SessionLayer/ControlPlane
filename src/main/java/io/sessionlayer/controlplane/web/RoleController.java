@@ -19,9 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-/**
- * Platform-RBAC roles CRUD (RBAC + audited, idempotency-key guarded).
- */
 @RestController
 public class RoleController implements RolesApi {
 

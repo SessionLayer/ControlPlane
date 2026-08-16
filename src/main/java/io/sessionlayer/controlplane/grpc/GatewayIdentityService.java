@@ -47,8 +47,6 @@ public class GatewayIdentityService extends GatewayIdentityGrpc.GatewayIdentityI
 	@Override
 	public void renewGatewayIdentity(RenewGatewayIdentityRequest request,
 			StreamObserver<RenewGatewayIdentityResponse> observer) {
-		// The interceptor resolved the caller synchronously into the gRPC context; read
-		// it before subscribing (the reactive callbacks run on other threads).
 		MtlsPeer peer = MtlsContext.peer();
 		String presentedFingerprint = CertificateFingerprints.sha256Hex(peer.certificate());
 		ReactiveBridge.forward(

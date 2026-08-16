@@ -37,10 +37,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-/**
- * Authentication resources (REST controller). Admin endpoints are default-deny
- * + audited. Errors are non-leaking status codes.
- */
 @RestController
 public class AuthController implements AuthApi {
 

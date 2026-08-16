@@ -66,8 +66,6 @@ public class RuleConfigService {
 	}
 
 	public Mono<Void> delete(UUID id, String actor) {
-		// Idempotent + auditable: capture the before-state, then delete + record the
-		// change (before/after); a delete of a missing row is still audited.
 		return rules.findById(id).flatMap(before -> deleteWithAudit(id, actor, before))
 				.switchIfEmpty(Mono.defer(() -> deleteWithAudit(id, actor, null)));
 	}
@@ -101,8 +99,6 @@ public class RuleConfigService {
 	private static void validate(Integer ttlSeconds, String effect, List<String> principals, JsonNode identitySelector,
 			JsonNode nodeLabelSelector, JsonNode sourceIpCondition) {
 		if (EFFECT_ALLOW.equals(effect) && ttlSeconds == null) {
-			// Named, because the failure this replaces was a framework 400 that named
-			// nothing and left the operator guessing which field was wrong.
 			throw ApiProblemException.validation("ttlSeconds is required when effect is 'allow'");
 		}
 		// Positivity is checked whenever a value is PRESENT, whatever the effect: the
@@ -115,8 +111,6 @@ public class RuleConfigService {
 		if (principals == null || principals.isEmpty()) {
 			throw ApiProblemException.validation("principals must be non-empty");
 		}
-		// Reject a selector the evaluator can't parse pre-commit, so a malformed rule
-		// never persists to fail-closed (or worse) on the decision path.
 		SelectorValidation.identitySelector(identitySelector);
 		SelectorValidation.labelSelector(nodeLabelSelector, "nodeLabelSelector");
 		SelectorValidation.sourceIpCondition(sourceIpCondition);

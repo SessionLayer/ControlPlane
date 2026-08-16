@@ -21,9 +21,6 @@ import reactor.core.publisher.Mono;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-/**
- * Node policies CRUD (RBAC + audited, idempotency-key guarded).
- */
 @RestController
 public class NodePolicyController implements NodePoliciesApi {
 

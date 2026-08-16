@@ -7,10 +7,6 @@ import io.sessionlayer.controlplane.ca.backend.aws.KmsKeyArn.Anchor;
 import io.sessionlayer.controlplane.ca.backend.aws.KmsKeyArn.InvalidKeyReference;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link KmsKeyArn} is a pure security boundary — every rejection is exercised
- * in isolation so a regression names the exact clause it broke.
- */
 class KmsKeyArnTest {
 
 	private static final Anchor ANCHOR = new Anchor("aws", "us-east-1", "111122223333");
@@ -85,7 +81,6 @@ class KmsKeyArnTest {
 				.hasMessageContaining("only the configured account, region and partition are permitted");
 	}
 
-	/** The anchor a compromised {@code ca_config} row cannot reach. */
 	@Test
 	void rejectsAnArnInAnotherAccount() {
 		assertThatThrownBy(() -> KmsKeyArn.parse("arn:aws:kms:us-east-1:999988887777:key/" + KEY_ID, ANCHOR))
@@ -98,11 +93,6 @@ class KmsKeyArnTest {
 				.isInstanceOf(InvalidKeyReference.class).hasMessageContaining("names partition 'aws-cn'");
 	}
 
-	/**
-	 * An ARN whose account, region and partition all match the anchor but which
-	 * names a different service: the anchor alone would pass it, so the service
-	 * field is checked in its own right.
-	 */
 	@Test
 	void rejectsAnArnForAnotherService() {
 		assertThatThrownBy(() -> KmsKeyArn.parse("arn:aws:s3:us-east-1:111122223333:key/" + KEY_ID, ANCHOR))
@@ -140,11 +130,6 @@ class KmsKeyArnTest {
 				.isInstanceOf(InvalidKeyReference.class).hasMessageContaining("is not a KMS key ARN");
 	}
 
-	/**
-	 * The key id is allow-listed to the two shapes KMS issues, not merely required
-	 * to be present: a value that occupies the position without being a key id is
-	 * refused the same as one that is absent.
-	 */
 	@Test
 	void rejectsAKeyIdThatIsNotAUuidOrMultiRegionId() {
 		for (String bad : new String[]{"", "session-ca", "1234ABCD-12ab-34cd-56ef-1234567890ab",
@@ -187,10 +172,6 @@ class KmsKeyArnTest {
 				.isInstanceOf(IllegalStateException.class).hasMessageContaining("sessionlayer.ca.aws.partition");
 	}
 
-	/**
-	 * Everything human- or telemetry-facing renders this form, so the account id
-	 * must not survive it while the key stays identifiable.
-	 */
 	@Test
 	void redactsTheAccountIdButStillNamesTheKey() {
 		String redacted = KmsKeyArn.parse(ARN, ANCHOR).redacted();

@@ -39,10 +39,6 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
-/**
- * Break-glass management (RBAC + audited). Only PUBLIC key material and
- * code/token HASHES are stored; no secrets are logged.
- */
 @RestController
 public class BreakglassController implements BreakglassApi {
 

@@ -18,11 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Mono;
 
-/**
- * Gateway identity directory + removal, replacing the raw
- * {@code DELETE FROM runtime.gateway_identity} the disaster-recovery runbook
- * required to free a name after a restore.
- */
 @Service
 public class GatewayDirectoryService {
 
@@ -72,7 +67,6 @@ public class GatewayDirectoryService {
 		this.tx = tx;
 	}
 
-	/** Identity metadata joined to the presence the removal guard reads. */
 	public record GatewayView(UUID id, String name, String fingerprint, String prevFingerprint, long generation,
 			String joinMethod, String status, Instant issuedAt, Instant notAfter, Instant createdAt, Instant updatedAt,
 			int presenceNodeCount, Instant presenceLastSeenAt) {
@@ -121,7 +115,6 @@ public class GatewayDirectoryService {
 		});
 	}
 
-	/** Same projection as the collection — one row, addressed by id. */
 	public Mono<GatewayView> get(UUID id) {
 		return db.sql("SELECT " + COLUMNS + " FROM runtime.gateway_identity WHERE id = :id").bind("id", id)
 				.map(GatewayDirectoryService::toIdentity).one()
@@ -186,10 +179,6 @@ public class GatewayDirectoryService {
 		return held.toString();
 	}
 
-	// Stamping ended_at and failing the recording is the honest residual state: the
-	// Gateway is about to lose the identity those RPCs authenticate with, so the
-	// upload will never arrive. Leaving status='recording' would claim a recording
-	// is still being written when nothing can ever write it.
 	private Mono<Void> closeStrandedSessions(UUID gatewayId, long openSessions) {
 		if (openSessions == 0) {
 			return Mono.empty();
@@ -220,8 +209,6 @@ public class GatewayDirectoryService {
 		if (names.isEmpty()) {
 			return Mono.just(Map.of());
 		}
-		// One grouped read for the whole page rather than a probe per row; the names
-		// go over as a text[] so the statement stays a single prepared form.
 		return db.sql(PRESENCE_BY_OWNER).bind("names", names.toArray(String[]::new)).bind("stale_before", staleBefore())
 				.map((row, meta) -> {
 					Long fresh = row.get("fresh_nodes", Long.class);
@@ -230,9 +217,6 @@ public class GatewayDirectoryService {
 				}).all().collectMap(Map.Entry::getKey, Map.Entry::getValue);
 	}
 
-	// A Gateway that stopped heartbeating past the HA staleness window no longer
-	// owns anything a peer would not already take over, so it does not block a
-	// removal — the same window PresenceService uses to allow a takeover.
 	private Instant staleBefore() {
 		return presenceFreshness.staleBefore(Instant.now());
 	}

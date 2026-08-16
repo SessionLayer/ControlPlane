@@ -102,9 +102,6 @@ public class WormObjectStore implements RecordingStore {
 
 	@Override
 	public Mono<Void> deleteObject(String objectKey, String wormMode) {
-		// Compliance objects are truly un-deletable (object-lock); refuse in-app too so
-		// the intent is explicit and we never even attempt a call the store would
-		// reject.
 		if ("compliance".equals(wormMode)) {
 			return Mono.error(new UnsupportedOperationException("compliance-mode recordings are un-deletable"));
 		}
@@ -199,10 +196,10 @@ public class WormObjectStore implements RecordingStore {
 		String bucket = properties.getBucket();
 		try {
 			s3.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
-			// A pre-existing operator bucket without object-lock would silently drop
-			// WORM immutability (a compliance PUT still
-			// fails per-object, but the misconfig should surface at STARTUP, not per
-			// recording at Tier-0). Verify it, fail fast on a definitive miss.
+			// A pre-existing operator bucket without object-lock would silently drop WORM
+			// immutability (a compliance PUT still fails per-object, but the misconfig
+			// should surface at STARTUP, not once per recording at run time). Verify it,
+			// fail fast on a definitive miss.
 			verifyObjectLockEnabled(bucket);
 		} catch (NoSuchBucketException absent) {
 			createBucket(bucket);

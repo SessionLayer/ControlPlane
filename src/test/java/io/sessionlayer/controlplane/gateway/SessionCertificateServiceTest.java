@@ -29,12 +29,6 @@ import org.mockito.ArgumentCaptor;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-/**
- * {@code SessionCertificateService.sign} must audit every fail-closed path it
- * takes, each with its own distinguishable reason: a client fault, an absent
- * CA, and a CA that was reached and refused. The three must never collapse into
- * one, since an operator reads the reason to decide where to look.
- */
 class SessionCertificateServiceTest {
 
 	private static final UUID GATEWAY_ID = UUID.randomUUID();
@@ -112,9 +106,6 @@ class SessionCertificateServiceTest {
 
 	@Test
 	void aClientFaultIsAuditedWithItsOwnDistinctReason() {
-		// A fingerprint that does not pin to the identity's current or previous
-		// value takes the same GatewayRequestException path a malformed/expired
-		// token would, without needing a second mock for those.
 		StepVerifier.create(service.sign(GATEWAY_ID, "stale-or-stolen-fingerprint", "raw-token", subjectKeyBlob,
 				SignRequestContext.EMPTY)).verifyError(GatewayRequestException.class);
 

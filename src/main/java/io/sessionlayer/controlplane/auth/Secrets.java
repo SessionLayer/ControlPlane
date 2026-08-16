@@ -4,12 +4,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 
-/**
- * Small secret-handling primitives shared by the authentication surface:
- * SHA-256 hashing (what we store instead of raw OTP/token/jti values),
- * constant-time comparison, and high-entropy token/code generation. No raw
- * secret is ever persisted — callers store {@link #sha256Hex} outputs.
- */
 public final class Secrets {
 
 	private static final SecureRandom RANDOM = new SecureRandom();
@@ -31,7 +25,6 @@ public final class Secrets {
 		}
 	}
 
-	/** Constant-time equality of two strings (no early-exit on the first diff). */
 	public static boolean constantTimeEquals(String a, String b) {
 		if (a == null || b == null) {
 			return false;
@@ -45,7 +38,6 @@ public final class Secrets {
 		return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(raw);
 	}
 
-	/** An uppercase base32 (A-Z,2-7) code — human-typeable for OTP delivery. */
 	public static String randomBase32(int bytes) {
 		byte[] raw = new byte[bytes];
 		RANDOM.nextBytes(raw);
@@ -55,7 +47,7 @@ public final class Secrets {
 	public static String randomUserCode() {
 		byte[] raw = new byte[5];
 		RANDOM.nextBytes(raw);
-		String code = base32(raw); // 8 chars
+		String code = base32(raw);
 		return code.substring(0, 4) + "-" + code.substring(4, 8);
 	}
 

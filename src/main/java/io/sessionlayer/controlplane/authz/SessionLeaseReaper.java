@@ -11,12 +11,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
-/**
- * Releases expired concurrency leases from sessions ending without
- * FinalizeRecording (hard-killed Gateways). Reap-safety: live sessions extend
- * leases at half-window cadence; grace is FLOORED at MIN_GRACE so reaper never
- * catches live-extending leases. Idempotent; failures logged/non-fatal.
- */
 @Component
 @ConditionalOnProperty(value = "sessionlayer.session-limits.reaper.enabled", havingValue = "true", matchIfMissing = true)
 public class SessionLeaseReaper {

@@ -53,7 +53,7 @@ class UserCertificateVerifierTest {
 	void tamperedSignatureFailsClosed() {
 		byte[] cert = ecdsaCert(CertType.USER, "alice@corp", List.of("deploy"), Instant.now().minusSeconds(60),
 				Instant.now().plusSeconds(600), new TreeMap<>());
-		cert[cert.length - 1] ^= 0x01; // flip a signature byte
+		cert[cert.length - 1] ^= 0x01;
 		assertThat(UserCertificateVerifier.verify(cert, List.of(caLine), "10.0.0.5", Instant.now(), SKEW).resolved())
 				.isFalse();
 	}
@@ -107,8 +107,6 @@ class UserCertificateVerifierTest {
 		assertThat(verdict.resolved()).isTrue();
 		assertThat(verdict.identity()).isEqualTo("bob@corp");
 	}
-
-	// ---- cert construction helpers ----------------------------------------
 
 	private byte[] ecdsaCert(CertType type, String keyId, List<String> principals, Instant after, Instant before,
 			TreeMap<String, String> critical) {

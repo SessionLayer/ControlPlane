@@ -23,9 +23,7 @@ class KekTest {
 		// Same, detected by decoded bytes even if the dev key is re-encoded.
 		assertThatThrownBy(() -> new KekProvider(KekProvider.DEV_DEFAULT_KEK_BASE64, null, false))
 				.isInstanceOf(IllegalStateException.class);
-		// Opt-in permits it (dev/test only).
 		assertThatCode(() -> new KekProvider("", null, true)).doesNotThrowAnyException();
-		// A real KEK always boots and is not flagged as the dev default.
 		KekProvider real = new KekProvider(REAL_KEK, null, false);
 		assertThat(real.isDevDefault()).isFalse();
 		assertThat(real.reference()).isEqualTo("config:sessionlayer.ca.local.kek-base64");
@@ -40,8 +38,6 @@ class KekTest {
 
 		Kek.Wrapped wrapped = kek.wrap(plaintext, aadA);
 		assertThat(kek.unwrap(wrapped.iv(), wrapped.ciphertext(), aadA)).isEqualTo(plaintext);
-		// Unwrapping with a different CA's AAD fails closed (cross-CA substitution
-		// blocked).
 		assertThatThrownBy(() -> kek.unwrap(wrapped.iv(), wrapped.ciphertext(), aadB))
 				.isInstanceOf(IllegalStateException.class);
 		kek.destroy();

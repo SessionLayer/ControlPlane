@@ -9,11 +9,6 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Table;
 
-/**
- * CA key material (wrappedKey is ciphertext, never plaintext). KEK is
- * env-sourced, never in DB, so datastore compromise yields unwrappable
- * ciphertext.
- */
 @Table(schema = "runtime", name = "ca_key_material")
 public record CaKeyMaterial(@Id UUID id, UUID caConfigId, String caConfigName, String wrapAlgorithm,
 		String kekReference, byte[] wrappedKey, byte[] iv, byte[] publicKey, String keyType, byte[] caCertificate,

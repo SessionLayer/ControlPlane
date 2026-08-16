@@ -4,15 +4,8 @@ import java.util.List;
 import reactor.core.publisher.Mono;
 import tools.jackson.databind.JsonNode;
 
-/**
- * Platform-RBAC: default-deny, every decision audited, separate from data-plane
- * RBAC.
- */
 public interface PlatformAuthorization {
 
-	/**
-	 * Fail-closed: audit every decision; scope=null for unscoped/global permission.
-	 */
 	Mono<PlatformDecision> authorize(PlatformSubject subject, String permission, PlatformScope scope);
 
 	/** Resolve scope grant for filtering results (not gating). Does not audit. */

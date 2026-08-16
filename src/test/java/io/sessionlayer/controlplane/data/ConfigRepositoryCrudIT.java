@@ -78,7 +78,7 @@ class ConfigRepositoryCrudIT extends AbstractDataIT {
 		var updated = caConfigs.save(new CaConfig(ca.id(), ca.name(), ca.caKind(), "aws_kms", "arn://key", "ecdsa-p384",
 				ca.rotationState(), ca.origin(), ca.version(), ca.createdAt(), ca.updatedAt())).block();
 		assertThat(updated).isNotNull();
-		assertThat(updated.version()).isGreaterThan(ca.version()); // @Version bumped on update
+		assertThat(updated.version()).isGreaterThan(ca.version());
 		assertThat(caConfigs.findByCaKindAndRotationState("session", "active").block().backend()).isEqualTo("aws_kms");
 
 		caConfigs.deleteById(ca.id()).block();

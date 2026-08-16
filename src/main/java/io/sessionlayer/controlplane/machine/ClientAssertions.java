@@ -10,10 +10,6 @@ import java.security.interfaces.RSAPublicKey;
 import java.time.Instant;
 import java.util.List;
 
-/**
- * Parsing + signature verification for OAuth private_key_jwt client assertions
- * (RFC 7523).
- */
 final class ClientAssertions {
 
 	private ClientAssertions() {

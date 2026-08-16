@@ -54,13 +54,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
-/**
- * The connect-time {@code Authorize} RPC over mTLS. An allow returns a
- * verifiable signed context + a minted session token that then signs an
- * inner-leg cert via the SessionSigning signer; a deny or a Lock returns a
- * generic deny with no token (fail closed), and the {@code ssh_session}
- * decision snapshot is written on allow.
- */
 class AuthorizeIT extends AbstractMtlsIT {
 
 	private static final JsonNodeFactory JSON = JsonNodeFactory.instance;
@@ -112,8 +105,6 @@ class AuthorizeIT extends AbstractMtlsIT {
 		assertThat(searchIds(dim(sessionId, q -> q.nodeLabels(Map.of("env", "prod"))))).contains(connect.id());
 		assertThat(searchIds(dim(null, q -> q.correlationId(sessionId)))).containsExactly(connect.id());
 
-		// The label scope filter now engages on real data: an env=prod-scoped auditor
-		// sees the row; an env=staging-scoped auditor does not (fail closed).
 		assertThat(searchIds(dim(sessionId, q -> q.scopeGrants(List.of(labelScope("env", "prod"))))))
 				.contains(connect.id());
 		assertThat(searchIds(dim(sessionId, q -> q.scopeGrants(List.of(labelScope("env", "staging")))))).isEmpty();
@@ -151,18 +142,13 @@ class AuthorizeIT extends AbstractMtlsIT {
 		seedAllow(identity, nodeId, List.of("deploy", "ops"), List.of("shell"));
 		EnrolledGateway gateway = enroll("gw-credscope-" + unique());
 
-		// Deny-only: a login inside the scope, and an empty scope (an unscoped
-		// credential), are both exactly as they were.
 		assertThat(authorize(gateway, scoped(identity, nodeId, "deploy", List.of("deploy"))).getDecision())
 				.isEqualTo(Decision.DECISION_ALLOW);
 		assertThat(authorize(gateway, scoped(identity, nodeId, "ops", List.of())).getDecision())
 				.isEqualTo(Decision.DECISION_ALLOW);
 
-		// RBAC allows 'ops', but the presented credential is scoped to 'deploy'.
 		AuthorizeResponse refused = authorize(gateway, scoped(identity, nodeId, "ops", List.of("deploy")));
 
-		// The client-facing answer is unchanged: the same generic deny every other
-		// refusal returns, with nothing else populated.
 		assertThat(refused.getDecision()).isEqualTo(Decision.DECISION_DENY);
 		assertThat(refused.hasContext()).isFalse();
 		assertThat(refused.hasNodeConnection()).isFalse();
@@ -372,17 +358,14 @@ class AuthorizeIT extends AbstractMtlsIT {
 	void aLockedCallerGatewayIsRefusedOnAuthorizeWithNoStateChange() {
 		String identity = "alice-" + unique();
 		UUID nodeId = seedProdNode();
-		seedAllow(identity, nodeId, List.of("deploy"), List.of("shell")); // otherwise-allowed
+		seedAllow(identity, nodeId, List.of("deploy"), List.of("shell"));
 		EnrolledGateway gateway = enroll("gw-locked-caller-" + unique());
-		// Lock the caller Gateway: the client cert stays cryptographically valid until
-		// expiry, so the status flip is the only thing refusing it.
 		db.sql("UPDATE runtime.gateway_identity SET status = 'locked' WHERE id = :id").bind("id", gateway.gatewayId())
 				.fetch().rowsUpdated().block();
 		UUID sessionId = UUID.randomUUID();
 
 		AuthorizeResponse response = authorize(gateway, request(identity, nodeId, "deploy", "10.0.0.5", sessionId));
 
-		// The same generic fail-closed shape as any denial: deny, no token, no context.
 		assertThat(response.getDecision()).isEqualTo(Decision.DECISION_DENY);
 		assertThat(response.getSessionToken()).isEmpty();
 		assertThat(response.hasContext()).isFalse();
@@ -437,7 +420,6 @@ class AuthorizeIT extends AbstractMtlsIT {
 		AuthorizeResponse response = authorize(gateway,
 				requestByName(identity, "no-such-node-" + unique(), "deploy", "10.0.0.5", UUID.randomUUID()));
 
-		// The SAME generic deny as any no-match — no existence disclosure.
 		assertThat(response.getDecision()).isEqualTo(Decision.DECISION_DENY);
 		assertThat(response.getSessionToken()).isEmpty();
 		assertThat(response.hasContext()).isFalse();
@@ -447,10 +429,8 @@ class AuthorizeIT extends AbstractMtlsIT {
 	void theNodeNameWinsOverAConflictingNodeId() throws Exception {
 		String identity = "alice-" + unique();
 		UUID namedNodeId = seedProdNode();
-		UUID otherNodeId = seedProdNode(); // a different, also-prod node
+		UUID otherNodeId = seedProdNode();
 		Node named = nodes.findById(namedNodeId).block();
-		// The allow matches identity + env=prod; BOTH nodes are prod, so the outcome
-		// hinges purely on which node is resolved — the name must win over the id.
 		seedAllow(identity, namedNodeId, List.of("deploy"), List.of("shell"));
 		EnrolledGateway gateway = enroll("gw-namewins-" + unique());
 		UUID sessionId = UUID.randomUUID();
@@ -501,7 +481,7 @@ class AuthorizeIT extends AbstractMtlsIT {
 	@Test
 	void allowReturnsAgentlessNodeConnectionWithHostCaVerificationMaterial() {
 		String identity = "alice-" + unique();
-		UUID nodeId = seedAgentlessNode("10.0.0.5"); // no port → dial gets :22 appended
+		UUID nodeId = seedAgentlessNode("10.0.0.5");
 		Node node = nodes.findById(nodeId).block();
 		seedAllow(identity, nodeId, List.of("deploy"), List.of("shell", "exec"));
 		OpenSshCertificate hostCert = signHostCert(node.name());
@@ -516,7 +496,6 @@ class AuthorizeIT extends AbstractMtlsIT {
 		NodeConnection connection = response.getNodeConnection();
 		assertThat(connection.getConnectorKind()).isEqualTo(ConnectorKind.CONNECTOR_KIND_AGENTLESS);
 		assertThat(connection.getDialAddress()).isEqualTo("10.0.0.5:22");
-		// The node name is carried for EVERY connector kind, not just OUTBOUND_AGENT.
 		assertThat(connection.getNodeName()).isEqualTo(node.name());
 
 		HostVerification verification = connection.getHostVerification();
@@ -534,7 +513,7 @@ class AuthorizeIT extends AbstractMtlsIT {
 	@Test
 	void allowReturnsAgentlessNodeConnectionWithPinnedHostKey() {
 		String identity = "bob-" + unique();
-		UUID nodeId = seedAgentlessNode("10.0.0.6:2222"); // explicit port → dial unchanged
+		UUID nodeId = seedAgentlessNode("10.0.0.6:2222");
 		seedAllow(identity, nodeId, List.of("deploy"), List.of("shell"));
 		byte[] pinnedBlob = seedPinnedHostKey(nodeId);
 		EnrolledGateway gateway = enroll("gw-conn-pin-" + unique());
@@ -614,7 +593,6 @@ class AuthorizeIT extends AbstractMtlsIT {
 		// channel. Empty here would make the Gateway fail closed to "node offline".
 		assertThat(connection.getNodeName()).isNotBlank().isEqualTo(node.name());
 
-		// An outbound agent dials out; there is nothing for the Gateway to dial.
 		assertThat(connection.getDialAddress()).isEmpty();
 	}
 

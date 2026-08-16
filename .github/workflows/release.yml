@@ -1,8 +1,3 @@
-# Supply-chain release pipeline: SBOM + SLSA provenance + keyless Sigstore
-# signature + a reproducibility gate for the release jar. Separate from `ci.yml`
-# (the required `gate` check) — this runs only on a `v*` tag push. Actions are
-# SHA-pinned; the trailing comment records the human tag. See the Documentation
-# repo's docs/security/supply-chain.md for the verification walkthrough.
 name: release
 
 on:
@@ -22,18 +17,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
-      contents: write # gh release create/upload
-      id-token: write # keyless cosign + provenance via ambient GitHub OIDC
-      attestations: write # actions/attest-build-provenance
+      contents: write
+      id-token: write
+      attestations: write
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # The tag is what every artifact is named and labelled after; the manifest
-      # is what the binary reports about itself. Nothing forced them to agree, so
-      # a tag on an unbumped tree would publish artifacts whose contents disagree
-      # with their names — and for the Agent that is the anti-rollback floor, not
-      # a cosmetic mismatch.
       - name: Assert the manifest version matches the tag
         run: |
           set -euo pipefail
@@ -55,7 +45,6 @@ jobs:
           java-version: '25.0.3+9'
           cache: maven
 
-      # Fix the archive timestamp to the tagged commit so the jar is byte-reproducible.
       - name: Pin reproducible build timestamp
         run: echo "BUILD_TS=$(git log -1 --format=%cI)" >> "$GITHUB_ENV"
 
@@ -69,7 +58,6 @@ jobs:
           echo "JAR=$JAR" >> "$GITHUB_ENV"
           echo "SBOM=controlplane-${VER}-sbom.cdx.json" >> "$GITHUB_ENV"
 
-      # Rebuild in a clean tree and assert an identical digest.
       - name: Reproducibility gate
         run: |
           sha256sum "$JAR" | awk '{print $1}' > first.sha256
@@ -81,14 +69,12 @@ jobs:
           fi
           echo "reproducible sha256: $(cat first.sha256)"
 
-      # CycloneDX 1.6 JSON. Version resolves from the pom plugin declaration.
       - name: Generate SBOM
         run: |
           ./mvnw -B -ntp -DskipTests org.cyclonedx:cyclonedx-maven-plugin:makeAggregateBom
           cp target/bom.json "$SBOM"
           jq -e '.bomFormat=="CycloneDX" and .specVersion=="1.6" and (.components|length>0)' "$SBOM" >/dev/null
 
-      # SLSA v1 provenance over the jar + SBOM (Rekor-logged Sigstore bundle).
       - name: Attest build provenance
         id: attest
         uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
@@ -107,8 +93,7 @@ jobs:
       # --output-signature/--output-certificate (warns, doesn't fail) — so those
       # per-file outputs never actually existed, and v0.1.0's "Publish release"
       # failed on a glob match for a .sig file cosign never wrote. The bundle is
-      # the one artifact this actually produces; verify against it (see
-      # docs/security/supply-chain.md).
+      # the one artifact this actually produces; verify against it.
       - name: Sign artifact and SBOM
         env:
           COSIGN_YES: 'true'
@@ -129,25 +114,22 @@ jobs:
             "${{ steps.attest.outputs.bundle-path }}" \
             --clobber
 
-  # The container image for the same tag, held to the integrity story the jar
-  # already has: multi-arch, SBOM and provenance attached to the index, signed
-  # with the same keyless Sigstore identity — and verified in this job, because
-  # a signature nobody checks is a claim rather than a control.
   image:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
       contents: read
-      packages: write # push to GHCR
-      id-token: write # keyless cosign + provenance via ambient GitHub OIDC
-      attestations: write # actions/attest-build-provenance
+      packages: write
+      id-token: write
+      attestations: write
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # No QEMU: the jar is architecture-neutral and the runtime is copied from
-      # the JRE image, which resolves per target platform, so neither stage
-      # executes anything for the foreign architecture.
+      # Nothing is emulated to BUILD: the jar is architecture-neutral and the
+      # runtime is copied from the JRE image, which resolves per target platform.
+      # QEMU is registered only so the published arm64 child can be executed
+      # during verification.
       # Registering binfmt lets the arm64 child manifest be executed on this
       # amd64 runner. Without it the arm64 half of every published index would be
       # a platform nobody has ever run — a manifest that claims more than was
@@ -167,9 +149,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
-      # sbom + provenance attach an SPDX document and SLSA provenance to the
-      # index as in-toto attestations, one per platform. No :latest — a floating
-      # tag is the hazard this project refuses everywhere else.
       - name: Build and push
         id: build
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
@@ -188,7 +167,6 @@ jobs:
       - name: Install cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 
-      # --recursive so every platform manifest is signed, not only the index.
       - name: Sign image
         env:
           COSIGN_YES: 'true'
@@ -202,8 +180,6 @@ jobs:
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
-      # Every assertion here names the value it expects. A step that only checks
-      # an exit code cannot tell the outcome it wants from the one it fears.
       - name: Verify the published image
         env:
           GH_TOKEN: ${{ github.token }}
@@ -238,8 +214,6 @@ jobs:
           [ -n "$CHILDREN" ] || { echo "::error::the index lists no linux platform manifests"; exit 1; }
           for child in $CHILDREN; do verify_signature "${IMAGE}@${child}"; done
 
-          # 2. Exactly the platforms the release claims — not "at least". An unexpected
-          #    third platform means something published that nobody reviewed.
           PLATFORMS=$(jq -r '[.manifests[].platform | select(.os == "linux" and .architecture != "unknown") | .architecture] | sort | unique | join(",")' <<<"$INDEX")
           [ "$PLATFORMS" = "amd64,arm64" ] || { echo "::error::index platforms are '$PLATFORMS', expected exactly 'amd64,arm64'"; exit 1; }
           echo "platforms: $PLATFORMS"
@@ -265,19 +239,11 @@ jobs:
           	|| { echo "::error::an SBOM attestation is missing or lists no components"; exit 1; }
           echo "SBOM packages per platform: $(jq -c "$SBOM_COUNTS" sbom.json)"
 
-          # 5. The tag an operator is told to pull resolves to the digest just verified.
-          #    Everything above addresses the image by digest, so a tag that never landed
-          #    or that a concurrent push moved would go unnoticed — and the tag is the
-          #    first hop of the procedure the installation guides document.
           TAG_DIGEST=$(docker buildx imagetools inspect "${IMAGE}:${GITHUB_REF_NAME}" --format '{{json .Manifest}}' | jq -r '.digest')
           [ "$TAG_DIGEST" = "$DIGEST" ] \
           	|| { echo "::error::${IMAGE}:${GITHUB_REF_NAME} resolves to $TAG_DIGEST, not the verified $DIGEST"; exit 1; }
           echo "tag ${GITHUB_REF_NAME} -> $TAG_DIGEST"
 
-
-          # 6. The arm64 child manifest, actually executed. Everything above reads
-          #    index metadata; this is the only step that proves the platform we
-          #    publish for runs at all.
           docker run --rm --platform linux/arm64 --entrypoint /opt/java/bin/java "$REF" -version
           echo "arm64 entrypoint ran"
 

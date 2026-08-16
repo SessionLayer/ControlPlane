@@ -47,7 +47,6 @@ class BasicEscapeHatchCidrValidationTest {
 		assertThatThrownBy(() -> enabled("").validateIfEnabled()).isInstanceOf(IllegalStateException.class);
 	}
 
-	/** An enabled hatch with no CIDRs could never authenticate anyone. */
 	@Test
 	void anEnabledHatchWithNoCidrsRefusesToStart() {
 		assertThatThrownBy(() -> enabled().validateIfEnabled()).isInstanceOf(IllegalStateException.class);

@@ -35,8 +35,6 @@ class OpenSshCertSignerValidationTest {
 
 	private final OpenSshCertificateAssembler assembler = new OpenSshCertificateAssembler();
 
-	// ---- signer + CA -------------------------------------------------------
-
 	private record Signer(SshCertSigner signer, LocalCaBackend backend) {
 	}
 
@@ -62,8 +60,6 @@ class OpenSshCertSignerValidationTest {
 		return (ECPublicKey) kp.getPublic();
 	}
 
-	// ---- tests -------------------------------------------------------------
-
 	@Test
 	void innerLegCertVerifiesCryptographicallyAndParsesWithSshKeygen(@TempDir Path dir) throws Exception {
 		Signer s = newLocalSigner();
@@ -72,11 +68,9 @@ class OpenSshCertSignerValidationTest {
 				"10.0.0.0/8", Set.of("shell", "exec"), 42L, Instant.now());
 		OpenSshCertificate cert = s.signer().signCertificate(new CertificateRequest(subject, params));
 
-		// (1) Cryptographic verification: the CA signature must verify over the TBS.
 		ParsedCert parsed = parse(cert.blob());
 		assertThat(verifySignature(parsed, s.backend().publicKey())).isTrue();
 
-		// (2) ssh-keygen -L structural validation of the certificate fields.
 		assumeTrue(commandAvailable("ssh-keygen"), "ssh-keygen not available");
 		Path certFile = dir.resolve("inner-cert.pub");
 		Files.writeString(certFile, cert.certificateLine() + "\n");
@@ -84,9 +78,9 @@ class OpenSshCertSignerValidationTest {
 		assertThat(out).contains("user certificate");
 		assertThat(out).contains("Key ID: \"sess-abc123+alice@corp\"");
 		assertThat(out).contains("Serial: 42");
-		assertThat(out).contains("deploy"); // principal
-		assertThat(out).contains("source-address 10.0.0.0/8"); // value-carrying critical option
-		assertThat(out).contains("permit-pty"); // granted flag extension
+		assertThat(out).contains("deploy");
+		assertThat(out).contains("source-address 10.0.0.0/8");
+		assertThat(out).contains("permit-pty");
 		assertThat(out).doesNotContain("permit-X11-forwarding"); // default-deny (not granted)
 		assertThat(out).doesNotContain("permit-agent-forwarding");
 	}
@@ -102,14 +96,10 @@ class OpenSshCertSignerValidationTest {
 		OpenSshCertificate cert = s.signer().signCertificate(new CertificateRequest(subject, params));
 		ParsedCert parsed = parse(cert.blob());
 
-		// Critical options content = string("source-address") || string(
-		// string("10.0.0.0/8") ).
 		byte[] expectedCritical = new SshWriter().writeString("source-address")
 				.writeString(new SshWriter().writeString("10.0.0.0/8").toByteArray()).toByteArray();
 		assertThat(parsed.criticalOptions()).isEqualTo(expectedCritical);
 
-		// Extensions content = string("permit-pty") || string("") (empty data, still a
-		// 4-byte length prefix).
 		byte[] expectedExtensions = new SshWriter().writeString("permit-pty").writeString(new byte[0]).toByteArray();
 		assertThat(parsed.extensions()).isEqualTo(expectedExtensions);
 	}
@@ -117,10 +107,8 @@ class OpenSshCertSignerValidationTest {
 	@Test
 	void criticalOptionsAndExtensionsMatchSshKeygen(@TempDir Path dir) throws Exception {
 		assumeTrue(commandAvailable("ssh-keygen"), "ssh-keygen not available");
-		// ssh-keygen generates a CA + a subject key and signs a reference cert with the
-		// same options; the options/extensions bytes are CA-independent, so ours must
-		// be
-		// byte-identical.
+		// The options/extensions bytes are CA-independent, so ours must be
+		// byte-identical to the reference cert ssh-keygen signs with the same options.
 		exec(dir, "ssh-keygen", "-q", "-t", "ecdsa", "-b", "256", "-N", "", "-f", dir.resolve("ca").toString());
 		exec(dir, "ssh-keygen", "-q", "-t", "ecdsa", "-b", "256", "-N", "", "-f", dir.resolve("subj").toString());
 		exec(dir, "ssh-keygen", "-s", dir.resolve("ca").toString(), "-I", "sess-1+alice", "-n", "deploy", "-O", "clear",
@@ -129,7 +117,6 @@ class OpenSshCertSignerValidationTest {
 		byte[] refBlob = readCertBlob(dir.resolve("subj-cert.pub"));
 		ParsedCert ref = parse(refBlob);
 
-		// Sign OUR cert for the very same subject key with the same options.
 		ECPublicKey subject = SshEcdsaPublicKeys.parseAuthorizedKey(Files.readString(dir.resolve("subj.pub")));
 		CertificateParameters params = CertificateProfiles.innerLegSessionCert("sess-1", "alice", "deploy",
 				"10.0.0.0/8", Set.of("shell"), 7L, Instant.now());
@@ -147,11 +134,8 @@ class OpenSshCertSignerValidationTest {
 		assumeTrue(sshdPath != null, "sshd not available");
 
 		Signer s = newLocalSigner();
-		// A real subject keypair (OpenSSH format) so `ssh -i` can use it; we certify
-		// its
-		// public key with OUR session CA. The cert principal is the current OS user so
-		// a
-		// non-root throwaway sshd can actually authenticate it (a full handshake).
+		// The cert principal is the current OS user so a non-root throwaway sshd can
+		// actually authenticate it.
 		String osUser = System.getProperty("user.name");
 		exec(dir, "ssh-keygen", "-q", "-t", "ecdsa", "-b", "256", "-N", "", "-f", dir.resolve("subj").toString());
 		exec(dir, "ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-f", dir.resolve("hostkey").toString());
@@ -161,7 +145,6 @@ class OpenSshCertSignerValidationTest {
 		OpenSshCertificate cert = s.signer().signCertificate(new CertificateRequest(subject, params));
 		Files.writeString(dir.resolve("subj-cert.pub"), cert.certificateLine() + "\n");
 
-		// Trust our session CA via TrustedUserCAKeys.
 		Path caFile = dir.resolve("session-ca.pub");
 		Files.writeString(caFile, s.signer().caAuthorizedKey("session-ca") + "\n");
 
@@ -177,18 +160,13 @@ class OpenSshCertSignerValidationTest {
 		Process sshd = new ProcessBuilder(sshdPath.toString(), "-D", "-e", "-f", config.toString())
 				.redirectErrorStream(true).redirectOutput(sshdLog.toFile()).start();
 		try {
-			// Wait for sshd to come up (or bail out to a skip if it cannot run here).
 			boolean up = waitForListening(port, sshdLog);
 			assumeTrue(up && sshd.isAlive(), "throwaway sshd did not start in this environment");
 
-			// A real end-to-end handshake: sshd validates the CERTIFICATE (CA trust via
-			// TrustedUserCAKeys, signature, validity, principal) and completes the login.
 			Exec ssh = exec(dir, 15, "ssh", "-F", "/dev/null", "-i", dir.resolve("subj").toString(), "-o",
 					"CertificateFile=" + dir.resolve("subj-cert.pub"), "-o", "UserKnownHostsFile=/dev/null", "-o",
 					"StrictHostKeyChecking=no", "-o", "IdentitiesOnly=yes", "-o", "BatchMode=yes", "-o",
 					"ConnectTimeout=5", "-p", Integer.toString(port), osUser + "@127.0.0.1", "echo HANDSHAKE_OK");
-			// Full success (the CA-signed cert authenticated + the session ran the
-			// command).
 			assertThat(ssh.stdout()).contains("HANDSHAKE_OK");
 		} finally {
 			sshd.destroyForcibly();
@@ -196,8 +174,6 @@ class OpenSshCertSignerValidationTest {
 		}
 
 		String log = Files.readString(sshdLog);
-		// sshd's own record that our Java-assembled cert passed CA/signature/validity/
-		// principal validation, and never a validation failure.
 		assertThat(log).contains("Accepted certificate ID \"sess-sshd+alice\"");
 		assertThat(log).contains("signed by ECDSA CA");
 		assertThat(log).doesNotContain("Certificate invalid");
@@ -209,8 +185,6 @@ class OpenSshCertSignerValidationTest {
 			return socket.getLocalPort();
 		}
 	}
-
-	// ---- certificate parsing + verification --------------------------------
 
 	private record ParsedCert(byte[] toBeSigned, byte[] criticalOptions, byte[] extensions, byte[] signatureField) {
 	}
@@ -277,8 +251,6 @@ class OpenSshCertSignerValidationTest {
 		String[] parts = Files.readString(certPub).trim().split("\\s+");
 		return java.util.Base64.getDecoder().decode(parts[1]);
 	}
-
-	// ---- process helpers ---------------------------------------------------
 
 	private record Exec(int exit, String stdout) {
 	}

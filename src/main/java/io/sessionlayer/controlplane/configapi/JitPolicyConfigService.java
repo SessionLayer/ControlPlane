@@ -91,8 +91,6 @@ public class JitPolicyConfigService {
 		if (maxTtlSeconds <= 0) {
 			throw ApiProblemException.validation("maxTtlSeconds must be > 0");
 		}
-		// The JIT-request submit path label-matches this selector against a node; a
-		// shape the evaluator can't parse would break submit, so reject it pre-commit.
 		SelectorValidation.labelSelector(targetSelector, "targetSelector");
 		if (approvalChain != null && approvalChain.isArray()) {
 			for (JsonNode level : approvalChain) {

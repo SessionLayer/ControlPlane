@@ -64,17 +64,6 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
-/**
- * The {@code Recording} gRPC service over mTLS against a real Postgres + MinIO
- * WORM store. Proves the Begin → RequestUpload → PUT → Finalize lifecycle:
- * {@code Authorize} ALLOW mints a recording token; {@code BeginRecording}
- * registers the 1:1 {@code recording_ref} + returns the customer key (no upload
- * cred); {@code RequestUpload} issues a fresh short-lived presigned PUT at
- * upload time that lands the object; replayed / cross-gateway / expired tokens
- * + invalid customer keys fail closed; {@code FinalizeRecording} commits
- * integrity + the (validated) SFTP audit correlated into the one stream; and a
- * WORM object-lock cannot be stripped or deleted.
- */
 class RecordingIT extends AbstractMtlsIT {
 
 	private static final JsonNodeFactory JSON = JsonNodeFactory.instance;
@@ -140,14 +129,12 @@ class RecordingIT extends AbstractMtlsIT {
 		assertThat(begin.getRecordingId()).isNotBlank();
 		assertThat(begin.getObjectKey())
 				.isEqualTo("recordings/" + sessionId + "/" + begin.getRecordingId() + ".cast.enc");
-		// worm mode is the operator default (governance) here
 		assertThat(begin.getWormMode()).isEqualTo(WormMode.WORM_MODE_GOVERNANCE);
 		assertThat(begin.getCustomerKey().getAlgorithm())
 				.isEqualTo(KeySealAlgorithm.KEY_SEAL_ALGORITHM_ECIES_P256_HKDF_SHA256_AES256GCM);
 		assertThat(begin.getCustomerKey().getPublicKey().toByteArray()).isEqualTo(customerKey);
 		assertThat(begin.getCustomerKey().getKeyRef()).isEqualTo("kms://customer-1");
 
-		// recording_ref written 1:1 with the session.
 		RecordingRef ref = recordings.findBySessionId(sessionId).block();
 		assertThat(ref).isNotNull();
 		assertThat(ref.objectKey()).isEqualTo(begin.getObjectKey());
@@ -156,7 +143,6 @@ class RecordingIT extends AbstractMtlsIT {
 		assertThat(ref.wormMode()).isEqualTo("governance");
 		assertThat(ref.retentionUntil()).isAfter(Instant.now());
 
-		// The upload credential is issued at upload time (RequestUpload), short-lived.
 		UploadCredential upload = requestUpload(gateway, begin.getRecordingId());
 		assertThat(upload.getMethod()).isEqualTo("PUT");
 		assertThat(upload.getUrl()).startsWith("http");
@@ -181,9 +167,6 @@ class RecordingIT extends AbstractMtlsIT {
 		AuthorizeResponse authz = authorize(gateway, identity, nodeId, "deploy", "10.0.0.5", UUID.randomUUID());
 		BeginRecordingResponse begin = beginRecording(gateway, authz.getRecordingToken());
 
-		// The credential lifetime is the UPLOAD, not the session: a later RequestUpload
-		// issues a freshly-dated credential (so a long session never carries a stale
-		// begin-time cred). Not single-use — it can be re-requested.
 		UploadCredential first = requestUpload(gateway, begin.getRecordingId());
 		Thread.sleep(2000);
 		UploadCredential second = requestUpload(gateway, begin.getRecordingId());
@@ -218,7 +201,7 @@ class RecordingIT extends AbstractMtlsIT {
 		EnrolledGateway gateway = enroll("gw-replay-" + unique());
 		AuthorizeResponse authz = authorize(gateway, identity, nodeId, "deploy", "10.0.0.5", UUID.randomUUID());
 
-		beginRecording(gateway, authz.getRecordingToken()); // first use consumes it
+		beginRecording(gateway, authz.getRecordingToken());
 		assertThatThrownBy(() -> beginRecording(gateway, authz.getRecordingToken()))
 				.isInstanceOf(StatusRuntimeException.class)
 				.satisfies(e -> assertThat(((StatusRuntimeException) e).getStatus().getCode())
@@ -245,7 +228,6 @@ class RecordingIT extends AbstractMtlsIT {
 	void expiredRecordingTokenIsRejected() {
 		configureCustomerKey("kms://customer-1", "governance");
 		EnrolledGateway gateway = enroll("gw-expired-" + unique());
-		// Seed an already-expired token bound to this gateway (hash stored; raw known).
 		String raw = "raw-" + UUID.randomUUID();
 		recordingTokens.save(RecordingToken.create(SingleUseTokens.hash(raw), gateway.gatewayId(), UUID.randomUUID(),
 				UUID.randomUUID(), "deploy", "10.0.0.5", Instant.now().minusSeconds(60))).block();
@@ -265,8 +247,6 @@ class RecordingIT extends AbstractMtlsIT {
 
 	@Test
 	void invalidCustomerKeyFailsClosed() {
-		// A blob that is not a valid SPKI public key (garbage / a private key) must be
-		// refused rather than handed to the Gateway to seal a recording to.
 		writeSettings("not-a-public-key".getBytes(), "kms://bad", "governance");
 		EnrolledGateway gateway = enroll("gw-badkey-" + unique());
 		AuthorizeResponse authz = authorizeFresh(gateway);
@@ -301,8 +281,6 @@ class RecordingIT extends AbstractMtlsIT {
 		assertThat(ref.contentDigest()).isEqualTo(digest);
 		assertThat(ref.sizeBytes()).isEqualTo(4096L);
 
-		// The begin, sftp.write and finalize events share the one correlated stream
-		// by session id.
 		List<AuditEvent> events = audits.findBySessionId(sessionId).collectList().block();
 		List<String> actions = events.stream().map(AuditEvent::action).toList();
 		assertThat(actions).contains("recording.begin", "sftp.write", "recording.finalize");
@@ -311,10 +289,9 @@ class RecordingIT extends AbstractMtlsIT {
 		assertThat(sftp.detail().get("direction").asString()).isEqualTo("upload");
 	}
 
-	// Per-tunnel audit lands at finalize (the sftp_audit precedent) as
-	// metadata-only `.closed` rows, capability-stamped for the audit search
-	// dimension; a capability outside the forwarding vocabulary can neither forge
-	// an action nor violate the capabilities column CHECK.
+	// Tunnel audit rows are metadata-only; a capability outside the forwarding
+	// vocabulary can neither forge an action nor violate the capabilities column
+	// CHECK.
 	@Test
 	void finalizeCorrelatesTunnelAuditAsClosedMetadataRows() {
 		configureCustomerKey("kms://customer-1", "governance");
@@ -354,17 +331,11 @@ class RecordingIT extends AbstractMtlsIT {
 		assertThat(x11.capabilities()).containsExactly("x11");
 		assertThat(x11.detail().get("target")).isNull();
 
-		// The forged capability is neutralized: generic action, no capability stamp.
 		AuditEvent unknown = events.stream().filter(e -> "tunnel.unknown".equals(e.action())).findFirst().orElseThrow();
 		assertThat(unknown.capabilities()).isNull();
 		assertThat(unknown.detail().get("capability").asString()).isEqualTo("unknown");
 	}
 
-	// Session-limit lifecycle completion: the first terminal finalize closes the
-	// owning session — stamps ended_at + a status-derived end_reason
-	// (SessionController history) AND releases the concurrency lease, freeing the
-	// identity's slot. The close is idempotent — a same-status re-finalize moves
-	// neither the end stamp nor the (already released) lease.
 	@Test
 	void finalizeMarksTheOwningSessionEndedAndReleasesTheLease() {
 		configureCustomerKey("kms://customer-1", "governance");
@@ -376,8 +347,6 @@ class RecordingIT extends AbstractMtlsIT {
 		AuthorizeResponse authz = authorize(gateway, identity, nodeId, "deploy", "10.0.0.5", sessionId);
 		BeginRecordingResponse begin = beginRecording(gateway, authz.getRecordingToken());
 
-		// Live before finalize: no end stamp, and the Authorize acquired one live
-		// lease.
 		assertThat(sshSessions.findById(sessionId).block().endedAt()).isNull();
 		assertThat(sessionLeases.countLiveByIdentity(identity, Instant.now()).block()).isEqualTo(1L);
 
@@ -386,11 +355,9 @@ class RecordingIT extends AbstractMtlsIT {
 
 		SshSession ended = sshSessions.findById(sessionId).block();
 		assertThat(ended.endedAt()).isNotNull();
-		assertThat(ended.endReason()).isEqualTo("closed"); // finalized → clean close
-		assertThat(sessionLeases.countLiveByIdentity(identity, Instant.now()).block()).isEqualTo(0L); // slot freed
+		assertThat(ended.endReason()).isEqualTo("closed");
+		assertThat(sessionLeases.countLiveByIdentity(identity, Instant.now()).block()).isEqualTo(0L);
 
-		// A same-status re-finalize is a no-op that moves neither the end stamp nor the
-		// released lease.
 		Instant firstEnd = ended.endedAt();
 		finalizeRecording(gateway, FinalizeRecordingRequest.newBuilder().setRecordingId(begin.getRecordingId())
 				.setStatus(RecordingStatus.RECORDING_STATUS_FINALIZED).setByteLen(1).build());
@@ -398,9 +365,6 @@ class RecordingIT extends AbstractMtlsIT {
 		assertThat(sessionLeases.countLiveByIdentity(identity, Instant.now()).block()).isEqualTo(0L);
 	}
 
-	// FinalizeRecording carries the object-store version id the Gateway PUT; the CP
-	// stores it write-once so replay/export can pin it. A re-finalize cannot
-	// repoint it (a compromised actor can't move the pin).
 	@Test
 	void finalizePersistsTheObjectVersionIdAndCannotRepointIt() {
 		configureCustomerKey("kms://customer-1", "governance");
@@ -470,8 +434,6 @@ class RecordingIT extends AbstractMtlsIT {
 
 		AuditEvent sftp = audits.findBySessionId(sessionId).collectList().block().stream()
 				.filter(e -> e.action().startsWith("sftp.")).findFirst().orElseThrow();
-		// Operation allowlisted → unknown; direction constrained; bad sha256 dropped;
-		// path length-bounded; negative size clamped.
 		assertThat(sftp.action()).isEqualTo("sftp.unknown");
 		assertThat(sftp.detail().get("direction").asString()).isEqualTo("unknown");
 		assertThat(sftp.detail().has("sha256")).isFalse();
@@ -499,8 +461,6 @@ class RecordingIT extends AbstractMtlsIT {
 		assertThat(finalizeRecording(gateway, first).getStatus()).isEqualTo(RecordingStatus.RECORDING_STATUS_FINALIZED);
 		long afterFirst = audits.findBySessionId(sessionId).count().block();
 
-		// A same-status re-finalize — even with DIFFERENT sftp_audit — is a no-op that
-		// appends NOTHING (no duplicate audit rows).
 		FinalizeRecordingRequest replay = FinalizeRecordingRequest.newBuilder().setRecordingId(begin.getRecordingId())
 				.setStatus(RecordingStatus.RECORDING_STATUS_FINALIZED).setHashChainHead(head).setByteLen(10)
 				.addSftpAudit(FileTransferAudit.newBuilder().setOperation("read").setPath("/b").setDirection("download")
@@ -510,7 +470,6 @@ class RecordingIT extends AbstractMtlsIT {
 				.isEqualTo(RecordingStatus.RECORDING_STATUS_FINALIZED);
 		assertThat(audits.findBySessionId(sessionId).count().block()).isEqualTo(afterFirst);
 
-		// Relabeling a finalized recording to FAILED (to hide it) is refused.
 		FinalizeRecordingRequest relabel = FinalizeRecordingRequest.newBuilder().setRecordingId(begin.getRecordingId())
 				.setStatus(RecordingStatus.RECORDING_STATUS_FAILED).setByteLen(0).build();
 		assertThatThrownBy(() -> finalizeRecording(gateway, relabel)).isInstanceOf(StatusRuntimeException.class)
@@ -554,14 +513,10 @@ class RecordingIT extends AbstractMtlsIT {
 			assertThat(retention.mode()).isEqualTo(ObjectLockRetentionMode.COMPLIANCE);
 			assertThat(retention.retainUntilDate()).isAfter(Instant.now());
 			String versionId = admin.headObject(b -> b.bucket(BUCKET).key(objectKey)).versionId();
-			// A compliance-locked version cannot be deleted before retain-until, even by
-			// the bucket owner (a compromised admin can't alter a recording).
 			assertThatThrownBy(() -> admin.deleteObject(b -> b.bucket(BUCKET).key(objectKey).versionId(versionId)))
 					.isInstanceOf(S3Exception.class);
 		}
 	}
-
-	// ----------------------- helpers -----------------------
 
 	private AuthorizeResponse authorize(EnrolledGateway gateway, String identity, UUID nodeId, String principal,
 			String sourceIp, UUID sessionId) {
@@ -570,8 +525,6 @@ class RecordingIT extends AbstractMtlsIT {
 		return onChannel(gateway, channel -> AuthorizationGrpc.newBlockingStub(channel).authorize(request));
 	}
 
-	// A minimal allow just to obtain a recording token for the fail-closed begin
-	// tests.
 	private AuthorizeResponse authorizeFresh(EnrolledGateway gateway) {
 		String identity = "user-" + unique();
 		UUID nodeId = seedProdNode();
@@ -649,7 +602,7 @@ class RecordingIT extends AbstractMtlsIT {
 	}
 
 	private byte[] configureCustomerKey(String keyRef, String wormMode) {
-		byte[] der = MtlsTestSupport.generateEcKeyPair().getPublic().getEncoded(); // DER SubjectPublicKeyInfo
+		byte[] der = MtlsTestSupport.generateEcKeyPair().getPublic().getEncoded();
 		writeSettings(der, keyRef, wormMode);
 		return der;
 	}

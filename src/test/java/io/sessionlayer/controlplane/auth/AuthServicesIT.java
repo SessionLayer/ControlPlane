@@ -45,15 +45,13 @@ class AuthServicesIT extends AbstractAuthIT {
 			assertThat(resolved.identity()).isEqualTo("alice");
 			assertThat(resolved.principals()).containsExactly("deploy");
 		}).verifyComplete();
-		StepVerifier.create(otpService.validate(issued.otp(), "10.0.0.5")).verifyComplete(); // empty
+		StepVerifier.create(otpService.validate(issued.otp(), "10.0.0.5")).verifyComplete();
 	}
 
 	@Test
 	void otpFromWrongSourceIsRejectedWithoutBurningIt() {
 		OtpService.IssuedOtp issued = otpService.issue("bob", List.of("dba"), "10.0.0.0/24", 120, "admin").block();
-		StepVerifier.create(otpService.validate(issued.otp(), "192.168.1.9")).verifyComplete(); // empty
-		// The OTP is NOT consumed (wrong source matched no row), so the legit source
-		// works.
+		StepVerifier.create(otpService.validate(issued.otp(), "192.168.1.9")).verifyComplete();
 		assertThat(otps.findById(issued.id()).block().used()).isFalse();
 		StepVerifier.create(otpService.validate(issued.otp(), "10.0.0.1"))
 				.assertNext(r -> assertThat(r.identity()).isEqualTo("bob")).verifyComplete();
@@ -70,7 +68,6 @@ class AuthServicesIT extends AbstractAuthIT {
 	@Test
 	void malformedSourceIpFailsClosed() {
 		OtpService.IssuedOtp issued = otpService.issue("grace", List.of("deploy"), "10.0.0.0/24", 120, "admin").block();
-		// A malformed source IP must deny (not 500) and must not consume the OTP.
 		StepVerifier.create(otpService.validate(issued.otp(), "not-an-ip")).verifyComplete();
 		assertThat(otps.findById(issued.id()).block().used()).isFalse();
 	}
@@ -80,7 +77,7 @@ class AuthServicesIT extends AbstractAuthIT {
 		OtpService.IssuedOtp issued = otpService.issue("carol", List.of("deploy"), null, 120, "admin").block();
 		db.sql("UPDATE runtime.otp SET expires_at = now() - interval '1 minute' WHERE id=:id").bind("id", issued.id())
 				.fetch().rowsUpdated().block();
-		StepVerifier.create(otpService.validate(issued.otp(), "10.0.0.1")).verifyComplete(); // empty
+		StepVerifier.create(otpService.validate(issued.otp(), "10.0.0.1")).verifyComplete();
 	}
 
 	@Test

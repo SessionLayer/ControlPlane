@@ -10,16 +10,10 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Set;
 
-/**
- * Reference verifier for signed decision context (fail-closed). Validates
- * signer leaf chains to mTLS CA, carries SIGNER_URI marker, and verifies ECDSA
- * signature over DOMAIN_PREFIX || signedContext.
- */
 public final class DecisionContextVerifier {
 
 	private static final int SAN_URI = 6;
 
-	/** EKU id-kp-codeSigning (the decision-context signer's purpose). */
 	private static final String CODE_SIGNING_EKU = "1.3.6.1.5.5.7.3.3";
 
 	private DecisionContextVerifier() {
@@ -29,8 +23,6 @@ public final class DecisionContextVerifier {
 			byte[] signature) {
 		try {
 			X509Certificate signer = parse(signerCertDer);
-			// SAN marker alone isn't sufficient; also require codeSigning EKU and reject CA
-			// certs (defense in depth).
 			if (!chainsTo(caCertificate, signer) || !hasSignerMarker(signer) || !isCodeSigner(signer)) {
 				return false;
 			}

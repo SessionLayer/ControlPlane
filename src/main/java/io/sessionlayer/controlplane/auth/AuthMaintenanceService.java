@@ -11,10 +11,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
-/**
- * Reaps expired transient authentication rows (OIDC state, rate-limits, device
- * flows, assertions, idempotency keys).
- */
 @Component
 @ConditionalOnProperty(value = "sessionlayer.auth.maintenance.enabled", havingValue = "true", matchIfMissing = true)
 public class AuthMaintenanceService {
@@ -35,8 +31,7 @@ public class AuthMaintenanceService {
 	}
 
 	// Fire-and-forget: NEVER block; a wedged startup prune must not abort CP boot
-	// (would crash-loop CP and take auth down — the same shape already
-	// fixed once in RecordingRetentionJob).
+	// (would crash-loop CP and take auth down).
 	@EventListener(ApplicationReadyEvent.class)
 	public void pruneOnStartup() {
 		prune("startup").subscribe(v -> {

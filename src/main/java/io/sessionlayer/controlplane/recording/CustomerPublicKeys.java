@@ -15,7 +15,6 @@ public final class CustomerPublicKeys {
 	private static final String EC_OID = X9ObjectIdentifiers.id_ecPublicKey.getId();
 	private static final String RSA_OID = PKCSObjectIdentifiers.rsaEncryption.getId();
 
-	/** prime256v1. The Gateway's sealer is P-256 only, by crate. */
 	private static final String P256_CURVE_OID = X9ObjectIdentifiers.prime256v1.getId();
 
 	/**
@@ -32,8 +31,6 @@ public final class CustomerPublicKeys {
 			return false;
 		}
 		try {
-			// getInstance over the parsed sequence rejects a PKCS#8 private key (different
-			// ASN.1 shape) and any non-SPKI blob before we ever touch a KeyFactory.
 			SubjectPublicKeyInfo spki = SubjectPublicKeyInfo.getInstance(ASN1Sequence.getInstance(der));
 			String oid = spki.getAlgorithm().getAlgorithm().getId();
 			X509EncodedKeySpec spec = new X509EncodedKeySpec(der);

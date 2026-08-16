@@ -9,12 +9,6 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Table;
 
-/**
- * RUNTIME · {@code runtime.service_account_credential}. Issued machine-consumer
- * credential (rotatable, revocable). Stores hash only, never raw secret.
- * {@code serviceAccountId}/{@code serviceAccountName} are a snapshot (no FK
- * across runtime→config).
- */
 @Table(schema = "runtime", name = "service_account_credential")
 public record ServiceAccountCredential(@Id UUID id, UUID serviceAccountId, String serviceAccountName,
 		String credentialType, String secretHash, String fingerprint, String status, Instant issuedAt, Instant notAfter,

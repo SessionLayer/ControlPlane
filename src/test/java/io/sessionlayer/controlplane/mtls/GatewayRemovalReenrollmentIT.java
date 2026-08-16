@@ -21,13 +21,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-/**
- * Removal frees a Gateway name, so the question the previous session's
- * impersonation defect makes unavoidable is what a free-then-re-enroll buys.
- * Two properties must hold: freeing a name cannot route around the
- * reserved-name rule, and a re-enrollment under a freed name inherits nothing
- * from the identity that was removed.
- */
 class GatewayRemovalReenrollmentIT extends AbstractMtlsIT {
 
 	@Autowired
@@ -86,17 +79,12 @@ class GatewayRemovalReenrollmentIT extends AbstractMtlsIT {
 				Instant.now().plus(Duration.ofHours(1)))).block();
 		assertThat(leases.countLiveByIdentity(identity, Instant.now()).block()).isEqualTo(1L);
 
-		// The open session now blocks an unforced removal, which is the guard doing
-		// its job — assert it here so this test says why it has to force rather than
-		// leaving a bare `true` to be read as carelessness.
 		ApiProblemException refused = catchThrowableOfType(ApiProblemException.class,
 				() -> directory.remove(original.gatewayId(), false, "operator").block());
 		assertThat(refused.getMessage()).contains("1 open session(s)");
 
 		directory.remove(original.gatewayId(), true, "operator").block();
 
-		// The session outlives the identity with no owner: history is preserved and
-		// the row cannot be claimed by whoever takes the name next.
 		assertThat(sshSessions.findById(session.id()).block().gatewayId()).isNull();
 		// And the slot stays occupied. A removal that silently released leases would
 		// let the identity exceed its cap while its real sessions are still running;
@@ -115,20 +103,12 @@ class GatewayRemovalReenrollmentIT extends AbstractMtlsIT {
 				() -> lifecycle.endSession(original.gatewayId(), session.id(), "the removed identity").block());
 		assertThat(byRemoved.reason()).isEqualTo(GatewayRequestException.Reason.PERMISSION_DENIED);
 
-		// The forced removal stamped the end itself, so the session is closed and
-		// ownerless — and the lease it held still counts, which is the property this
-		// test pins that the forced-removal tests do not.
 		SshSession orphaned = sshSessions.findById(session.id()).block();
 		assertThat(orphaned.endedAt()).isNotNull();
 		assertThat(orphaned.endReason()).isEqualTo("gateway_removed");
 		assertThat(leases.countLiveByIdentity(identity, Instant.now()).block()).isEqualTo(1L);
 	}
 
-	/**
-	 * The removed identity is refused everywhere the Control Plane resolves a
-	 * caller, so removal takes the Gateway down immediately rather than leaving it
-	 * half-live.
-	 */
 	@Test
 	void aRemovedIdentityIsGoneFromEveryCallerLookup() {
 		String name = "gw-gone-" + suffix();

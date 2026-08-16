@@ -17,13 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Mono;
 
-/**
- * Concurrency-lease diagnosis and single-lease release, replacing the raw
- * {@code SELECT}/{@code UPDATE} on {@code runtime.session_lease} the
- * disaster-recovery runbook required. A lease that outlived its session denies
- * its identity with the same generic problem as a real policy deny, so the read
- * half is what makes the two distinguishable without a database credential.
- */
 @Service
 public class SessionLeaseAdminService {
 
@@ -103,11 +96,6 @@ public class SessionLeaseAdminService {
 		return Criteria.where("releasedAt").isNotNull().or("expiresAt").lessThanOrEquals(now);
 	}
 
-	// Always written, even when the row was already released: the operator asked
-	// for
-	// a correction to enforcement state and that request is the auditable act. The
-	// no-op case is distinguishable by released_by_this_call rather than by
-	// absence.
 	private Mono<Void> auditRelease(String actor, SessionLease lease, String reason, boolean released) {
 		Map<String, String> detail = new LinkedHashMap<>();
 		detail.put("identity", lease.identity());

@@ -1,18 +1,9 @@
--- V21 — origin provenance is api|ui|default (drop 'git'). SessionLayer CP.
+-- Why this cannot fail on existing data: no row ever carried the dropped 'git'
+-- value (no writer for it was built), so DROP + re-ADD of the column CHECK is
+-- lossless and needs no data rewrite.
 --
--- Owner decision (2026-07-15): external config automation was descoped — config is
--- managed via UI + API over Postgres, the single source of truth (Design D11). The
--- `origin` column stays as generic provenance (which admin surface last wrote a row),
--- but its fourth legacy value can no longer occur, so this migration tightens the
--- CHECK to IN ('api', 'ui', 'default') on every config table that carries `origin`.
---
--- Expand/contract, lossless: no row ever carried the dropped value (no writer for it
--- was built), so DROP + re-ADD the column CHECK is safe with no data rewrite. The
--- config/runtime schema split is retained — it is the general config-vs-runtime
--- boundary that backs the cp_runtime role.
---
--- Postgres names a column CHECK `<table>_<column>_check`; each is dropped and re-added
--- explicitly so the constraint name and definition stay greppable.
+-- Postgres names a column CHECK `<table>_<column>_check`; each is dropped and
+-- re-added explicitly so the constraint name and definition stay greppable.
 
 ALTER TABLE config.node_policy
     DROP CONSTRAINT node_policy_origin_check,

@@ -27,13 +27,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import tools.jackson.databind.node.JsonNodeFactory;
 
-/**
- * The host-anchor read/replace API. Two separate defects meet here: an
- * Agent-created node has no anchor and nothing could add one (so every session
- * to it aborted, permanently), and a host certificate — the anchor the
- * documentation calls primary — could not be stored at all, because
- * {@code node_host_key} was shaped for the pinned-key case and applied to both.
- */
 @AutoConfigureWebTestClient
 class NodeHostAnchorsIT extends AbstractAuthIT {
 
@@ -60,8 +53,7 @@ class NodeHostAnchorsIT extends AbstractAuthIT {
 		String admin = "svc-anchor-repair-" + unique();
 		String token = tokenWith(admin, PlatformPermissions.NODE_ENROLL);
 		// Exactly what AgentEnrollmentService.resolveNode writes when an Agent joins a
-		// name nobody registered: active, agent-connected, no anchor. Until this API
-		// existed the only escape was to abandon the name.
+		// name nobody registered: active, agent-connected, no anchor.
 		Node node = nodes.save(Node.create("agent-" + unique(), null, JSON.objectNode(), "agent", "active", null))
 				.block();
 
@@ -96,9 +88,6 @@ class NodeHostAnchorsIT extends AbstractAuthIT {
 		String rotated = pinnedHostKeyLine();
 		putAnchors(token, id, Map.of("pinnedHostKey", rotated)).expectStatus().isOk();
 
-		// The superseded key is gone, not merely joined by its replacement — a rotation
-		// that left the old anchor in place would keep trusting a key the node no
-		// longer presents.
 		List<String> fingerprints = anchors(token, id).stream().map(anchor -> (String) anchor.get("fingerprint"))
 				.toList();
 		assertThat(fingerprints).singleElement().isEqualTo(fingerprintOf(rotated));
@@ -165,7 +154,6 @@ class NodeHostAnchorsIT extends AbstractAuthIT {
 		assertThat(anchors(token, certified)).singleElement()
 				.satisfies(anchor -> assertThat(anchor.get("keyType")).isEqualTo("ssh-rsa-cert-v01@openssh.com"));
 
-		// And through the replace path, which writes the same rows.
 		putAnchors(token, pinned, Map.of("pinnedHostKey", "ssh-rsa " + randomBlob(270) + " rotated@rsa")).expectStatus()
 				.isOk();
 	}
@@ -189,7 +177,6 @@ class NodeHostAnchorsIT extends AbstractAuthIT {
 		UUID id = registerAgentless(token, Map.of("pinnedHostKey", pinnedHostKeyLine()));
 		putAnchors(token, id, Map.of("pinnedHostKey", unknownType)).expectStatus().isEqualTo(422).expectHeader()
 				.contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON);
-		// The refused replace rolled back: the node keeps the anchor it had.
 		assertThat(anchors(token, id)).hasSize(1);
 	}
 
@@ -212,7 +199,6 @@ class NodeHostAnchorsIT extends AbstractAuthIT {
 				.expectStatus().isEqualTo(422).expectBody().jsonPath("$.detail")
 				.isEqualTo("a hostCertificate must carry a base64 key/cert blob");
 
-		// A refused replace changed nothing.
 		assertThat(anchors(token, id)).hasSize(1);
 	}
 
@@ -232,8 +218,6 @@ class NodeHostAnchorsIT extends AbstractAuthIT {
 		UUID id = registerAgentless(token, Map.of("pinnedHostKey", pinnedHostKeyLine()));
 		client.delete().uri("/v1/nodes/" + id).header("Authorization", "Bearer " + token).exchange().expectStatus()
 				.isNoContent();
-		// Removal is terminal: a removed node is replaced by a fresh registration, not
-		// repaired.
 		putAnchors(token, id, anchor).expectStatus().isEqualTo(409).expectHeader()
 				.contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON).expectBody().jsonPath("$.detail")
 				.value(detail -> assertThat((String) detail).contains("removed"));
@@ -268,7 +252,6 @@ class NodeHostAnchorsIT extends AbstractAuthIT {
 		// which is what the single audit record proves.
 		assertThat(replays(admin)).isEqualTo(1);
 
-		// The same key with a different body is the reuse the guard exists to catch.
 		putAnchors(token, id, Map.of("pinnedHostKey", pinnedHostKeyLine()), key).expectStatus().isEqualTo(422);
 	}
 

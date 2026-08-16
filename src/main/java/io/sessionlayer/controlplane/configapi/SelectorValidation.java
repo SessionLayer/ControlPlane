@@ -6,10 +6,6 @@ import java.util.List;
 import java.util.Map;
 import tools.jackson.databind.JsonNode;
 
-/**
- * Pre-commit selector validation: reject unparseable shapes before persistence
- * to prevent fail-closed on the request path.
- */
 final class SelectorValidation {
 
 	private SelectorValidation() {

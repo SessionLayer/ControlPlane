@@ -168,7 +168,7 @@ class AuditEventSearchIT extends AbstractConfigApiIT {
 				labels("env", "prod"), T3);
 
 		ObjectNode scope = JSON.objectNode();
-		scope.set("node_labels", JSON.objectNode()); // empty object => no effective constraint
+		scope.set("node_labels", JSON.objectNode());
 		String scoped = scopedToken("svc-audit-degenerate-" + run, scope, PlatformPermissions.AUDIT_READ);
 		assertThat(ids(query(scoped, "correlationId", run.toString()))).isEmpty();
 		assertThat(getStatus(scoped, event.id())).isEqualTo(404);
@@ -185,7 +185,6 @@ class AuditEventSearchIT extends AbstractConfigApiIT {
 		String none = tokenWith("svc-audit-none-" + run);
 		client.get().uri("/v1/audit-events").header("Authorization", "Bearer " + none).exchange().expectStatus()
 				.isForbidden();
-		// A binding for a DIFFERENT permission also does not admit audit search.
 		String other = tokenWith("svc-audit-other-" + run, PlatformPermissions.LOCK_READ);
 		client.get().uri("/v1/audit-events").header("Authorization", "Bearer " + other).exchange().expectStatus()
 				.isForbidden();
@@ -210,8 +209,6 @@ class AuditEventSearchIT extends AbstractConfigApiIT {
 		assertThat(getStatus(none, event.id())).isEqualTo(403);
 	}
 
-	// Search completeness: an auditor can filter by capability/node-label, so a
-	// returned event must also PROJECT them (not just source_ip/correlation_id).
 	@Test
 	void returnedEventProjectsCapabilitiesAndNodeLabels() {
 		UUID run = UUID.randomUUID();
@@ -298,7 +295,7 @@ class AuditEventSearchIT extends AbstractConfigApiIT {
 			pages++;
 		} while (cursor != null && pages < 10);
 		assertThat(paged).containsExactlyElementsOf(expected);
-		assertThat(pages).isEqualTo(3); // 2 + 2 + 1
+		assertThat(pages).isEqualTo(3);
 
 		client.get().uri("/v1/audit-events?cursor=notacursor").header("Authorization", "Bearer " + token).exchange()
 				.expectStatus().isBadRequest();

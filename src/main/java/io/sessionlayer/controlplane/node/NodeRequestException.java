@@ -3,21 +3,13 @@ package io.sessionlayer.controlplane.node;
 /**
  * A fail-closed rejection from {@link NodeLifecycleService}. Carries a
  * {@link Reason} the REST layer maps to an RFC-9457 status
- * ({@code 400}/{@code 404}/{@code 409}). The message is operator-facing (an
- * admin API); it never reaches the SSH user.
+ * ({@code 400}/{@code 404}/{@code 409}/{@code 422}). The message is
+ * operator-facing (an admin API); it never reaches the SSH user.
  */
 public class NodeRequestException extends RuntimeException {
 
-	/**
-	 * The rejection category, mapped to an HTTP status by the controller advice.
-	 */
 	public enum Reason {
-		/** Malformed input (bad name/address, missing host anchor) — 400. */
-		INVALID_ARGUMENT,
-		/** The node id does not exist — 404. */
-		NOT_FOUND,
-		/** A node with that name is already registered — 409. */
-		CONFLICT,
+		INVALID_ARGUMENT, NOT_FOUND, CONFLICT,
 		/**
 		 * Well-formed request, unusable content — an empty or malformed anchor set on a
 		 * host-anchor replace — 422. Distinct from INVALID_ARGUMENT because the anchors

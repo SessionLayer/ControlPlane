@@ -30,9 +30,6 @@ public record AuditEvent(@Id UUID id, Instant occurredAt, String actor, String s
 				nodeLabels, sourceIp, accessModel, capabilities, detail, null, null, null, null, null);
 	}
 
-	/**
-	 * Stamp the hash-chain columns just before insert (the writer computes them).
-	 */
 	public AuditEvent withChain(String prevHash, String recordHash) {
 		return new AuditEvent(id, occurredAt, actor, subject, action, outcome, correlationId, sessionId, nodeId,
 				nodeLabels, sourceIp, accessModel, capabilities, detail, prevHash, recordHash, version, createdAt, seq);

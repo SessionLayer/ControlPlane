@@ -19,9 +19,6 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import reactor.test.StepVerifier;
 import tools.jackson.databind.ObjectMapper;
 
-/**
- * Monotonic generation counters and presence nonce; stale renewal rejection.
- */
 class GenerationCounterIT extends AbstractDataIT {
 
 	@Autowired

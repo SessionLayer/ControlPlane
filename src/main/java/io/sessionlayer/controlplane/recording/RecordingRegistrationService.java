@@ -188,9 +188,6 @@ public class RecordingRegistrationService {
 						return Mono.error(refused());
 					}
 					if (!"recording".equals(ref.status())) {
-						// Already finalized: a same-status re-finalize is an idempotent no-op
-						// (write NOTHING — no duplicate audit rows); relabeling to a DIFFERENT
-						// terminal status (e.g. finalized→failed to hide it) is refused.
 						return ref.status().equals(status)
 								? Mono.just(status)
 								: Mono.error(new GatewayRequestException(Reason.FAILED_PRECONDITION,
@@ -215,22 +212,17 @@ public class RecordingRegistrationService {
 				.retryWhen(Retry.max(1).filter(OptimisticLockingFailureException.class::isInstance));
 	}
 
-	// Lifecycle completion: the first terminal finalize closes the owning session —
-	// stamps ended_at/end_reason (the SessionController history) AND releases the
-	// session_lease, freeing the identity's concurrency slot (Authorize counts
-	// unreleased leases). Idempotent — an already-ended row is left untouched and
-	// the lease release is a no-op if already released. end_reason is derived from
-	// the recording's terminal status: it marks HOW the recording completed, not
-	// the authoritative teardown cause (a Lock teardown's "why" lives in the
+	// The first terminal finalize closes the owning session: it stamps
+	// ended_at/end_reason AND releases the session_lease, freeing the identity's
+	// concurrency slot (Authorize counts unreleased leases). end_reason is derived
+	// from the recording's terminal status — it marks HOW the recording completed,
+	// not the authoritative teardown cause (a Lock teardown's "why" lives in the
 	// lock/audit trail).
 	private Mono<Void> endSession(SshSession session, String status) {
 		Instant now = Instant.now();
 		Mono<Void> stampEnd = session.endedAt() == null
 				? sshSessions.save(session.ended(now, sessionEndReason(status))).then()
 				: Mono.empty();
-		// Release the concurrency lease so the identity's slot frees the
-		// moment the session ends (idempotent; a break-glass session never took a lease
-		// → a harmless no-op).
 		return stampEnd.then(sessionLeases.releaseBySessionId(session.id(), now)).then();
 	}
 
@@ -238,7 +230,7 @@ public class RecordingRegistrationService {
 		return switch (status) {
 			case "truncated" -> "truncated";
 			case "failed" -> "error";
-			default -> "closed"; // finalized: the session closed and its recording sealed cleanly
+			default -> "closed";
 		};
 	}
 
@@ -256,9 +248,6 @@ public class RecordingRegistrationService {
 				.then();
 	}
 
-	// One audit_event per admitted forward/X11 tunnel, metadata
-	// only — forwarded byte content is never captured (no universal decode).
-	// Sequential (concatMap) — one tx connection.
 	private Mono<Void> writeTunnelAudit(SshSession session, Map<String, String> nodeLabels,
 			List<TunnelAuditEntry> tunnelAudit) {
 		if (tunnelAudit == null || tunnelAudit.isEmpty()) {
@@ -298,8 +287,6 @@ public class RecordingRegistrationService {
 				.accessModel(session.accessModel()).nodeLabels(nodeLabels).correlationId(session.correlationId());
 	}
 
-	// The session's node label snapshot for its audit events (one read; empty when
-	// the session has no node).
 	private Mono<Map<String, String>> nodeLabels(UUID nodeId) {
 		if (nodeId == null) {
 			return Mono.just(Map.of());
@@ -389,15 +376,10 @@ public class RecordingRegistrationService {
 		return detail;
 	}
 
-	// A FAILED recording is recorded loudly (never silently dropped); a finalized
-	// or
-	// truncated (valid partial) recording is a success outcome.
 	private static String finalizeOutcome(String status) {
 		return "failed".equals(status) ? "failure" : "success";
 	}
 
-	// The digest columns are "sha256:<64-hex>" (content_digest carries a DB CHECK);
-	// a malformed non-empty value fails closed rather than corrupt the row.
 	private static String normalizedDigest(String value) {
 		if (value == null || value.isBlank()) {
 			return null;

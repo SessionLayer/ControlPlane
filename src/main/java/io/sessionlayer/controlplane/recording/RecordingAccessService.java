@@ -53,9 +53,6 @@ public class RecordingAccessService {
 		this.properties = properties;
 	}
 
-	// The identity/node filters live on ssh_session, so list joins recording_ref to
-	// its 1:1 session; keyset over recording_ref.id (UUIDv7, time-ordered) mirrors
-	// CursorPages so a page is stable under concurrent inserts.
 	public Mono<CursorPages.Page<RecordingSummary>> list(String cursor, Integer limit, UUID sessionId, String identity,
 			UUID nodeId) {
 		int pageSize = CursorPages.clamp(limit);

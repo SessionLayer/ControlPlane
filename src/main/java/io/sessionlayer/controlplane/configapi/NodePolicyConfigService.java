@@ -81,8 +81,6 @@ public class NodePolicyConfigService {
 						e -> ApiProblemException.conflict("a node policy named '" + name + "' already exists"));
 	}
 
-	// Host-trust refs are POINTERS (a pin digest / CA name), never inline key
-	// material — reject anything that looks like a private key.
 	private static void validate(String hostPinRef, String hostCaRef) {
 		rejectPrivateKey(hostPinRef, "hostPinRef");
 		rejectPrivateKey(hostCaRef, "hostCaRef");

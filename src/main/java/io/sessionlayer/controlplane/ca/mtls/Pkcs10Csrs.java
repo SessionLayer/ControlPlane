@@ -20,8 +20,10 @@ import org.bouncycastle.pkcs.PKCS10CertificationRequest;
  * <li><b>Proof of possession</b> — the CSR self-signature is verified against
  * the embedded public key, so a CSR cannot claim a key the requester does not
  * hold.</li>
- * <li><b>Key type</b> — only ECDSA P-256 is accepted (the platform default); a
- * wrong curve/algorithm is refused.</li>
+ * <li><b>Key type</b> — ECDSA with a 256-bit field is required. Note this is a
+ * field-size check, not a curve check: another 256-bit curve (secp256k1,
+ * brainpoolP256r1) passes here, unlike {@code recording.CustomerPublicKeys},
+ * which compares the named-curve OID.</li>
  * <li><b>Subject</b> — the CN is extracted for the caller to check against the
  * enrollment scope / current identity.</li>
  * </ul>
@@ -36,16 +38,9 @@ public final class Pkcs10Csrs {
 	private Pkcs10Csrs() {
 	}
 
-	/** A validated CSR: its certified public key and its subject CN. */
 	public record ParsedCsr(PublicKey publicKey, String commonName) {
 	}
 
-	/**
-	 * Parse a DER-encoded PKCS#10 CSR, verify proof of possession, require ECDSA
-	 * P-256, and extract the subject CN. Throws {@link CsrException} on any
-	 * malformed / unverifiable / wrong-key input (the caller maps it to a
-	 * fail-closed gRPC error).
-	 */
 	public static ParsedCsr parseAndVerify(byte[] der) {
 		if (der == null || der.length == 0) {
 			throw new CsrException("empty CSR");
@@ -90,7 +85,6 @@ public final class Pkcs10Csrs {
 		return cn;
 	}
 
-	/** A malformed, unverifiable, or wrong-key CSR (fail closed). */
 	public static final class CsrException extends RuntimeException {
 		public CsrException(String message) {
 			super(message);

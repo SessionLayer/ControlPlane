@@ -39,16 +39,6 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
-/**
- * The exact-lease lifecycle RPCs. {@code NotifySessionEnd} releases the
- * concurrency lease promptly on any teardown (independent of
- * FinalizeRecording), stamps {@code ended_at}/{@code end_reason}, is
- * idempotent, caller-bound (a Gateway can never free another's slot) and
- * race-safe with the finalize path. {@code ExtendSessionLease} re-stamps a live
- * lease's expiry to the SERVER-authoritative window so a RunToTtl session
- * outliving {@code grant_expiry} still occupies its slot; it never shortens a
- * lease and refuses ended sessions / released leases / foreign callers.
- */
 @ExtendWith(OutputCaptureExtension.class)
 class SessionLifecycleIT extends AbstractMtlsIT {
 
@@ -85,15 +75,12 @@ class SessionLifecycleIT extends AbstractMtlsIT {
 		SshSession session = sshSessions.findById(sessionId).block();
 		assertThat(session.endedAt()).isNotNull();
 		assertThat(session.endReason()).isEqualTo("closed");
-		// The lifecycle outcome is observable — enum-only tags, no identity.
 		assertThat(lifecycleCount("notify_session_end", "released")).isEqualTo(releasedBefore + 1);
 
-		// The lifecycle end joined the session's correlation chain.
 		var events = auditStore.search(new AuditQuery(null, identity, "session.end", "success", null, null, null, null,
 				null, null, null, Map.of(), null, List.of(), null, 50)).block().items();
 		assertThat(events).anySatisfy(e -> assertThat(e.sessionId()).isEqualTo(sessionId));
 
-		// Idempotent repeat: no error, nothing further released, no duplicate audit.
 		NotifySessionEndResponse repeat = notifyEnd(gateway, sessionId, SessionEndReason.SESSION_END_REASON_CLOSED);
 		assertThat(repeat.getReleased()).isFalse();
 		long endEvents = auditStore
@@ -116,9 +103,6 @@ class SessionLifecycleIT extends AbstractMtlsIT {
 		assertThat(sshSessions.findById(sessionId).block().endReason()).isEqualTo("idle_timeout");
 	}
 
-	// The ownership gate: only the session's brokering gateway may end/extend it.
-	// A foreign (fully authenticated) Gateway gets the generic denial and
-	// releases/extends NOTHING.
 	@Test
 	void aForeignGatewayIsRefusedAndReleasesNothing() {
 		String identity = "foreign-" + unique();
@@ -135,7 +119,6 @@ class SessionLifecycleIT extends AbstractMtlsIT {
 						e -> assertThat(e.getStatus().getCode()).isEqualTo(Status.Code.PERMISSION_DENIED));
 		assertThat(countLive(identity)).isEqualTo(1);
 		assertThat(sshSessions.findById(sessionId).block().endedAt()).isNull();
-		// The refusal is counted (enum tags only).
 		assertThat(lifecycleCount("notify_session_end", "refused")).isEqualTo(refusedBefore + 1);
 
 		assertThatThrownBy(() -> extend(foreign, sessionId)).isInstanceOfSatisfying(StatusRuntimeException.class,
@@ -147,11 +130,6 @@ class SessionLifecycleIT extends AbstractMtlsIT {
 						e -> assertThat(e.getStatus().getCode()).isEqualTo(Status.Code.PERMISSION_DENIED));
 	}
 
-	// The AuthInterceptor tier gate: only Handshake/Negotiate + the two Enroll
-	// methods are bootstrap-reachable; EVERY other method — the new lifecycle
-	// RPCs included — requires a valid client cert chained to the internal CA. A
-	// caller with no client certificate is refused UNAUTHENTICATED before any
-	// handler runs (and can therefore never release or extend anything).
 	@Test
 	void theLifecycleRpcsRequireAClientCertificate() {
 		String identity = "nocert-" + unique();
@@ -176,7 +154,6 @@ class SessionLifecycleIT extends AbstractMtlsIT {
 		} finally {
 			shutdown(channel);
 		}
-		// Nothing was released by the refused calls.
 		assertThat(countLive(identity)).isEqualTo(1);
 	}
 
@@ -200,7 +177,6 @@ class SessionLifecycleIT extends AbstractMtlsIT {
 
 		NotifySessionEndResponse response = notifyEnd(gateway, sessionId, SessionEndReason.SESSION_END_REASON_ERROR);
 		assertThat(response.getReleased()).isFalse();
-		// The finalize-side reason stands (first writer wins; the repeat is a no-op).
 		assertThat(sshSessions.findById(sessionId).block().endReason()).isEqualTo("closed");
 	}
 
@@ -213,8 +189,6 @@ class SessionLifecycleIT extends AbstractMtlsIT {
 		UUID sessionId = UUID.randomUUID();
 		authorize(gateway, identity, nodeId, sessionId);
 
-		// Simulate a RunToTtl session that outlived grant_expiry: its lease window
-		// has lapsed (unreleased but expired), so it no longer counts.
 		db.sql("UPDATE runtime.session_lease SET expires_at = now() - interval '1 second' WHERE session_id = :sid")
 				.bind("sid", sessionId).fetch().rowsUpdated().block();
 		assertThat(countLive(identity)).isZero();
@@ -224,16 +198,12 @@ class SessionLifecycleIT extends AbstractMtlsIT {
 		long delta = response.getExpiresAtEpochSeconds() - Instant.now().getEpochSecond();
 		assertThat(delta).isBetween(850L, 910L); // the PT15M server-authoritative window
 
-		// The still-running session occupies its slot again (no under-count).
 		assertThat(countLive(identity)).isEqualTo(1);
 		SessionLease lease = sessionLeases.findBySessionId(sessionId).block();
 		assertThat(lease.expiresAt().getEpochSecond()).isEqualTo(response.getExpiresAtEpochSeconds());
 		assertThat(lifecycleCount("extend_session_lease", "extended")).isEqualTo(extendedBefore + 1);
 	}
 
-	// The re-stamp can only EXTEND the counted window (GREATEST): an early call
-	// against a lease with more remaining life than the extension window never
-	// shortens it (which would silently under-count later).
 	@Test
 	void extendNeverShortensALease() {
 		String identity = "extend-long-" + unique();
@@ -243,7 +213,7 @@ class SessionLifecycleIT extends AbstractMtlsIT {
 		UUID sessionId = UUID.randomUUID();
 		authorize(gateway, identity, nodeId, sessionId);
 
-		Instant before = sessionLeases.findBySessionId(sessionId).block().expiresAt(); // grant TTL, 1h out
+		Instant before = sessionLeases.findBySessionId(sessionId).block().expiresAt();
 		extend(gateway, sessionId);
 		Instant after = sessionLeases.findBySessionId(sessionId).block().expiresAt();
 		assertThat(after).isEqualTo(before); // 1h remaining > the 15m window — untouched
@@ -256,15 +226,12 @@ class SessionLifecycleIT extends AbstractMtlsIT {
 		seedAllow(identity, nodeId);
 		EnrolledGateway gateway = enroll("gw-extref-" + unique());
 
-		// Ended session: FAILED_PRECONDITION (a legitimate owner, a state refusal).
 		UUID ended = UUID.randomUUID();
 		authorize(gateway, identity, nodeId, ended);
 		notifyEnd(gateway, ended, SessionEndReason.SESSION_END_REASON_CLOSED);
 		assertThatThrownBy(() -> extend(gateway, ended)).isInstanceOfSatisfying(StatusRuntimeException.class,
 				e -> assertThat(e.getStatus().getCode()).isEqualTo(Status.Code.FAILED_PRECONDITION));
 
-		// Live session whose lease was already released: same refusal, and the
-		// release is never resurrected.
 		UUID released = UUID.randomUUID();
 		authorize(gateway, identity, nodeId, released);
 		sessionLeases.releaseBySessionId(released, Instant.now()).block();
@@ -278,8 +245,6 @@ class SessionLifecycleIT extends AbstractMtlsIT {
 		assertThat(lifecycleCount("extend_session_lease", "refused")).isEqualTo(refusedBefore + 1);
 		assertThat(output.getOut()).contains("ExtendSessionLease refused for live session " + released);
 	}
-
-	// ----------------------- helpers -----------------------
 
 	private double lifecycleCount(String rpc, String outcome) {
 		var counter = meters.find("sessionlayer.session.lifecycle").tag("rpc", rpc).tag("outcome", outcome).counter();

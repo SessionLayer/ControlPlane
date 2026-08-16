@@ -56,8 +56,6 @@ class GatewayHostCertificateIT extends AbstractMtlsIT {
 		assertThat(cert.principals()).containsExactlyElementsOf(principals);
 		assertThat(cert.keyId()).isEqualTo("gateway-host:" + name);
 
-		// Chains to the HOST CA: the cert's signature key is a trusted host-CA key AND
-		// the CA signature verifies (OpenSSH @cert-authority trust — no TOFU).
 		List<byte[]> trustedHostCa = caRotation.trustedCaKeys("host").block().stream()
 				.map(line -> Base64.getDecoder().decode(line.trim().split("\\s+")[1])).toList();
 		assertThat(trustedHostCa).anySatisfy(ca -> assertThat(ca).isEqualTo(cert.caKeyBlob()));
@@ -177,7 +175,7 @@ class GatewayHostCertificateIT extends AbstractMtlsIT {
 		reader.readString(); // critical options
 		reader.readString(); // extensions
 		reader.readString(); // reserved
-		byte[] caKeyBlob = reader.readString(); // signature key
+		byte[] caKeyBlob = reader.readString();
 		int tbsLength = reader.position();
 		byte[] signature = reader.readString();
 		List<String> principals = new ArrayList<>();

@@ -9,10 +9,6 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Table;
 
-/**
- * Recording with lifecycle governance; provenance row retained after erasure.
- * encryptionKeyRef is customer key reference only, never key material.
- */
 @Table(schema = "runtime", name = "recording_ref")
 public record RecordingRef(@Id UUID id, UUID sessionId, String objectKey, String encryptionKeyRef, String hashChainHead,
 		String wormMode, Long sizeBytes, Instant retentionUntil, boolean legalHold, String status, String format,
@@ -42,9 +38,6 @@ public record RecordingRef(@Id UUID id, UUID sessionId, String objectKey, String
 				legalHoldReason, version, createdAt, updatedAt);
 	}
 
-	/**
-	 * Place or release the legal hold: blocks retention prune + governance delete.
-	 */
 	public RecordingRef withLegalHold(boolean held, String reason) {
 		return new RecordingRef(id, sessionId, objectKey, encryptionKeyRef, hashChainHead, wormMode, sizeBytes,
 				retentionUntil, held, status, format, contentDigest, objectVersionId, prunedAt, deleteMode, deletedBy,

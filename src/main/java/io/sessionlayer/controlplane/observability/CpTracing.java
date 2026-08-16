@@ -14,11 +14,6 @@ import io.sessionlayer.controlplane.authz.ConnectDecision;
 import reactor.core.publisher.Mono;
 
 /**
- * The CP tracing seam. Extracts the Gateway's W3C trace context from gRPC
- * metadata and wraps the two decision RPCs in spans so they become children of
- * the Gateway root: {@code cp.authorize} and {@code cp.cert_sign}.
- *
- * <p>
  * Spans carry <b>correlation, never content</b>: only IDs, enums, outcomes, and
  * — on failure — the error <i>type</i>. No SSH plaintext, key, OTP, token, or
  * recording byte ever enters a span. The parent is passed <b>explicitly</b> to
@@ -111,7 +106,6 @@ public final class CpTracing {
 	}
 
 	private static void markError(Span span, Throwable error) {
-		// Record the error CATEGORY only — never the message (which could echo input).
 		span.setStatus(StatusCode.ERROR);
 		span.setAttribute(OUTCOME, "error");
 		span.setAttribute(ERROR_TYPE, error.getClass().getSimpleName());

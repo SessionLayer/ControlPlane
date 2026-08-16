@@ -15,13 +15,11 @@ import reactor.core.publisher.Mono;
 
 class AuditPartitionMaintenanceTest {
 
-	// Regression for the startup crash-loop shape: ensureOnStartup()
-	// used to .block(Duration.ofSeconds(30)) off ApplicationReadyEvent, so a wedged
-	// partition-create query (e.g. two rolling-upgrade instances racing for the
-	// same DDL) hung CP boot for 30s and then threw IllegalStateException out of
-	// the listener, crash-looping the whole process for an audit-housekeeping
-	// problem. The listener must return immediately regardless of how long
-	// ensureAhead() takes.
+	// ensureOnStartup() runs off ApplicationReadyEvent, where a throw crash-loops
+	// the whole process — so blocking on a wedged partition-create query (two
+	// rolling-upgrade instances racing for the same DDL) would take CP boot down
+	// for an audit-housekeeping problem. The listener must return immediately
+	// regardless of how long ensureAhead() takes.
 	@SuppressWarnings("unchecked")
 	@Test
 	void startupEnsureNeverBlocksTheCallingThreadEvenOnAWedgedQuery() {

@@ -5,9 +5,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 
 /**
- * SessionLayer Control Plane entry point.
- *
- * <p>
  * {@link DataSourceAutoConfiguration} is excluded on purpose: the application
  * runtime accesses Postgres exclusively over R2DBC (fully non-blocking), so
  * there must be no primary blocking JDBC {@code DataSource} on the request

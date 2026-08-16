@@ -21,12 +21,6 @@ import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 import tools.jackson.databind.JsonNode;
 
-/**
- * Exact-lease session-lifecycle signals. Both bound to authenticated mTLS
- * caller; fail closed on ownership mismatch. endSession: reliable end-stamp +
- * lease release (idempotent, race-safe). extendLease: re-stamps lease expiry to
- * SERVER-authoritative window.
- */
 @Service
 public class SessionLifecycleService {
 
@@ -49,7 +43,6 @@ public class SessionLifecycleService {
 		this.tx = tx;
 	}
 
-	/** Returns whether THIS call released a still-live lease (diagnostics). */
 	public Mono<Boolean> endSession(UUID callerGatewayId, UUID sessionId, String reason) {
 		if (callerGatewayId == null || sessionId == null) {
 			return Mono.error(refused());
@@ -74,7 +67,6 @@ public class SessionLifecycleService {
 				.retryWhen(Retry.max(1).filter(OptimisticLockingFailureException.class::isInstance));
 	}
 
-	/** Returns the lease's new expiry (now + the server-authoritative window). */
 	public Mono<Instant> extendLease(UUID callerGatewayId, UUID sessionId) {
 		if (callerGatewayId == null || sessionId == null) {
 			return Mono.error(refused());
@@ -91,10 +83,6 @@ public class SessionLifecycleService {
 				if (rows > 0) {
 					return Mono.just(expiry);
 				}
-				// A LIVE session whose lease is released/absent is the signature of a
-				// reaped-while-alive lease, the one case where the concurrency count is
-				// permanently inexact — say so loudly: the identity under-counts until
-				// the session actually ends.
 				LOG.warn("ExtendSessionLease refused for live session {}: lease already released/absent — if the "
 						+ "reaper released it mid-run, concurrency under-counts until the session ends (check "
 						+ "sessionlayer.session-limits.reaper.grace vs the Gateway extend cadence)", sessionId);
@@ -103,9 +91,6 @@ public class SessionLifecycleService {
 		});
 	}
 
-	// The lifecycle end joins the session's correlation chain (alongside the
-	// connect decision + recording events). Written only when this call
-	// changed state — an idempotent repeat writes no duplicate rows.
 	private Mono<Void> auditEnd(UUID callerGatewayId, SshSession session, String reason, boolean stamped,
 			boolean released) {
 		if (!stamped && !released) {

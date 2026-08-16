@@ -2,9 +2,6 @@ package io.sessionlayer.controlplane.bootstrap;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/**
- * First-admin bootstrap configuration.
- */
 @ConfigurationProperties(prefix = "sessionlayer.bootstrap")
 public class BootstrapProperties {
 

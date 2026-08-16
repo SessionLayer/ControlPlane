@@ -27,10 +27,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-/**
- * Certificate authorities (CRUD + rotation, RBAC + audited, idempotency-key
- * guarded). Response NEVER carries private key material.
- */
 @RestController
 public class CaController implements CasApi {
 
@@ -95,7 +91,6 @@ public class CaController implements CasApi {
 	@Override
 	public Mono<ResponseEntity<CaResource>> rotateCa(UUID caId, String idempotencyKey,
 			Mono<RotateCaRequest> rotateCaRequest, ServerWebExchange exchange) {
-		// The body is optional; normalise it so the idempotency fingerprint is stable.
 		return rotateCaRequest.defaultIfEmpty(new RotateCaRequest())
 				.flatMap(req -> access.withPermission(PlatformPermissions.CA_ROTATE, subject -> {
 					// Unlike createCa's algorithm(), a null override here MUST stay null rather

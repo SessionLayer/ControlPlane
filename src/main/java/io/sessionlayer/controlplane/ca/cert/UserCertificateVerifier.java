@@ -80,7 +80,7 @@ public final class UserCertificateVerifier {
 		}
 		reader.readString(); // nonce
 		for (int i = 0; i < certifiedKeyFields; i++) {
-			reader.readString(); // certified key's type-specific fields (skipped)
+			reader.readString();
 		}
 		reader.readUint64(); // serial
 		long type = reader.readUint32();
@@ -91,7 +91,7 @@ public final class UserCertificateVerifier {
 		byte[] criticalOptions = reader.readString();
 		reader.readString(); // extensions (non-critical: unknown ones are ignored)
 		reader.readString(); // reserved
-		byte[] caKeyBlob = reader.readString(); // signature key
+		byte[] caKeyBlob = reader.readString();
 		int tbsLength = reader.position();
 		byte[] signatureField = reader.readString();
 		if (reader.hasRemaining()) {
@@ -171,7 +171,8 @@ public final class UserCertificateVerifier {
 				continue;
 			}
 			try {
-				// Only ECDSA user CAs are verifiable; a non-ECDSA key-type name throws → skip.
+				// Only ECDSA user CAs are verifiable; a non-ECDSA key-type name throws, and
+				// the catch below ends the search with no trusted CA (fail closed).
 				CaKeyType keyType = CaKeyType.fromKeyTypeName(parts[0]);
 				return new TrustedCa(keyType, SshEcdsaPublicKeys.parse(trustedBlob));
 			} catch (RuntimeException unsupported) {
@@ -186,7 +187,7 @@ public final class UserCertificateVerifier {
 			SshReader sig = new SshReader(signatureField);
 			String signatureAlg = sig.readStringUtf8();
 			if (!ca.keyType().keyTypeName().equals(signatureAlg)) {
-				return false; // signature algorithm must match the trusted CA key
+				return false;
 			}
 			SshReader inner = new SshReader(sig.readString());
 			BigInteger r = inner.readMpint();
@@ -207,11 +208,6 @@ public final class UserCertificateVerifier {
 				&& Long.compareUnsigned(nowSeconds - skewSeconds, validBefore) <= 0;
 	}
 
-	/**
-	 * Reject unknown critical options and enforce a pinned {@code source-address}
-	 * (deny-only): returns a fail reason, or {@code null} when the options are
-	 * acceptable for {@code sourceIp}.
-	 */
 	private static String enforceCriticalOptions(byte[] criticalOptions, String sourceIp) {
 		SshReader reader = new SshReader(criticalOptions);
 		while (reader.hasRemaining()) {
@@ -237,7 +233,7 @@ public final class UserCertificateVerifier {
 
 	private static boolean sourceAllowed(String cidrList, String sourceIp) {
 		if (sourceIp == null || sourceIp.isBlank()) {
-			return false; // pinned source but no known client IP → fail closed
+			return false;
 		}
 		for (String cidr : cidrList.split(",")) {
 			String trimmed = cidr.trim();

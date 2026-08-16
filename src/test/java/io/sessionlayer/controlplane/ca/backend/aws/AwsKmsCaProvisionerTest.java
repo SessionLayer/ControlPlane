@@ -21,13 +21,6 @@ import java.security.interfaces.ECPublicKey;
 import java.security.spec.ECGenParameterSpec;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link AwsKmsCaProvisioner} is the rotation-time bridge between
- * {@link KmsKeyArn} (write-path pinning/allow-list) and
- * {@link AwsKmsSignerFactory#fetchPublicKey} (the one KMS read). This class
- * proves the wiring — parse, validate, fetch, build — with the factory mocked,
- * matching how {@code CaSignerServiceTest} proves the sign-time half.
- */
 class AwsKmsCaProvisionerTest {
 
 	private static final KmsKeyArn.Anchor ANCHOR = new KmsKeyArn.Anchor("aws", "us-east-1", "111122223333");
@@ -76,8 +69,6 @@ class AwsKmsCaProvisionerTest {
 		CaKeyMaterial material = result.material();
 		assertThat(material.caConfigId()).isEqualTo(config.id());
 		assertThat(material.keyLocation()).isEqualTo(CaKeyMaterial.EXTERNAL);
-		// No private half is persisted, in any column, ever — that is the whole
-		// point of adopting a key held in a key service.
 		assertThat(material.wrappedKey()).isNull();
 		assertThat(material.iv()).isNull();
 		assertThat(material.kekReference()).isNull();
@@ -123,11 +114,6 @@ class AwsKmsCaProvisionerTest {
 		verifyNoInteractions(factory);
 	}
 
-	/**
-	 * A KMS read that fails — an unreachable endpoint, a rejected credential, a
-	 * disabled key — aborts the rotation having written nothing, rather than
-	 * falling through to a key this Control Plane could generate itself.
-	 */
 	@Test
 	void aFailedKmsReadAbortsTheAdoptionRatherThanProvisioningAnything() {
 		AwsKmsSignerFactory factory = mock(AwsKmsSignerFactory.class);

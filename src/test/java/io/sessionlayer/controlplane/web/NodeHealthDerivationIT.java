@@ -30,12 +30,9 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import tools.jackson.databind.node.JsonNodeFactory;
 
 /**
- * {@code health} and {@code owningGateway} are derived at read time. They were
- * once columns nothing ever updated, so the API answered {@code unknown} with
- * no owner for the life of every node — and the install guide tells an operator
- * to confirm an Agent install by reading {@code health}. Every assertion here
- * is on the VALUE: a regression that stops populating them reads as
- * {@code unknown} again and fails.
+ * {@code health} and {@code owningGateway} are derived at read time. Every
+ * assertion here is on the VALUE: a regression that stops populating them reads
+ * as {@code unknown} again and fails.
  */
 @AutoConfigureWebTestClient
 class NodeHealthDerivationIT extends AbstractAuthIT {
@@ -66,16 +63,12 @@ class NodeHealthDerivationIT extends AbstractAuthIT {
 		String name = "agent-" + unique();
 		UUID id = registerAgent(token, name);
 
-		// Anchored but unclaimed: no Gateway holds the agent control channel yet, so
-		// the CP genuinely does not know — and says so rather than guessing.
 		getNode(token, id).jsonPath("$.health").isEqualTo("unknown").jsonPath("$.owningGateway").doesNotExist();
 
 		String owner = "gw-health-" + unique();
 		claim(id, owner, Instant.now());
 
 		getNode(token, id).jsonPath("$.health").isEqualTo("healthy").jsonPath("$.owningGateway").isEqualTo(owner);
-		// The listing derives the same values from the same sources (one presence read
-		// for the page, not a probe per node).
 		assertThat(listNode(token, id)).containsEntry("health", "healthy").containsEntry("owningGateway", owner);
 
 		ageClaimPastTheWindow(id);
@@ -109,7 +102,6 @@ class NodeHealthDerivationIT extends AbstractAuthIT {
 		getNode(token, node.id()).jsonPath("$.health").isEqualTo("unhealthy").jsonPath("$.owningGateway")
 				.isEqualTo(owner);
 
-		// And it drops away with the claim, exactly as on the anchored path.
 		ageClaimPastTheWindow(node.id());
 		getNode(token, node.id()).jsonPath("$.health").isEqualTo("unhealthy").jsonPath("$.owningGateway")
 				.doesNotExist();

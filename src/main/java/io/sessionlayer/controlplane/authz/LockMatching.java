@@ -4,21 +4,11 @@ import java.util.Map;
 import java.util.Set;
 import tools.jackson.databind.JsonNode;
 
-/**
- * Matches access_lock.target_selector against connects. Fail-closed: empty/
- * uninterpretable targets match (deny wins). Recognizes singular/plural
- * selector forms (OR-matched); same as Gateway's per-channel local checks.
- */
 public final class LockMatching {
 
 	private LockMatching() {
 	}
 
-	/**
-	 * Connect facets a lock may target. requestedPrincipal is the login attempt;
-	 * allowedLogins lets a principal-lock block "what may I do" queries; groups
-	 * targets SSO/OIDC groups.
-	 */
 	public record LockSubject(String identity, String nodeId, Map<String, String> labels, Set<String> allowedLogins,
 			String requestedPrincipal, Set<String> groups) {
 	}
@@ -29,7 +19,6 @@ public final class LockMatching {
 		}
 		boolean recognized = false;
 
-		// Fleet-wide lock denies everything (never implicit).
 		if (target.has("all")) {
 			recognized = true;
 			if (target.get("all").asBoolean(false)) {
@@ -122,7 +111,7 @@ public final class LockMatching {
 
 	private static boolean labelLocked(JsonNode nodeLabel, Map<String, String> labels) {
 		if (nodeLabel == null || !nodeLabel.isObject()) {
-			return true; // malformed node_label facet → fail closed
+			return true;
 		}
 		String key = Selectors.text(nodeLabel.get("key"));
 		String value = Selectors.text(nodeLabel.get("value"));
@@ -132,8 +121,6 @@ public final class LockMatching {
 		return value.equals(labels.get(key));
 	}
 
-	// node_labels are "key=value" strings; malformed tokens (no '=') fail closed
-	// (defense in depth).
 	private static boolean anyLabelLocked(JsonNode array, Map<String, String> labels) {
 		if (array == null || !array.isArray()) {
 			return false;
@@ -145,7 +132,7 @@ public final class LockMatching {
 			}
 			int eq = token.indexOf('=');
 			if (eq < 0) {
-				return true; // malformed "key=value" → fail closed
+				return true;
 			}
 			if (token.substring(eq + 1).equals(labels.get(token.substring(0, eq)))) {
 				return true;

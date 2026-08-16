@@ -63,7 +63,6 @@ class MtlsJoinVerifierTest {
 		byte[] csrB = MtlsTestSupport.csr(MtlsTestSupport.generateEcKeyPair(), "node-x");
 		byte[] popOverA = pop(leafKey, csrA);
 
-		// PoP signed over CSR A cannot enroll CSR B (replay defense).
 		StepVerifier.create(verifier(operatorCa).verify(der(leaf), popOverA, "node-x", csrB)).verifyError();
 	}
 

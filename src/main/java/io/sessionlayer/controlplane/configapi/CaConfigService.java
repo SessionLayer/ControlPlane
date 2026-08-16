@@ -134,20 +134,6 @@ public class CaConfigService {
 		}).switchIfEmpty(Mono.defer(() -> deleteAndAudit(id, actor, null)));
 	}
 
-	/**
-	 * Rotate the CA <b>kind</b> of {@code id} through the local rotation state
-	 * machine: provision a fresh incoming CA, promote it to active and demote the
-	 * current active to outgoing (both trusted during the overlap), then return the
-	 * new active CA. Never returns private material.
-	 *
-	 * <p>
-	 * {@code backend}/{@code keyReference}/{@code algorithm} are optional overrides
-	 * for the incoming key (contract {@code RotateCaRequest}); an omitted one
-	 * inherits the current active CA's value. Overriding {@code backend} is the
-	 * adoption path onto a different key service — validated through the same
-	 * capability/private-material gate as create/update, before anything is
-	 * written.
-	 */
 	public Mono<CaConfig> rotate(UUID id, String actor, String backend, String keyReference, String algorithm) {
 		return get(id).flatMap(existing -> {
 			String kind = existing.caKind();
@@ -222,12 +208,6 @@ public class CaConfigService {
 		}
 	}
 
-	/**
-	 * The mandatory pinned key version and the configured-vault allow-list must
-	 * hold at the write path, not only when a signer is loaded to sign — a
-	 * version-less or wrong-vault reference stored here would otherwise be caught
-	 * only the first time this CA tries to sign, far too late.
-	 */
 	private void validateAzureKeyReference(String keyReference) {
 		AzureKeyVaultSignerFactory factory = azureSignerFactory.getIfAvailable();
 		if (factory == null) {
@@ -241,12 +221,6 @@ public class CaConfigService {
 		}
 	}
 
-	/**
-	 * The alias refusal and the configured-account allow-list must hold at the
-	 * write path, not only when a signer is loaded to sign — an alias or a
-	 * foreign-account ARN stored here would otherwise be caught only the first time
-	 * this CA tries to sign, far too late.
-	 */
 	private void validateAwsKmsKeyReference(String keyReference) {
 		AwsKmsSignerFactory factory = awsKmsSignerFactory.getIfAvailable();
 		if (factory == null) {

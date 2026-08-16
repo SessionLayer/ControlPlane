@@ -51,10 +51,6 @@ public interface SessionLeaseRepository extends ReactiveCrudRepository<SessionLe
 	@Query("UPDATE runtime.session_lease SET released_at = :now WHERE id = :id AND released_at IS NULL")
 	Mono<Integer> releaseById(UUID id, Instant now);
 
-	/**
-	 * Reap leaked leases: mark released any unreleased lease past cutoff.
-	 * Idempotent.
-	 */
 	@Modifying
 	@Query("UPDATE runtime.session_lease SET released_at = :now "
 			+ "WHERE released_at IS NULL AND expires_at IS NOT NULL AND expires_at < :cutoff")

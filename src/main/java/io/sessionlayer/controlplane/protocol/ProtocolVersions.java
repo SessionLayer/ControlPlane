@@ -2,22 +2,6 @@ package io.sessionlayer.controlplane.protocol;
 
 import io.sessionlayer.controlplane.grpc.v1.ProtocolVersion;
 
-/**
- * Single source of truth for the CP&lt;-&gt;Gateway gRPC protocol version this
- * build speaks.
- *
- * <p>
- * Consumed by both the gRPC {@code Handshake} server and the REST
- * {@code /v1/version} endpoint so the two surfaces can never disagree. Per
- * {@code contracts/VERSIONING.md} §6 the current range is {@code [1.0,
- * 1.1]}: three additive services were added to the plane
- * ({@code GatewayIdentity.EnrollGateway/RenewGatewayIdentity} and
- * {@code SessionSigning.SignSessionCertificate}), which is a MINOR bump, so
- * this build advertises {@code protocol_max = 1.1} while keeping
- * {@code protocol_min
- * = 1.0} — the N-1 window (VERSIONING.md §4) that lets a 1.1 CP still negotiate
- * 1.0 with a Gateway that has not upgraded.
- */
 public final class ProtocolVersions {
 
 	public static final int MAJOR = 1;
@@ -42,8 +26,6 @@ public final class ProtocolVersions {
 	}
 
 	public static String display(ProtocolVersion version) {
-		// major/minor are proto uint32; render unsigned so out-of-int-range values
-		// from a hostile peer show correctly in diagnostics rather than as negatives.
 		return Integer.toUnsignedString(version.getMajor()) + "." + Integer.toUnsignedString(version.getMinor());
 	}
 }

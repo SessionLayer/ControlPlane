@@ -16,10 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-/**
- * RUNTIME SSH sessions admin (RBAC + audited, idempotency-key guarded).
- * Terminate pushes a top-tier Lock deny.
- */
 @RestController
 public class SessionController implements SessionsApi {
 
@@ -51,8 +47,6 @@ public class SessionController implements SessionsApi {
 	@Override
 	public Mono<ResponseEntity<SessionResource>> terminateSession(UUID sessionId, String idempotencyKey,
 			Mono<TerminateSessionRequest> terminateSessionRequest, ServerWebExchange exchange) {
-		// The body (a reason) is optional; supply an empty default so a bodiless
-		// terminate still runs and fingerprints deterministically for idempotency.
 		return terminateSessionRequest.defaultIfEmpty(new TerminateSessionRequest())
 				.flatMap(req -> access.withPermission(PlatformPermissions.LOCK_WRITE, subject -> {
 					Mono<ResponseEntity<SessionResource>> action = sessions

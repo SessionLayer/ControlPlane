@@ -9,11 +9,6 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Table;
 
-/**
- * Singleton cluster configuration: CA provisioning,
- * retention/WORM/OTP/session-limit defaults, first-admin bootstrap flag. KEK
- * reference (never bytes); DB-enforced singleton.
- */
 @Table(schema = "config", name = "operator_settings")
 public record OperatorSettings(@Id UUID id, boolean singleton, String kekReference, String defaultCaBackend,
 		int auditRetentionDays, String defaultWormMode, int otpTtlSeconds, Integer defaultMaxSessionSeconds,
@@ -33,7 +28,6 @@ public record OperatorSettings(@Id UUID id, boolean singleton, String kekReferen
 				null, false, null, null, "ecies_p256", null, 365, true, "default", null, null, null);
 	}
 
-	/** Replaces exactly the fields {@code PUT /v1/operator-settings} may write. */
 	public OperatorSettings withOperatorManaged(int auditRetentionDays, int recordingRetentionDays,
 			String defaultWormMode, int otpTtlSeconds, Integer defaultMaxSessionSeconds,
 			Integer defaultIdleTimeoutSeconds, Integer defaultMaxConcurrentSessions, String origin) {
@@ -44,7 +38,6 @@ public record OperatorSettings(@Id UUID id, boolean singleton, String kekReferen
 				recordingStrictDefault, origin, version, createdAt, updatedAt);
 	}
 
-	/** Replaces exactly the three recording-key columns. */
 	public OperatorSettings withRecordingKey(byte[] recordingCustomerPublicKey, String recordingKeySealAlgorithm,
 			String recordingKeyRef, String origin) {
 		return new OperatorSettings(id, singleton, kekReference, defaultCaBackend, auditRetentionDays, defaultWormMode,

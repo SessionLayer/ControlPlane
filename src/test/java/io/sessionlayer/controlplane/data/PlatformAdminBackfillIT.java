@@ -105,8 +105,6 @@ class PlatformAdminBackfillIT extends AbstractAuthIT {
 		execute(newestVocabularyMigration());
 	}
 
-	// The newest migration whose text rewrites the permission CHECK. Discovered so
-	// the test keeps testing today's migration instead of a frozen one.
 	private static String newestVocabularyMigration() throws Exception {
 		Resource[] migrations = new PathMatchingResourcePatternResolver()
 				.getResources("classpath*:db/migration/V*.sql");

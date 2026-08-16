@@ -14,10 +14,6 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 
-/**
- * Mints and holds the CP's machine-identity token signing key; regenerated per
- * boot.
- */
 @Component
 public class MachineTokenSigner {
 
@@ -41,10 +37,6 @@ public class MachineTokenSigner {
 		return (RSAPublicKey) keyPair.getPublic();
 	}
 
-	/**
-	 * Sign a machine token binding identity + groups (CPU-bound; run off the event
-	 * loop).
-	 */
 	public String mint(String identity, List<String> groups) {
 		Instant now = Instant.now();
 		Instant exp = now.plus(properties.getTokenTtl());

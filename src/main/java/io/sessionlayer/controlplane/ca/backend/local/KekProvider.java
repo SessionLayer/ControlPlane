@@ -25,7 +25,6 @@ import java.util.Base64;
  */
 public final class KekProvider {
 
-	/** A well-known dev/test KEK (32 bytes, base64). NEVER for production. */
 	public static final String DEV_DEFAULT_KEK_BASE64 = "c2Vzc2lvbmxheWVyRGV2S2VrMDEyMzQ1Njc4OUFCQ0Q=";
 	private static final byte[] DEV_DEFAULT_KEK_BYTES = Base64.getDecoder().decode(DEV_DEFAULT_KEK_BASE64);
 
@@ -39,9 +38,6 @@ public final class KekProvider {
 		if (decoded.length != 32) {
 			throw new IllegalArgumentException("KEK must decode to 32 bytes (AES-256), got " + decoded.length);
 		}
-		// Compare decoded BYTES (constant-time), not the base64 string, so a
-		// re-encoding
-		// of the dev key is still detected.
 		this.devDefault = MessageDigest.isEqual(decoded, DEV_DEFAULT_KEK_BYTES);
 		if (this.devDefault && !allowDevDefault) {
 			throw new IllegalStateException(
@@ -50,27 +46,19 @@ public final class KekProvider {
 							+ "sessionlayer.ca.local.allow-dev-kek=true for dev/test ONLY (never in production).");
 		}
 		this.kekBytes = decoded;
-		// The default reference names what is actually read (the property), not a
-		// misleading env var; the dev default is labelled insecure.
 		this.reference = (reference != null && !reference.isBlank())
 				? reference
 				: (this.devDefault ? "dev-default:insecure" : "config:sessionlayer.ca.local.kek-base64");
 	}
 
-	/** A fresh {@link Kek}; the caller MUST {@link Kek#destroy()} it after use. */
 	public Kek newKek() {
 		return new Kek(kekBytes);
 	}
 
-	/**
-	 * The opaque reference recorded alongside wrapped material (never the KEK
-	 * itself).
-	 */
 	public String reference() {
 		return reference;
 	}
 
-	/** True when the insecure dev/test default KEK is in use (warn loudly). */
 	public boolean isDevDefault() {
 		return devDefault;
 	}

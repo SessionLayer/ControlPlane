@@ -59,8 +59,6 @@ class BreakglassPolicyCrudIT extends AbstractConfigApiIT {
 		client.get().uri("/v1/breakglass-policies").header("Authorization", "Bearer " + noneToken).exchange()
 				.expectStatus().isForbidden();
 
-		// settings:write does NOT grant break-glass management — it is its own
-		// permission.
 		String settings = "svc-bg-settings-" + UUID.randomUUID();
 		String settingsToken = tokenWith(settings, PlatformPermissions.SETTINGS_WRITE);
 		client.get().uri("/v1/breakglass-policies").header("Authorization", "Bearer " + settingsToken).exchange()
@@ -86,7 +84,6 @@ class BreakglassPolicyCrudIT extends AbstractConfigApiIT {
 		client.get().uri("/v1/breakglass-policies/" + id).header("Authorization", "Bearer " + token).exchange()
 				.expectStatus().isOk().expectBody().jsonPath("$.authPath").isEqualTo("fido2");
 
-		// Update replaces mutable fields; the name is immutable.
 		client.put().uri("/v1/breakglass-policies/" + id).header("Authorization", "Bearer " + token)
 				.contentType(MediaType.APPLICATION_JSON)
 				.bodyValue(Map.of("alertTarget", "slack://sec", "recordingStrict", false, "reviewRequired", true,

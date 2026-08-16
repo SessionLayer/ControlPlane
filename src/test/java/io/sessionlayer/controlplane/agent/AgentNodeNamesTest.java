@@ -24,7 +24,7 @@ class AgentNodeNamesTest {
 		assertThat(AgentNodeNames.isValid("double..dot")).isFalse();
 		assertThat(AgentNodeNames.isValid("-hyphenstart")).isFalse();
 		assertThat(AgentNodeNames.isValid("has space")).isFalse();
-		assertThat(AgentNodeNames.isValid("gw1,O=Evil")).isFalse(); // RDN injection
-		assertThat(AgentNodeNames.isValid("a".repeat(254))).isFalse(); // too long
+		assertThat(AgentNodeNames.isValid("gw1,O=Evil")).isFalse();
+		assertThat(AgentNodeNames.isValid("a".repeat(254))).isFalse();
 	}
 }

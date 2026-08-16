@@ -8,33 +8,13 @@ import java.util.UUID;
 import reactor.core.publisher.Mono;
 import tools.jackson.databind.JsonNode;
 
-/**
- * Pluggable audit-event store seam. Append + read only, never update/delete
- * (WORM). Swappable backend (Postgres/SIEM/S3/OpenSearch). Off-box shipping is
- * separate ({@link AuditForwarder}).
- */
 public interface AuditEventStore {
 
-	/**
-	 * Append one audit event carrying only the core dimensions. A convenience over
-	 * {@link #record(AuditRecord)} for the ~40 config/login/lifecycle callers that
-	 * have no connect-time snapshot dimensions to record; the five snapshot columns
-	 * ({@code source_ip}/{@code access_model}/{@code capabilities}/
-	 * {@code node_labels}/{@code correlation_id}) stay null. {@code detail} is a
-	 * small, secret-free string map; {@code sessionId}/{@code nodeId} may be null.
-	 */
 	default Mono<Void> record(String actor, String subject, String action, String outcome, UUID sessionId, UUID nodeId,
 			Map<String, String> detail) {
 		return record(AuditRecord.of(actor, subject, action, outcome, sessionId, nodeId, detail));
 	}
 
-	/**
-	 * Append one audit event with every dimension the producer has (source IP,
-	 * access model, capabilities, node labels, correlation id). This is the single
-	 * append seam; the core {@link #record} overload delegates here with the
-	 * snapshot dimensions null. The backing implementation is responsible for
-	 * tamper-evidence (the Postgres impl hash-chains the whole row).
-	 */
 	Mono<Void> record(AuditRecord record);
 
 	/**
@@ -48,10 +28,6 @@ public interface AuditEventStore {
 
 	Mono<AuditEvent> findById(UUID id);
 
-	/**
-	 * Recompute + verify the tamper-evidence hash chain. A read path calls this to
-	 * prove a search left the chain intact.
-	 */
 	Mono<AuditChainVerifier.Result> verifyChain();
 
 	/**
@@ -148,7 +124,6 @@ public interface AuditEventStore {
 		}
 	}
 
-	/** A page of results plus the opaque forward cursor for the next page. */
 	record AuditPage(List<AuditEvent> items, String nextCursor) {
 	}
 

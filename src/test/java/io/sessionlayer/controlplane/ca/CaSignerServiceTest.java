@@ -30,9 +30,7 @@ import reactor.test.StepVerifier;
 /**
  * There is no code path from a key-service {@code ca_config} row to
  * {@link LocalCaFactory}: a CA the operator configured for Key Vault or KMS
- * must never fall back to signing from the database. Every failure mode — no
- * factory bean, missing key material, a malformed key_reference — is
- * {@link NoSignerAvailable}, never local.
+ * must never fall back to signing from the database.
  */
 class CaSignerServiceTest {
 
@@ -49,7 +47,6 @@ class CaSignerServiceTest {
 	/** A well-formed Key Vault version: 32 lowercase hex characters. */
 	private static final String VERSION = "abcdef0123456789abcdef0123456789";
 
-	/** A well-formed KMS key ARN in the anchored account. */
 	private static final String KEY_ARN = "arn:aws:kms:us-east-1:111122223333:key/"
 			+ "1234abcd-12ab-34cd-56ef-1234567890ab";
 
@@ -106,9 +103,6 @@ class CaSignerServiceTest {
 				error -> assertThat(error).isInstanceOf(NoSignerAvailable.class).hasMessageContaining("Key Vault"))
 				.verify();
 
-		// Not just "no wrong signer" but no interaction at all: an azure_keyvault
-		// row with no Key Vault support never even queries local key material, let
-		// alone unwraps it.
 		verifyNoInteractions(localCaFactory, keys);
 	}
 
@@ -137,7 +131,6 @@ class CaSignerServiceTest {
 		AzureKeyVaultSignerFactory azureFactory = mock(AzureKeyVaultSignerFactory.class);
 		when(azureFactory.vaultUri()).thenReturn("https://myvault.vault.azure.net");
 
-		// version-less is refused by KeyVaultKeyReference, before any vault call.
 		CaConfig config = azureConfig("https://myvault.vault.azure.net/keys/ssh-ca");
 		CaKeyMaterial material = materialWithPublicKey(config, (ECPublicKey) ecKeyPair().getPublic());
 		when(keys.findByCaConfigId(config.id())).thenReturn(Mono.just(material));
@@ -188,8 +181,6 @@ class CaSignerServiceTest {
 						error -> assertThat(error).isInstanceOf(NoSignerAvailable.class).hasMessageContaining("KMS"))
 				.verify();
 
-		// Not just "no wrong signer" but no interaction at all: an aws_kms row with
-		// no KMS support never even queries local key material, let alone unwraps it.
 		verifyNoInteractions(localCaFactory, keys);
 	}
 
@@ -236,10 +227,6 @@ class CaSignerServiceTest {
 		verifyNoInteractions(localCaFactory);
 	}
 
-	/**
-	 * The allow-list anchor holds at sign time too: a row naming a key in another
-	 * account cannot be signed with, whatever the database says.
-	 */
 	@Test
 	void kmsConfiguredCaNamingAnotherAccountFailsClosed() {
 		CaConfigRepository configs = mock(CaConfigRepository.class);

@@ -19,9 +19,6 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import tools.jackson.databind.ObjectMapper;
 
-/**
- * Data-plane rules CRUD (RBAC + audited, idempotency-key guarded).
- */
 @RestController
 public class RuleController implements RulesApi {
 

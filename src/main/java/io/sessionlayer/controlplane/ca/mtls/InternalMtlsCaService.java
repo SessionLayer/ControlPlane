@@ -7,21 +7,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Mono;
 
-/**
- * Provisions (idempotently, race-safely) and loads the internal mTLS CA (Part
- * B). The CA is provisioned as part of cold start
- * ({@code CaProvisioningService} calls {@link #ensureProvisioned} under the
- * shared advisory lock) and is also self-provisioned on demand by the gRPC
- * server startup via {@link #loadOrProvision} (which takes the same lock), so
- * the mTLS plane comes up even if it is the first thing to touch the CA.
- * Loading is fail-closed: if there is no active mTLS CA it errors rather than
- * falling back.
- */
 @Service
 public class InternalMtlsCaService {
 
 	/** Same advisory-lock key as {@code CaProvisioningService} cold start. */
-	private static final long COLD_START_LOCK = 0x53_4C_5F_43_41_5F_43_53L; // "SL_CA_CS"
+	private static final long COLD_START_LOCK = 0x53_4C_5F_43_41_5F_43_53L;
 
 	private final CaConfigRepository caConfigs;
 	private final CaKeyMaterialRepository caKeyMaterials;
@@ -66,7 +56,6 @@ public class InternalMtlsCaService {
 						.then(caKeyMaterials.save(provisioned.material())).then());
 	}
 
-	/** Load the active internal mTLS CA backend, or fail closed. */
 	public Mono<X509CaBackend> activeBackend() {
 		return caConfigs.findByCaKindAndRotationState(InternalMtlsCaFactory.CA_KIND, "active")
 				.switchIfEmpty(Mono.error(new NoMtlsCaAvailable("no active internal mTLS CA (fail closed)")))
@@ -76,17 +65,12 @@ public class InternalMtlsCaService {
 						.map(material -> (X509CaBackend) factory.load(config, material)));
 	}
 
-	/**
-	 * Load the active internal mTLS CA, provisioning it first (race-safely, under
-	 * the cold-start advisory lock) if absent. Used by the gRPC server startup.
-	 */
 	public Mono<X509CaBackend> loadOrProvision(String backend) {
 		return activeBackend().onErrorResume(NoMtlsCaAvailable.class,
 				absent -> provisionUnderLock(backend).then(activeBackend()));
 	}
 
 	private Mono<Void> provisionUnderLock(String backend) {
-		// lock_timeout so a wedged peer fails the boot rather than hanging forever.
 		Mono<Void> body = db.sql("SET LOCAL lock_timeout = '15s'").fetch().rowsUpdated()
 				.then(db.sql("SELECT pg_advisory_xact_lock(:k)").bind("k", COLD_START_LOCK).fetch().rowsUpdated())
 				.then(ensureProvisioned(backend));

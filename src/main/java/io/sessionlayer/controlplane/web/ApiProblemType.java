@@ -2,9 +2,6 @@ package io.sessionlayer.controlplane.web;
 
 import org.springframework.http.HttpStatusCode;
 
-/**
- * RFC 9457 problem {@code type} vocabulary.
- */
 public enum ApiProblemType {
 
 	VALIDATION("validation-error", 422, "Invalid configuration"), MALFORMED("malformed-request", 400,

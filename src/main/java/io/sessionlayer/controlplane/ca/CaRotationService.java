@@ -20,11 +20,6 @@ import reactor.core.scheduler.Schedulers;
  * an overlap the trusted set (what nodes trust via {@code TrustedUserCAKeys})
  * contains the incoming (pre-published), active and outgoing CA keys, so no
  * in-flight or new session is rejected; {@code expired} keys drop out of trust.
- *
- * <p>
- * Emergency rotation is paired with locking + default-deny; locking is Session
- * Ten — the seam is here (rotation is independent of the lock primitive), not
- * the lock implementation.
  */
 @Service
 public class CaRotationService {
@@ -116,24 +111,12 @@ public class CaRotationService {
 				.onErrorMap(TimeoutException.class, e -> new ProvisionTimedOut(backend, kind));
 	}
 
-	/**
-	 * Persists a {@link CaKeyProvisioner.Provisioned}: the two saves only,
-	 * transactional so they land together or not at all.
-	 */
 	public Mono<CaConfig> persistIncoming(CaKeyProvisioner.Provisioned provisioned) {
 		Mono<CaConfig> body = caConfigs.save(provisioned.config())
 				.flatMap(saved -> caKeyMaterials.save(provisioned.material()).thenReturn(saved));
 		return tx.transactional(body).single();
 	}
 
-	/**
-	 * Composes {@link #provisionIncoming} and {@link #persistIncoming} for a caller
-	 * with nothing to interleave between resolving the key and writing it.
-	 * {@code CaConfigService.rotate} does NOT use this: it resolves the
-	 * {@link CaKeyProvisioner.Provisioned} first and only then opens its own
-	 * transaction (persist + promote + audit), so provisioning is never inside a
-	 * transaction there either.
-	 */
 	public Mono<CaConfig> beginRotation(String kind, String newName, String backend, String keyReference,
 			String algorithm) {
 		return provisionIncoming(kind, newName, backend, keyReference, algorithm).flatMap(this::persistIncoming);

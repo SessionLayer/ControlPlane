@@ -12,12 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-/**
- * Hand-written deny-overrides evaluator. Avoids Cedar JNI; PolicyEngine seam
- * keeps Cedar swappable. Algebra: applicable rules → locks → denies →
- * default-deny → allow (login/capability unions per grant).
- * Commutative/idempotent; fail-closed.
- */
 @Component
 public class DenyOverridesPolicyEngine implements PolicyEngine {
 
@@ -29,8 +23,6 @@ public class DenyOverridesPolicyEngine implements PolicyEngine {
 		try {
 			return decide(request, grants, locks, now);
 		} catch (RuntimeException failClosed) {
-			// Determinism is a security property; any error deterministically denies
-			// (fail-closed).
 			LOG.warn("data-plane evaluation failed closed: {}", failClosed.toString());
 			return DataPlaneDecision.deny(DataPlaneDecision.Reason.EVALUATION_ERROR, null, null);
 		}
@@ -74,13 +66,9 @@ public class DenyOverridesPolicyEngine implements PolicyEngine {
 				: allows.stream().filter(r -> principals(r).contains(requested)).toList();
 		Set<String> capabilities = new TreeSet<>();
 		contributing.forEach(r -> capabilities.addAll(Capabilities.effective(setOf(r.capabilities()))));
-		// ttlSeconds is nullable now (a deny carries none), so filter BEFORE unboxing.
-		// Every element here is an allow, which the write path still requires a TTL
-		// for — but that is an invariant enforced in the database, and mapToInt on a
-		// null would be an NPE on the decision path the first time it stopped holding.
 		int grantTtl = contributing.stream().map(DpRule::ttlSeconds).filter(java.util.Objects::nonNull)
 				.mapToInt(Integer::intValue).filter(t -> t > 0).min().orElse(0);
-		DpRule representative = contributing.get(0); // applicable is id-sorted → lowest id
+		DpRule representative = contributing.get(0);
 		return DataPlaneDecision.allow(allowedLogins, capabilities, grantTtl, representative.id(),
 				representative.name());
 	}

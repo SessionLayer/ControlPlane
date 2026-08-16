@@ -35,9 +35,6 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
-/**
- * Node lifecycle (RBAC + audited). Registration is a pure API operation.
- */
 @RestController
 public class NodeController implements NodesApi {
 

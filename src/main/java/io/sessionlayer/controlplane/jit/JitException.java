@@ -1,10 +1,5 @@
 package io.sessionlayer.controlplane.jit;
 
-/**
- * A JIT state-machine error, mapped by the controller's handler to an RFC-9457
- * problem with the right status. The message is operator-facing (JIT is a
- * platform-RBAC surface, not an anonymous auth path), but never leaks a secret.
- */
 public class JitException extends RuntimeException {
 
 	public enum Reason {

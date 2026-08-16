@@ -72,7 +72,6 @@ final class AuditSearchSql {
 		params.put(column, value);
 	}
 
-	// scopeGrants OR-ed and AND-ed with the user filters; empty => unrestricted.
 	private static void scope(List<String> where, Map<String, Object> params, List<JsonNode> grants) {
 		if (grants.isEmpty()) {
 			return;

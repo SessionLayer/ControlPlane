@@ -17,10 +17,6 @@ public interface NodeHostKeyRepository extends ReactiveCrudRepository<NodeHostKe
 	@Query("DELETE FROM runtime.node_host_key WHERE node_id = :nodeId")
 	Mono<Integer> deleteByNodeId(UUID nodeId);
 
-	/**
-	 * Which nodes hold any enrollment anchor at all — the ids only, so listing a
-	 * fleet stays one query instead of loading every anchor row for every node.
-	 */
 	@Query("SELECT DISTINCT node_id FROM runtime.node_host_key")
 	Flux<UUID> findAnchoredNodeIds();
 }

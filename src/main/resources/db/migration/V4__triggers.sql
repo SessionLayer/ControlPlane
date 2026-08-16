@@ -1,15 +1,3 @@
--- V4 — Triggers: audit append-only + generation-counter monotonicity.
--- SessionLayer Control Plane. Enforces two invariants in the DATABASE, not by
--- application convention (operating doctrine §4.6 / §7).
-
--- ---------------------------------------------------------------------------
--- audit_event is APPEND-ONLY (Design §4.6, FR-AUD-9). Immutability is enforced
--- here so it does not depend on application discipline. A dedicated INSERT/SELECT
--- writer role is an additional deployment hardening layer on top of this.
---
---   * BEFORE UPDATE OR DELETE (row level): reject mutation/removal of any row.
---   * BEFORE TRUNCATE (statement level): reject wholesale wipe.
--- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION runtime.audit_event_immutable()
     RETURNS trigger
     LANGUAGE plpgsql AS $$
@@ -28,13 +16,10 @@ CREATE OR REPLACE TRIGGER audit_event_no_truncate
     BEFORE TRUNCATE ON runtime.audit_event
     FOR EACH STATEMENT EXECUTE FUNCTION runtime.audit_event_immutable();
 
--- ---------------------------------------------------------------------------
--- Generation counter is monotonic (Design §8.2). A renewal that would DECREASE
--- the generation counter is rejected at the DB layer — defense in depth beneath
--- the application's @Version optimistic-concurrency guard. A cloned credential
--- that forks the counter cannot regress the stored value via a stale write.
--- (Equality is allowed: an idempotent re-write of the same generation is benign.)
--- ---------------------------------------------------------------------------
+-- A renewal that would DECREASE the generation counter is rejected at the DB layer:
+-- the application's @Version optimistic-concurrency guard catches a lost update but
+-- not a stale-value write, so without this a cloned credential that forked the counter
+-- could regress the stored value.
 CREATE OR REPLACE FUNCTION runtime.enforce_generation_monotonic()
     RETURNS trigger
     LANGUAGE plpgsql AS $$
@@ -57,14 +42,9 @@ CREATE OR REPLACE TRIGGER gateway_identity_generation_monotonic
     BEFORE UPDATE ON runtime.gateway_identity
     FOR EACH ROW EXECUTE FUNCTION runtime.enforce_generation_monotonic();
 
--- ---------------------------------------------------------------------------
--- Presence ownership nonce is monotonic (Design §10.2/§10.3, FR-HA-2/FR-HA-5).
--- The nonce is the anti-stale-ownership fencing token: routing fails closed on a
--- stale nonce, so a write that LOWERS it (a stale/duplicated Gateway re-claiming a
--- node it no longer owns) is a split-brain hazard. The @Version column guards a lost
--- update but not a stale-value write; this trigger closes that gap — the exact
--- defense already applied to the generation counter.
--- ---------------------------------------------------------------------------
+-- The presence nonce is the anti-stale-ownership fencing token: routing fails closed on
+-- a stale nonce, so a write that LOWERS it — a stale or duplicated Gateway re-claiming a
+-- node it no longer owns — is a split-brain hazard.
 CREATE OR REPLACE FUNCTION runtime.enforce_presence_nonce_monotonic()
     RETURNS trigger
     LANGUAGE plpgsql AS $$
@@ -83,15 +63,9 @@ CREATE OR REPLACE TRIGGER presence_nonce_monotonic
     BEFORE UPDATE ON runtime.presence
     FOR EACH ROW EXECUTE FUNCTION runtime.enforce_presence_nonce_monotonic();
 
--- ---------------------------------------------------------------------------
--- recording_ref provenance is write-once (Design §15 "crown jewels", FR-AUD-3).
--- object_key / encryption_key_ref / hash_chain_head locate, decrypt and verify a
--- recording; silently rewriting them is evidence tampering. Once set (non-NULL) they
--- may not change (the application sets hash_chain_head after creation, so a
--- NULL->value transition is allowed; value->different-value is not). Mutable
--- operational fields (worm_mode,
--- size_bytes, version, updated_at) stay updatable.
--- ---------------------------------------------------------------------------
+-- These columns locate, decrypt and verify a recording, so silently rewriting one is
+-- evidence tampering. hash_chain_head is exempt while NULL because the application sets
+-- it after the row is created; a NULL -> value transition must stay legal.
 CREATE OR REPLACE FUNCTION runtime.enforce_recording_ref_write_once()
     RETURNS trigger
     LANGUAGE plpgsql AS $$

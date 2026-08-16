@@ -47,11 +47,9 @@ class SessionCrudIT extends AbstractConfigApiIT {
 		SshSession live = active(identity);
 		ended(identity);
 
-		// Filter by identity returns both this identity's sessions.
 		client.get().uri("/v1/sessions?identity=" + identity).header("Authorization", "Bearer " + token).exchange()
 				.expectStatus().isOk().expectBody().jsonPath("$.items.length()").isEqualTo(2);
 
-		// activeOnly narrows to the un-ended session.
 		client.get().uri("/v1/sessions?identity=" + identity + "&activeOnly=true")
 				.header("Authorization", "Bearer " + token).exchange().expectStatus().isOk().expectBody()
 				.jsonPath("$.items.length()").isEqualTo(1).jsonPath("$.items[0].id").isEqualTo(live.id().toString());
@@ -60,7 +58,6 @@ class SessionCrudIT extends AbstractConfigApiIT {
 				.expectStatus().isOk().expectBody().jsonPath("$.identity").isEqualTo(identity).jsonPath("$.accessModel")
 				.isEqualTo("standing").jsonPath("$.principal").isEqualTo("deploy");
 
-		// Terminate → 202 + an identity-scoped strict lock + a session.terminate audit.
 		client.post().uri("/v1/sessions/" + live.id() + "/terminate").header("Authorization", "Bearer " + token)
 				.contentType(MediaType.APPLICATION_JSON).bodyValue(Map.of("reason", "incident-9")).exchange()
 				.expectStatus().isEqualTo(202).expectBody().jsonPath("$.id").isEqualTo(live.id().toString());
@@ -86,7 +83,6 @@ class SessionCrudIT extends AbstractConfigApiIT {
 		client.get().uri("/v1/sessions/" + live.id()).header("Authorization", "Bearer " + noneToken).exchange()
 				.expectStatus().isForbidden();
 
-		// audit:read admits reads but NOT terminate (that needs lock:write).
 		String reader = "svc-session-reader-" + UUID.randomUUID();
 		String readToken = tokenWith(reader, PlatformPermissions.AUDIT_READ);
 		client.get().uri("/v1/sessions").header("Authorization", "Bearer " + readToken).exchange().expectStatus()

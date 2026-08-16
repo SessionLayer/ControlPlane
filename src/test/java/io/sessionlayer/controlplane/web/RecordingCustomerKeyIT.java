@@ -93,7 +93,6 @@ class RecordingCustomerKeyIT extends AbstractConfigApiIT {
 			assertThat(e.action()).isEqualTo("operator_settings.recording_key.provision");
 			assertThat(e.detail().get("before")).isNull();
 			assertThat(e.detail().get("after").get("fingerprintSha256").stringValue()).isEqualTo(fingerprint(pair));
-			// The whole point: the audit row carries the fingerprint and never the key.
 			assertThat(e.detail().toString()).doesNotContain(spki(pair));
 		});
 	}
@@ -238,19 +237,16 @@ class RecordingCustomerKeyIT extends AbstractConfigApiIT {
 		KeyPair incoming = ec("secp256r1");
 		provision(bearer, outgoing);
 
-		// No acknowledgement: refused.
 		Map<String, Object> noAck = keyBody(spki(incoming), "ecies_p256");
 		noAck.put("expectedFingerprintSha256", fingerprint(outgoing));
 		client.put().uri("/v1/operator-settings/recording-customer-key").header("Authorization", "Bearer " + bearer)
 				.contentType(MediaType.APPLICATION_JSON).bodyValue(noAck).exchange().expectStatus().isEqualTo(422);
 
-		// No echoed fingerprint: refused.
 		Map<String, Object> noEcho = keyBody(spki(incoming), "ecies_p256");
 		noEcho.put("acknowledgeExistingRecordingsUndecryptable", true);
 		client.put().uri("/v1/operator-settings/recording-customer-key").header("Authorization", "Bearer " + bearer)
 				.contentType(MediaType.APPLICATION_JSON).bodyValue(noEcho).exchange().expectStatus().isEqualTo(422);
 
-		// Wrong echoed fingerprint: a blind or racing overwrite is a conflict.
 		Map<String, Object> wrongEcho = keyBody(spki(incoming), "ecies_p256");
 		wrongEcho.put("expectedFingerprintSha256", fingerprint(incoming));
 		wrongEcho.put("acknowledgeExistingRecordingsUndecryptable", true);
@@ -309,7 +305,6 @@ class RecordingCustomerKeyIT extends AbstractConfigApiIT {
 				.isEqualTo("vault://customer/recording-key").jsonPath("$.fingerprintSha256")
 				.isEqualTo(fingerprint(pair));
 
-		// The reader still gets everything a provisioning check needs.
 		client.get().uri("/v1/operator-settings/recording-customer-key").header("Authorization", "Bearer " + readerOnly)
 				.exchange().expectStatus().isOk().expectBody().jsonPath("$.configured").isEqualTo(true)
 				.jsonPath("$.fingerprintSha256").isEqualTo(fingerprint(pair)).jsonPath("$.publicKey")

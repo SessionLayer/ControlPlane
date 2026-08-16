@@ -12,9 +12,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-/**
- * Meta probes (public, unauthenticated).
- */
 @RestController
 public class MetaController implements MetaApi {
 
@@ -36,9 +33,6 @@ public class MetaController implements MetaApi {
 
 	@Override
 	public Mono<ResponseEntity<VersionInfo>> getVersion(final ServerWebExchange exchange) {
-		// The CP<->Gateway range comes from ProtocolVersions (shared with the gRPC
-		// Handshake server), currently [1.0, 1.1] (VERSIONING.md §6);
-		// the Agent<->Gateway wire baseline is still the single point 1.0.
 		ProtocolVersionRange cpGatewayRange = new ProtocolVersionRange(
 				ProtocolVersions.display(ProtocolVersions.SUPPORTED_MIN),
 				ProtocolVersions.display(ProtocolVersions.SUPPORTED_MAX));

@@ -1,12 +1,7 @@
--- V18 — Lock CRUD platform permissions. SessionLayer Control Plane.
--- Forward-only, additive; V1-V17 unchanged.
---
--- Adds the incident-response lock CRUD (Design §8.3; FR-LOCK-1/2),
--- platform-RBAC gated by two new permissions: lock:read (list) and lock:write
--- (create/release). The config.platform_role.permissions column CHECK-constrains
--- the allowed permission vocabulary (V2), so it must widen to admit the two new
--- strings — otherwise a platform-admin role carrying every PlatformPermissions.ALL
--- entry (incl. the first-admin bootstrap role) would violate the CHECK.
+-- config.platform_role.permissions CHECK-constrains the allowed permission
+-- vocabulary (V2), so it must widen to admit lock:read and lock:write — otherwise a
+-- platform-admin role carrying every PlatformPermissions.ALL entry (incl. the
+-- first-admin bootstrap role) would violate the CHECK.
 --
 -- The V2 constraint was created inline/anonymous; Postgres named it
 -- platform_role_permissions_check (mirrors the V14 ca_config_ca_kind_check

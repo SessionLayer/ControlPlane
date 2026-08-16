@@ -3,9 +3,6 @@ package io.sessionlayer.controlplane.machine;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/**
- * Machine-identity token configuration.
- */
 @ConfigurationProperties(prefix = "sessionlayer.machine")
 public class MachineTokenProperties {
 
@@ -17,7 +14,6 @@ public class MachineTokenProperties {
 
 	private Duration clockSkew = Duration.ofSeconds(30);
 
-	/** Max age of a presented private_key_jwt client assertion (RFC 7523). */
 	private Duration maxAssertionAge = Duration.ofMinutes(5);
 
 	public String getIssuer() {

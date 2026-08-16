@@ -28,17 +28,9 @@ public final class EcdsaSignatures {
 	private EcdsaSignatures() {
 	}
 
-	/** A normalized ECDSA signature as its two integer components. */
 	public record RS(BigInteger r, BigInteger s) {
 	}
 
-	/**
-	 * Parse a DER {@code SEQUENCE { INTEGER r, INTEGER s }} into {@code (r, s)}. A
-	 * minimal, strict, dependency-free DER reader: it validates the tags and
-	 * lengths and rejects trailing garbage. The INTEGER content is a signed
-	 * big-endian value (a leading {@code 0x00} keeps a high-bit value positive),
-	 * which is exactly {@link BigInteger#BigInteger(byte[])}.
-	 */
 	public static RS fromDer(byte[] der) {
 		DerReader seq = new DerReader(der);
 		DerReader body = seq.readSequence();
@@ -51,11 +43,6 @@ public final class EcdsaSignatures {
 		return new RS(r, s);
 	}
 
-	/**
-	 * Parse a P1363 / raw fixed-width {@code r || s} signature into {@code (r, s)}.
-	 * The buffer is exactly {@code 2 * coordinateBytes} long; each half is an
-	 * unsigned big-endian integer.
-	 */
 	public static RS fromP1363(byte[] raw, CaKeyType keyType) {
 		int coordLen = keyType.coordinateBytes();
 		if (raw.length != 2 * coordLen) {
@@ -66,16 +53,12 @@ public final class EcdsaSignatures {
 		byte[] sb = new byte[coordLen];
 		System.arraycopy(raw, 0, rb, 0, coordLen);
 		System.arraycopy(raw, coordLen, sb, 0, coordLen);
-		BigInteger r = new BigInteger(1, rb); // unsigned
+		BigInteger r = new BigInteger(1, rb);
 		BigInteger s = new BigInteger(1, sb);
 		requirePositive(r, s);
 		return new RS(r, s);
 	}
 
-	/**
-	 * The OpenSSH ECDSA signature field content:
-	 * {@code string(alg) || string(mpint r || mpint s)}.
-	 */
 	public static byte[] encodeSignatureBlob(CaKeyType keyType, RS rs) {
 		byte[] inner = new SshWriter().writeMpint(rs.r()).writeMpint(rs.s()).toByteArray();
 		return new SshWriter().writeString(keyType.keyTypeName()).writeString(inner).toByteArray();
@@ -119,10 +102,6 @@ public final class EcdsaSignatures {
 		}
 	}
 
-	/**
-	 * A tiny strict DER reader for the {@code SEQUENCE{INTEGER,INTEGER}} shape
-	 * only.
-	 */
 	private static final class DerReader {
 		private final byte[] buf;
 		private int pos;
@@ -156,7 +135,7 @@ public final class EcdsaSignatures {
 		BigInteger readInteger() {
 			expectTag(0x02);
 			int len = readLength();
-			if (len <= 0 || len > end - pos) { // overflow-safe
+			if (len <= 0 || len > end - pos) {
 				throw new IllegalArgumentException("DER integer length invalid");
 			}
 			byte[] content = new byte[len];
@@ -178,7 +157,7 @@ public final class EcdsaSignatures {
 			}
 			int first = buf[pos++] & 0xFF;
 			if (first < 0x80) {
-				return first; // short form
+				return first;
 			}
 			int numBytes = first & 0x7F;
 			if (numBytes == 0 || numBytes > 4 || pos + numBytes > end) {

@@ -42,14 +42,6 @@ import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
-/**
- * The regression matrix for the JIT/standing UNION restructure: an approved,
- * in-window JIT grant is now folded into the SAME evaluation as standing access
- * (never gated on a prior standing failure), so it can widen a connect even
- * when standing already matches something (just not enough). Every
- * deny-wins/break-glass/self-approval/attribution invariant is proven here, not
- * assumed — see {@code ConnectAuthorizationService#resolveDecision}.
- */
 class JitMergeAuthorizeIT extends AbstractMtlsIT {
 
 	private static final JsonNodeFactory JSON = JsonNodeFactory.instance;
@@ -129,7 +121,7 @@ class JitMergeAuthorizeIT extends AbstractMtlsIT {
 		String zone = unique();
 		UUID nodeId = seedNode(zone);
 		seedAllow(identity, nodeId, List.of("deploy"), List.of("shell", "exec"), 3600);
-		seedZeroChainPolicy(zone, 1800, List.of("shell", "exec")); // a policy exists, but no request was submitted
+		seedZeroChainPolicy(zone, 1800, List.of("shell", "exec"));
 
 		EnrolledGateway gateway = enroll("gw-common-" + unique());
 		UUID sessionId = UUID.randomUUID();
@@ -167,8 +159,6 @@ class JitMergeAuthorizeIT extends AbstractMtlsIT {
 		assertThat(jitRequests.findById(grant.id()).block().state()).isEqualTo(JitRequest.APPROVED);
 	}
 
-	// (5) deny-wins over JIT: a Lock on the JIT-approved principal denies even
-	// though standing doesn't cover it at all and a usable grant exists.
 	@Test
 	void aLockOnTheJitApprovedPrincipalStillDeniesEvenWithNoStandingCoverage() {
 		String identity = "erin-" + unique();
@@ -197,9 +187,6 @@ class JitMergeAuthorizeIT extends AbstractMtlsIT {
 		}
 	}
 
-	// (6) deny-wins over JIT: an explicit standing deny is terminal regardless of
-	// a usable JIT grant for the same principal — the single most important
-	// regression test in this file.
 	@Test
 	void anExplicitStandingDenyStillWinsOverAUsableJitGrant() {
 		String identity = "frank-" + unique();
@@ -221,7 +208,6 @@ class JitMergeAuthorizeIT extends AbstractMtlsIT {
 		assertThat(deny.detail().get("reason").stringValue()).isEqualTo("EXPLICIT_DENY");
 	}
 
-	// (7) still fails without a grant: no standing match, no usable JIT grant.
 	@Test
 	void deniesWithNoStandingAndNoUsableGrant() {
 		String identity = "gina-" + unique();
@@ -236,8 +222,6 @@ class JitMergeAuthorizeIT extends AbstractMtlsIT {
 		assertThat(deny.detail().get("reason").stringValue()).isEqualTo("NO_MATCHING_ALLOW");
 	}
 
-	// (8) still fails, principal genuinely uncovered: the fix widens WHEN JIT is
-	// consulted, never grants anything nobody approved.
 	@Test
 	void deniesWhenNoUsableGrantCoversTheRequestedPrincipal() {
 		String identity = "hank-" + unique();
@@ -253,8 +237,6 @@ class JitMergeAuthorizeIT extends AbstractMtlsIT {
 		assertThat(deny.detail().get("reason").stringValue()).isEqualTo("PRINCIPAL_NOT_ALLOWED");
 	}
 
-	// (9) break-glass untouched: the union logic is bypassed entirely — a usable
-	// JIT grant sits there UNCONSUMED while break-glass decides the connect.
 	@Test
 	void breakglassBypassesTheUnionEntirelyAndNeverTouchesAUsableJitGrant() throws Exception {
 		String identity = "ivan-" + unique();
@@ -279,19 +261,15 @@ class JitMergeAuthorizeIT extends AbstractMtlsIT {
 		assertThat(ctx.getAccessModel()).isEqualTo(AccessModel.ACCESS_MODEL_BREAKGLASS);
 		SshSession session = sshSessions.findById(sessionId).block();
 		assertThat(session.jitRequestId()).isNull();
-		// The grant never entered the decision at all — still APPROVED.
 		assertThat(jitRequests.findById(grant.id()).block().state()).isEqualTo(JitRequest.APPROVED);
 	}
 
-	// (10) self-approval is still impossible, and — specific to the unconditional
-	// lookup — a request stuck PENDING_APPROVAL (self-approval rejected) is never
-	// returned as a usable grant by the merged path.
 	@Test
 	void selfApprovalRemainsImpossibleAndAPendingRequestNeverElevatesTheConnect() {
 		String identity = "judy-" + unique();
 		String zone = unique();
 		UUID nodeId = seedNode(zone);
-		seedChainPolicy(zone, 1800, level("email", identity)); // the requester is itself the configured approver
+		seedChainPolicy(zone, 1800, level("email", identity));
 		JitRequest submitted = jit.submit(identity, nodeId, "deploy", List.of("shell"), "self").block();
 		assertThat(submitted.state()).isEqualTo(JitRequest.PENDING_APPROVAL);
 
@@ -305,10 +283,6 @@ class JitMergeAuthorizeIT extends AbstractMtlsIT {
 		assertThat(response.getDecision()).isEqualTo(Decision.DECISION_DENY);
 	}
 
-	// (11) TTL bound: even when a standing rule for the same principal carries a
-	// very long TTL, a load-bearing JIT grant's shorter remaining TTL still
-	// bounds the emitted grant_expiry (the engine's own min-positive-ttls
-	// formula, now exercised across BOTH rule sets at once).
 	@Test
 	void aLoadBearingGrantBoundsTheTtlEvenWhenStandingHasAMuchLongerOne() throws Exception {
 		String identity = "karl-" + unique();
@@ -325,14 +299,10 @@ class JitMergeAuthorizeIT extends AbstractMtlsIT {
 		DecisionContext ctx = DecisionContext.parseFrom(response.getSignedContext());
 		assertThat(ctx.getAccessModel()).isEqualTo(AccessModel.ACCESS_MODEL_JIT);
 		long ttl = ctx.getGrantExpiryEpochSeconds() - Instant.now().getEpochSecond();
-		// Bounded by the JIT grant's ~120s ceiling, nowhere near the standing rule's
-		// 100,000s.
 		assertThat(ttl).isBetween(1L, 130L);
 		assertThat(jitRequests.findById(grant.id()).block().state()).isEqualTo(JitRequest.ACTIVE);
 	}
 
-	// (12) a merged (hybrid) session tears down exactly like a pure-JIT one: the
-	// revoke-as-lock mechanism doesn't care how the grant became ACTIVE.
 	@Test
 	void revokeAsLockTearsDownAMergedSessionsGrantJustLikeAPureJitOne() {
 		String identity = "linda-" + unique();
@@ -360,8 +330,6 @@ class JitMergeAuthorizeIT extends AbstractMtlsIT {
 		AuthorizeResponse after = authorize(gateway, identity, nodeId, "deploy", UUID.randomUUID());
 		assertThat(after.getDecision()).isEqualTo(Decision.DECISION_DENY);
 	}
-
-	// ----- helpers -----
 
 	private AuthorizeResponse authorize(EnrolledGateway gateway, String identity, UUID nodeId, String principal,
 			UUID sessionId) {
@@ -401,7 +369,6 @@ class JitMergeAuthorizeIT extends AbstractMtlsIT {
 		}
 	}
 
-	// A structurally valid sk-ecdsa-sha2-nistp256 wire blob (public material only).
 	private static byte[] skBlob(byte fill) {
 		byte[] q = new byte[65];
 		q[0] = 0x04;

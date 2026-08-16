@@ -10,10 +10,6 @@ import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
-/**
- * Lock matching over plural/singular selector shapes; fail-closed on
- * empty/unrecognised.
- */
 class LockMatchingTest {
 
 	private static final JsonNodeFactory JSON = JsonNodeFactory.instance;
@@ -41,8 +37,8 @@ class LockMatchingTest {
 
 	@Test
 	void pluralPrincipalsMatchRequestedOrAllowedLogin() {
-		assertThat(LockMatching.matches(array("principals", "deploy"), ALICE)).isTrue(); // requested
-		assertThat(LockMatching.matches(array("principals", "root"), ALICE)).isTrue(); // an allowed login
+		assertThat(LockMatching.matches(array("principals", "deploy"), ALICE)).isTrue();
+		assertThat(LockMatching.matches(array("principals", "root"), ALICE)).isTrue();
 		assertThat(LockMatching.matches(array("principals", "nobody"), ALICE)).isFalse();
 	}
 

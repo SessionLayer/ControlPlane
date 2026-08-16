@@ -111,7 +111,6 @@ class BasicEscapeHatchFilterTest {
 		assertRefused(run(config(USER, PASSWORD_HASH, LOOPBACK), unresolved, basic(USER, PASSWORD)));
 	}
 
-	/** The default is an empty list, so an unconfigured hatch grants nothing. */
 	@Test
 	void anEmptyAllowedCidrListRefusesEveryone() {
 		assertRefused(run(config(USER, PASSWORD_HASH), peer("127.0.0.1"), basic(USER, PASSWORD)));
@@ -194,10 +193,6 @@ class BasicEscapeHatchFilterTest {
 		assertThat(unknownUser.matchInvocations()).isEqualTo(knownUser.matchInvocations()).isEqualTo(1);
 	}
 
-	/**
-	 * A source outside the allowed CIDRs is refused before any hashing, so the
-	 * hatch cannot be used as a remote bcrypt oracle from an unauthorised network.
-	 */
 	@Test
 	void aRefusedSourceNeverReachesThePasswordHash() {
 		CountingPasswordEncoder encoder = new CountingPasswordEncoder();
@@ -221,7 +216,6 @@ class BasicEscapeHatchFilterTest {
 				basic(USER, PASSWORD)));
 	}
 
-	/** A mis-typed CIDR must not turn every Basic-bearing request into a 500. */
 	@Test
 	void aMalformedAllowedCidrRefusesRatherThanRaising() {
 		assertRefused(run(config(USER, PASSWORD_HASH, "127.0.0.1"), peer("127.0.0.1"), basic(USER, PASSWORD)));
@@ -256,8 +250,6 @@ class BasicEscapeHatchFilterTest {
 
 	private static void assertRefused(Outcome outcome) {
 		assertThat(outcome.authentication()).isNull();
-		// Deny-only: the request continues unauthenticated. A filter that answered 401
-		// itself would never have run the chain.
 		assertThat(outcome.chainInvocations()).isEqualTo(1);
 	}
 
@@ -289,10 +281,6 @@ class BasicEscapeHatchFilterTest {
 		return new Outcome(captured.get(), chainInvocations.get());
 	}
 
-	/**
-	 * Runs the real transformer rather than modelling what it produces, so the test
-	 * still holds if its address handling changes.
-	 */
 	private static ServerWebExchange forwarded(String header, String value, String authorization) {
 		MockServerHttpRequest request = MockServerHttpRequest.get("/v1/cas")
 				.remoteAddress(new InetSocketAddress(InetAddress.ofLiteral("203.0.113.9"), 41234)).header(header, value)

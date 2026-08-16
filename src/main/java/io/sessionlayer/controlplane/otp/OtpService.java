@@ -15,27 +15,16 @@ import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-/**
- * Server-generated single-use OTP. Issuance produces a high-entropy code
- * (≥128-bit) with a short TTL (60–300s, clamped) and stores only its SHA-256;
- * the raw value is returned once for out-of-band delivery. Validation is
- * <b>constant-time</b> (the presented value is hashed, never compared
- * char-by-char), <b>single-use</b> (an atomic mark-used UPDATE — a replay
- * matches no row), source-CIDR bound (deny-only), and rate-limited; <b>the
- * identity comes from the record</b>, never from client input.
- */
 @Service
 public class OtpService {
 
 	private static final int MIN_TTL_SECONDS = 60;
 	private static final int MAX_TTL_SECONDS = 300;
 
-	// Atomic mark-used: a row is returned (and consumed) only if it is unused,
-	// unexpired, and the source is inside the bound CIDR (deny-only). A replay,
-	// an expired code, or a wrong source matches nothing → fail closed. Both sides
-	// cast to `inet` (not the strict `cidr`), so an operator-friendly host-bits
-	// CIDR (e.g. 192.168.1.5/24, which the schema stores via lenient ::inet) does
-	// not throw at query time; `<<=` uses the stored masklen's network.
+	// Both sides cast to `inet` (not the strict `cidr`), so an operator-friendly
+	// host-bits CIDR (e.g. 192.168.1.5/24, which the schema stores via lenient
+	// ::inet) does not throw at query time; `<<=` uses the stored masklen's
+	// network.
 	private static final String CONSUME = """
 			UPDATE runtime.otp SET used = true, used_at = now()
 			WHERE otp_hash = :hash AND used = false AND expires_at > now()
@@ -85,11 +74,6 @@ public class OtpService {
 				});
 	}
 
-	/**
-	 * Validate a presented OTP from {@code sourceIp}. Constant-time (hash lookup),
-	 * single-use (atomic), rate-limited. The resolved identity/principals come from
-	 * the record. Consumed by the Gateway.
-	 */
 	public Mono<Resolved> validate(String presentedOtp, String sourceIp) {
 		String ip = sourceIp == null ? "" : sourceIp;
 		return rateLimiter.tryAcquire("otp:verify:" + ip, authProperties.getOtpVerify()).flatMap(allowed -> {
@@ -107,7 +91,6 @@ public class OtpService {
 							.thenReturn(resolved))
 					.switchIfEmpty(audit.record("system", null, "otp.verify", "denied", null, null,
 							Map.of("reason", "invalid_or_expired", "source_ip", ip)).then(Mono.empty()))
-					// A malformed source IP (bad ::inet cast) or any DB error → fail closed (deny).
 					.onErrorResume(err -> audit.record("system", null, "otp.verify", "error", null, null,
 							Map.of("reason", "evaluation_error", "source_ip", ip)).then(Mono.empty()));
 		});

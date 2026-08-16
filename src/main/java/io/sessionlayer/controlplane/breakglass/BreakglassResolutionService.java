@@ -17,22 +17,11 @@ import reactor.core.publisher.Mono;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-/**
- * The break-glass AUTHENTICATION path. Resolves an offered FIDO2 sk-ecdsa
- * PUBLIC key (primary) or offline code (fallback) to an identity and scoped
- * principals, minting the single-use token. The alert fires at authentication.
- * Any failure is generic non-resolution (fail closed). The offline code is a
- * SECRET and is NEVER logged.
- */
 @Service
 public class BreakglassResolutionService {
 
 	private static final Logger LOG = LoggerFactory.getLogger(BreakglassResolutionService.class);
 
-	// Atomic mark-used: a code row is returned (and consumed) only if it is unused,
-	// unrevoked, unexpired, and the source is inside its bound CIDR (deny-only). A
-	// replay/expired/revoked/wrong-source code matches nothing → fail closed. The
-	// ::inet casts mirror OtpService (lenient host-bits CIDR, never throws).
 	private static final String CONSUME_CODE = """
 			UPDATE runtime.breakglass_offline_code SET used = true, used_at = now()
 			WHERE code_hash = :hash AND used = false AND revoked_at IS NULL AND expires_at > now()
@@ -100,7 +89,6 @@ public class BreakglassResolutionService {
 						return mint(consumed.identity(), consumed.principals(), nodeId, ip, callerGatewayId,
 								"offline_code");
 					}).switchIfEmpty(denied("invalid_or_used", ip))
-					// A malformed source (bad ::inet) or any DB error → fail closed.
 					.onErrorResume(err -> denied("evaluation_error", ip));
 		});
 	}
@@ -122,7 +110,6 @@ public class BreakglassResolutionService {
 	}
 
 	private Mono<Resolution> denied(String reason, String sourceIp) {
-		// Generic non-resolution: the reason stays server-side (never the code/key).
 		return audit.record("system", null, "breakglass.resolve", "denied", null, null,
 				Map.of("reason", reason, "source_ip", sourceIp == null ? "" : sourceIp)).then(Mono.empty());
 	}
@@ -135,7 +122,6 @@ public class BreakglassResolutionService {
 			return objectMapper.readTree(json);
 		} catch (RuntimeException malformed) {
 			LOG.warn("break-glass code node_selector unparseable, failing closed (permits nothing)");
-			// A non-empty selector whose node_ids permits no node → fail closed.
 			return objectMapper.createObjectNode().set("node_ids", objectMapper.createArrayNode());
 		}
 	}

@@ -103,8 +103,6 @@ class PresenceServiceIT extends AbstractMtlsIT {
 		PresenceHeartbeatResponse claim = presenceHeartbeat(gwA, node.name(), ADDR_A);
 		PresenceHeartbeatResponse standby = presenceHeartbeat(gwB, node.name(), ADDR_B);
 
-		// gwA is still fresh, so gwB is a warm standby: no write, authoritative owner
-		// returned unchanged (same nonce/nonce_id/addr), is_self_owner=false.
 		assertThat(standby.getIsSelfOwner()).isFalse();
 		assertThat(standby.getOwningGatewayId()).isEqualTo(nameA);
 		assertThat(standby.getGatewayAddr()).isEqualTo(ADDR_A);
@@ -142,9 +140,6 @@ class PresenceServiceIT extends AbstractMtlsIT {
 		ageOwnerStale(node.id());
 		PresenceHeartbeatResponse takeover = presenceHeartbeat(gwB, node.name(), ADDR_B);
 
-		// The partitioned old owner returns and heartbeats: the row now names gwB at a
-		// higher nonce and gwB is fresh, so gwA is fenced out (standby) — it can never
-		// reclaim with its stale view, and it learns the advanced nonce.
 		PresenceHeartbeatResponse fenced = presenceHeartbeat(gwA, node.name(), ADDR_A);
 		assertThat(fenced.getIsSelfOwner()).isFalse();
 		assertThat(fenced.getOwningGatewayId()).isEqualTo(nameB);
@@ -172,8 +167,6 @@ class PresenceServiceIT extends AbstractMtlsIT {
 	void anUnknownNodeNameFailsClosed() {
 		EnrolledGateway gwA = enroll("gw-pres-unknown-" + unique());
 
-		// The Gateway can only own a node the CP knows: an unregistered/deleted name
-		// resolves to nothing → fail closed, no presence row (never TOFU a node).
 		StatusRuntimeException refused = catchThrowableOfType(StatusRuntimeException.class,
 				() -> presenceHeartbeat(gwA, "no-such-node-" + unique(), ADDR_A));
 		assertThat(refused.getStatus().getCode()).isEqualTo(Status.Code.PERMISSION_DENIED);
@@ -181,8 +174,6 @@ class PresenceServiceIT extends AbstractMtlsIT {
 
 	@Test
 	void anAgentAuthenticatedPeerCannotClaimOwnership() {
-		// The interceptor authenticates an agent cert (it is a valid principal), but a
-		// non-Gateway peer must not own a node — the handler fails closed.
 		Node node = seedAgentNode();
 		KeyPair agentKey = MtlsTestSupport.generateEcKeyPair();
 		X509Certificate agentCert = agentClientCert(agentKey.getPublic(), UUID.randomUUID());
@@ -190,7 +181,6 @@ class PresenceServiceIT extends AbstractMtlsIT {
 		StatusRuntimeException refused = catchThrowableOfType(StatusRuntimeException.class,
 				() -> heartbeatWithCert(agentCert, agentKey.getPrivate(), node.name(), ADDR_A));
 		assertThat(refused.getStatus().getCode()).isEqualTo(Status.Code.PERMISSION_DENIED);
-		// No ownership was recorded (the write never ran).
 		assertThat(presences.findById(node.id()).block()).isNull();
 	}
 
@@ -200,8 +190,6 @@ class PresenceServiceIT extends AbstractMtlsIT {
 		Node node = seedAgentNode();
 		lockGateway(gwA);
 
-		// A locked Gateway is a non-active principal: it may not acquire ownership
-		// (same gate SignSessionCertificate / RenewGatewayIdentity apply).
 		StatusRuntimeException refused = catchThrowableOfType(StatusRuntimeException.class,
 				() -> presenceHeartbeat(gwA, node.name(), ADDR_A));
 		assertThat(refused.getStatus().getCode()).isEqualTo(Status.Code.PERMISSION_DENIED);
@@ -219,8 +207,6 @@ class PresenceServiceIT extends AbstractMtlsIT {
 		PresenceReleaseResponse release = presenceRelease(gwA, node.name());
 		assertThat(release.getReleased()).isTrue();
 
-		// gwA relinquished, so gwB claims on its very next heartbeat even though gwA
-		// was fresh a moment ago (the planned-drain failover window is closed).
 		PresenceHeartbeatResponse takeover = presenceHeartbeat(gwB, node.name(), ADDR_B);
 		assertThat(takeover.getIsSelfOwner()).isTrue();
 		assertThat(takeover.getOwningGatewayId()).isEqualTo(nameB);
@@ -238,7 +224,6 @@ class PresenceServiceIT extends AbstractMtlsIT {
 		PresenceReleaseResponse release = presenceRelease(gwB, node.name());
 		assertThat(release.getReleased()).isFalse();
 
-		// gwA still owns (its refresh keeps the same nonce; the row was untouched).
 		PresenceHeartbeatResponse refresh = presenceHeartbeat(gwA, node.name(), ADDR_A);
 		assertThat(refresh.getIsSelfOwner()).isTrue();
 		assertThat(refresh.getOwningGatewayId()).isEqualTo(nameA);
@@ -269,13 +254,10 @@ class PresenceServiceIT extends AbstractMtlsIT {
 		EnrolledGateway gwA = enroll(nameA);
 		Node node = seedAnchoredAgentNode();
 
-		// Anchored but unclaimed: no Gateway has ever held this node's control channel.
 		assertThat(view(node).health()).isEqualTo("unknown");
 
 		presenceHeartbeat(gwA, node.name(), ADDR_A);
 
-		// The read side is fed by the real write path, not a hand-built row: the
-		// derived answer must be the claim this heartbeat just made.
 		NodeView claimed = view(node);
 		assertThat(claimed.health()).isEqualTo("healthy");
 		// The owner is the gateway NAME (the HA routing key the rest of the plane
@@ -305,8 +287,6 @@ class PresenceServiceIT extends AbstractMtlsIT {
 		assertThat(updated).isEqualTo(1L);
 	}
 
-	// An AGENT-namespace client leaf (SAN sessionlayer://agent/<id>) off the same
-	// internal CA — a valid non-Gateway principal, self-contained to this IT.
 	private X509Certificate agentClientCert(PublicKey publicKey, UUID agentId) {
 		return mtlsCa.activeBackend().block()
 				.issueLeaf(new LeafCertificateSpec(publicKey, "probe-agent", List.of("probe-agent"),

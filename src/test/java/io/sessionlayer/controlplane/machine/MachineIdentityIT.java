@@ -88,8 +88,6 @@ class MachineIdentityIT extends AbstractAuthIT {
 
 		machineIdentity.revokeCredential(sa.id(), issued.credential().id(), "admin").block();
 
-		// A revoked credential can no longer obtain a new token (new sessions denied
-		// immediately).
 		StepVerifier.create(machineIdentity.issueToken(
 				new TokenRequest("client_credentials", sa.name(), null, null, issued.clientSecret(), null), null,
 				"203.0.113.12")).verifyError(MachineIdentityService.TokenRequestDenied.class);

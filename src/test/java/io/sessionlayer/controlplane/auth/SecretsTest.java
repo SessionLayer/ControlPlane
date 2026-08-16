@@ -24,9 +24,9 @@ class SecretsTest {
 
 	@Test
 	void otpHasAtLeast128BitsOfEntropyAndIsBase32() {
-		String otp = Secrets.randomBase32(16); // 16 bytes = 128 bits
+		String otp = Secrets.randomBase32(16);
 		assertThat(otp).matches("[A-Z2-7]+");
-		assertThat(otp.length()).isGreaterThanOrEqualTo(25); // 128 bits / 5 bits-per-char ≈ 26
+		assertThat(otp.length()).isGreaterThanOrEqualTo(25);
 	}
 
 	@Test

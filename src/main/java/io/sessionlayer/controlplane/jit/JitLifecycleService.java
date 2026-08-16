@@ -33,26 +33,6 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
-/**
- * The JIT access-model state machine. Drives {@code runtime.jit_request}
- * through REQUESTED → PENDING_APPROVAL → {APPROVED|DENIED|EXPIRED} → ACTIVE →
- * {EXPIRED|REVOKED}, with two independent clocks — the approval window
- * ({@code approval_deadline}) and the grant TTL ({@code grant_expires_at},
- * started at final approval and snapshotted from the policy at submit). Every
- * transition is audited. Self-approval is impossible: an approver can never be
- * the requester and may act at most once, enforced here over the snapshotted
- * chain so no config or re-request can bypass it.
- *
- * <p>
- * A usable grant (APPROVED/ACTIVE with an unelapsed grant clock) is consumed by
- * the {@code Authorize} evaluator, which synthesizes an in-memory allow and
- * re-runs the deny-overrides engine — so a Lock still denies a JIT grant (deny
- * wins), even a zero-approval one. Revoking an APPROVED/ACTIVE grant writes a
- * short-lived strict {@code access_lock} targeting the grant's IDENTITY (not
- * the node — that would deny every user on the node) so a LIVE session tears
- * down; the lock then auto-clears, and the REVOKED state is what blocks
- * re-auth.
- */
 @Service
 public class JitLifecycleService {
 
@@ -86,8 +66,6 @@ public class JitLifecycleService {
 		this.metrics = metrics;
 	}
 
-	// ----- submit -----
-
 	public Mono<JitRequest> submit(String requester, UUID targetNodeId, String principal, List<String> capabilities,
 			String reason) {
 		if (blank(requester) || blank(principal) || blank(reason) || targetNodeId == null) {
@@ -110,9 +88,6 @@ public class JitLifecycleService {
 				.sort((a, b) -> a.name().compareTo(b.name())).next();
 	}
 
-	// Fail closed on a malformed policy selector (matches the data-plane
-	// evaluator's
-	// posture): one bad jit_policy row must not throw and 500 every submit.
 	private static boolean matchesNode(JitPolicy policy, Map<String, String> labels) {
 		try {
 			return Selectors.labelMatches(policy.targetSelector(), labels);
@@ -141,8 +116,6 @@ public class JitLifecycleService {
 		Integer maxTtl = policy.maxTtlSeconds();
 
 		if (chain.isEmpty()) {
-			// A zero-level chain still produces a grant (the grant clock starts now), but
-			// it is fed through the engine at Authorize, so a Lock still denies it.
 			Instant grantExpiry = now.plus(grantTtl(maxTtl));
 			JitRequest approved = JitRequest.create(requester, node.id(), node.name(), null, principal, caps, reason,
 					JitRequest.APPROVED, policy.id(), policy.name(), maxTtl, policy.approvalChain(), noApprovals,
@@ -167,8 +140,6 @@ public class JitLifecycleService {
 																"approval_deadline", approvalDeadline.toString())))
 												.thenReturn(saved)));
 	}
-
-	// ----- approve / deny -----
 
 	public Mono<JitRequest> approve(UUID requestId, String approver, List<String> approverGroups, String reason) {
 		return act(requestId, approver, approverGroups, reason, true);
@@ -199,8 +170,6 @@ public class JitLifecycleService {
 						return lazilyExpire(request, now).then(Mono.error(
 								new JitException(JitException.Reason.NOT_PENDING, "the approval window has elapsed")));
 					}
-					// Hard invariant, checked BEFORE any level match: the requester can never
-					// approve/deny their own request, whatever the chain config says.
 					if (request.requester().equals(approver)) {
 						return auditReject(request, "self_approval", approver)
 								.then(Mono.error(new JitException(JitException.Reason.SELF_APPROVAL,
@@ -287,30 +256,17 @@ public class JitLifecycleService {
 		return committed.map(revocation -> {
 			lockFeedHub.publishAdded(revocation.lock());
 			return revocation.request();
-		})
-				// A concurrent revoke that lost the @Version race: re-read; if already REVOKED
-				// return it idempotently, else it moved to a non-revocable state.
-				.onErrorResume(OptimisticLockingFailureException.class,
-						race -> requests.findById(requestId)
-								.flatMap(fresh -> JitRequest.REVOKED.equals(fresh.state())
-										? Mono.just(fresh)
-										: Mono.error(new JitException(JitException.Reason.NOT_REVOCABLE,
-												"only an approved or active grant can be revoked"))));
+		}).onErrorResume(OptimisticLockingFailureException.class,
+				race -> requests.findById(requestId)
+						.flatMap(fresh -> JitRequest.REVOKED.equals(fresh.state())
+								? Mono.just(fresh)
+								: Mono.error(new JitException(JitException.Reason.NOT_REVOCABLE,
+										"only an approved or active grant can be revoked"))));
 	}
 
 	private record Revocation(JitRequest request, AccessLock lock) {
 	}
 
-	// ----- expiry (both clocks) -----
-
-	/**
-	 * Transition every overdue row to EXPIRED (approval window elapsed while
-	 * REQUESTED/PENDING_APPROVAL; grant clock elapsed while APPROVED/ACTIVE) and
-	 * audit each. Idempotent and per-row fault-tolerant: a lost {@code @Version}
-	 * update OR any other per-row error is logged and skipped so one bad row never
-	 * aborts the whole sweep. Callable by the scheduler and directly by tests.
-	 * Returns how many rows this call expired.
-	 */
 	public Mono<Long> expireOverdue() {
 		Instant now = Instant.now();
 		Flux<JitRequest> overdue = Flux
@@ -323,9 +279,6 @@ public class JitLifecycleService {
 		}), 4).reduce(0L, Long::sum);
 	}
 
-	// Flip one request to EXPIRED + audit, in its own transaction. Empty (not
-	// error)
-	// on a lost @Version race — another writer already expired it.
 	private Mono<Void> lazilyExpire(JitRequest request, Instant now) {
 		return tx
 				.transactional(requests.save(request.expired(now))
@@ -346,22 +299,6 @@ public class JitLifecycleService {
 		return deadline != null && !deadline.isAfter(now);
 	}
 
-	/**
-	 * The usable JIT grant for {@code requester} on {@code nodeId} as
-	 * {@code principal}, if any: APPROVED/ACTIVE, matching target, grant clock not
-	 * elapsed. Deterministic — the earliest-expiring usable grant. Never serves an
-	 * overdue grant (lazy expiry on read); the scheduler/{@link #expireOverdue()}
-	 * does the durable state flip.
-	 *
-	 * <p>
-	 * Authorize calls this UNCONDITIONALLY on every connect (not only when standing
-	 * access fails), so it is a direct, indexed point query
-	 * ({@code idx_jit_request_usable}) rather than a per-requester scan filtered in
-	 * the application — and it is bounded by {@code lookup-timeout}: a degraded
-	 * {@code jit_request} table degrades this to "no usable grant" (narrows, never
-	 * widens access) instead of riding the pool's default statement timeout into a
-	 * fleet-wide fail-closed deny.
-	 */
 	public Mono<JitRequest> findUsableGrant(String requester, UUID nodeId, String principal, Instant now) {
 		if (blank(requester) || nodeId == null || blank(principal)) {
 			return Mono.empty();
@@ -373,7 +310,6 @@ public class JitLifecycleService {
 				.timeout(properties.getLookupTimeout(), Mono.empty());
 	}
 
-	/** APPROVED → ACTIVE on first consumption at Authorize (idempotent). */
 	public Mono<JitRequest> markActive(JitRequest request) {
 		if (JitRequest.ACTIVE.equals(request.state())) {
 			return Mono.just(request);
@@ -383,15 +319,9 @@ public class JitLifecycleService {
 				.transactional(requests.save(active)
 						.flatMap(saved -> auditTransition(saved, "jit.activated", "success",
 								detail("grant_expires_at", String.valueOf(saved.grantExpiresAt()))).thenReturn(saved)))
-				// A lost race (another connect activated it first) is benign — it is ACTIVE.
 				.onErrorResume(OptimisticLockingFailureException.class, race -> Mono.just(active));
 	}
 
-	// ----- helpers -----
-
-	// Grant clock = min(snapshot max_ttl, cluster ceiling). A null/non-positive
-	// snapshot (only a legacy row) falls to the ceiling; a real snapshot never
-	// does.
 	private Duration grantTtl(Integer snapshotMaxTtl) {
 		long ceiling = properties.getMaxGrantTtl().toSeconds();
 		long base = (snapshotMaxTtl == null || snapshotMaxTtl <= 0) ? ceiling : snapshotMaxTtl;
@@ -405,7 +335,6 @@ public class JitLifecycleService {
 		if (requested == null || requested.isEmpty()) {
 			return List.copyOf(allowed);
 		}
-		// Deny-only: a request can only narrow the policy's capability set.
 		return requested.stream().filter(allowed::contains).distinct().toList();
 	}
 
@@ -437,8 +366,6 @@ public class JitLifecycleService {
 				.detail(full).accessModel(MODEL_JIT).nodeLabels(labels).correlationId(request.id()).build()));
 	}
 
-	// The target node's label snapshot for an audit event (one read; empty when the
-	// node is absent — an unknown-node reject still audits with no labels).
 	private Mono<Map<String, String>> nodeLabels(UUID nodeId) {
 		if (nodeId == null) {
 			return Mono.just(Map.of());

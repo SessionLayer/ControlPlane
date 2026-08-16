@@ -162,7 +162,7 @@ public class AgentEnrollmentService {
 			case TOKEN -> "token";
 			case OIDC -> "oidc";
 			case MTLS -> "mtls";
-			default -> null; // PROOF_NOT_SET / unknown
+			default -> null;
 		};
 	}
 

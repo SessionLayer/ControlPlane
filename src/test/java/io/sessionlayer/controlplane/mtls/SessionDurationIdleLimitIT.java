@@ -60,7 +60,7 @@ class SessionDurationIdleLimitIT extends AbstractMtlsIT {
 		UUID nodeId = seedProdNode();
 		seedAllow(identity, nodeId, List.of("deploy"), List.of("shell"));
 		seedPolicy(identity, null, 300, null);
-		seedPolicy(identity, null, 120, null); // most restrictive wins
+		seedPolicy(identity, null, 120, null);
 
 		AuthorizeResponse response = authorize(enroll("gw-dur-" + unique()), identity, nodeId, "deploy");
 		assertThat(response.getDecision()).isEqualTo(Decision.DECISION_ALLOW);
@@ -157,8 +157,6 @@ class SessionDurationIdleLimitIT extends AbstractMtlsIT {
 				.isEqualTo(response.getSignedContext().toByteArray());
 	}
 
-	// ----------------------- helpers -----------------------
-
 	private static DecisionContext parseSigned(AuthorizeResponse response) {
 		try {
 			return DecisionContext.parseFrom(response.getSignedContext());
@@ -223,7 +221,6 @@ class SessionDurationIdleLimitIT extends AbstractMtlsIT {
 				.block();
 	}
 
-	// A structurally valid sk-ecdsa-sha2-nistp256 wire blob (public material only).
 	private static byte[] skBlob(byte fill) {
 		byte[] q = new byte[65];
 		q[0] = 0x04;

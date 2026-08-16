@@ -6,7 +6,7 @@
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>4.1.0</version>
-		<relativePath/> <!-- lookup parent from repository -->
+		<relativePath/>
 	</parent>
 	<groupId>io.sessionlayer</groupId>
 	<artifactId>controlplane</artifactId>
@@ -32,19 +32,8 @@
 		-->
 		<project.build.outputTimestamp>2025-01-01T00:00:00Z</project.build.outputTimestamp>
 
-		<!--
-		  CycloneDX SBOM plugin (supply chain). Not managed by the Boot BOM;
-		  pinned to the latest stable. Inventory + integrity only — never wired to
-		  a scanner (owner rule).
-		-->
 		<cyclonedx-maven-plugin.version>2.9.2</cyclonedx-maven-plugin.version>
 
-		<!--
-		  Quality-tooling versions NOT managed by the Spring Boot BOM.
-		  Everything gRPC/protobuf-related (grpc-java, protobuf-java, the ascopes
-		  protobuf-maven-plugin, spring-grpc) IS managed by Spring Boot 4.1.0, so it
-		  carries no version here on purpose.
-		-->
 		<spotless-maven-plugin.version>3.8.0</spotless-maven-plugin.version>
 		<maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
 		<checkstyle.version>13.8.0</checkstyle.version>
@@ -57,48 +46,22 @@
 		  KeyUsage / EKU / SAN / BasicConstraints). We do NOT hand-roll X.509 DER and do
 		  NOT reuse the SSH OpenSshCertificateAssembler (that stays SSH-only). BC's
 		  licence (MIT-style) is GPL-3.0-compatible. Pinned explicitly because the BOM
-		  does not manage it; 1.84 is the latest bc-jdk18on release.
+		  does not manage it.
 		-->
 		<bouncycastle.version>1.85</bouncycastle.version>
 
 		<!--
-		  RE2/J — Google's linear-time regular-expression engine (a Java port of
-		  RE2). Used for the data-plane RBAC label `regex` operator: it is
-		  guaranteed to run in time linear in the input, so a
-		  catastrophic-backtracking pattern cannot cause ReDoS on the decision
-		  hot path (a security property here — see guardrails). We do NOT use
-		  java.util.regex for that operator. BSD-style licence (Go licence),
-		  GPL-3.0-compatible; not managed by the Spring Boot BOM, so pinned here.
+		  RE2/J is guaranteed to run in time linear in the input, so a
+		  catastrophic-backtracking pattern cannot cause ReDoS on the data-plane
+		  RBAC label `regex` operator, which is on the decision hot path. We do
+		  NOT use java.util.regex for that operator.
 		-->
 		<re2j.version>1.8</re2j.version>
 
-		<!--
-		  jqwik — property-based testing on the JUnit Platform. Proves
-		  the deny-overrides algebra's load-bearing invariants as PROPERTIES
-		  (order-independence, deny-overrides, default-deny, lock un-overridability,
-		  capability AND-of-denies) rather than a handful of examples. TEST scope
-		  only (never shipped); EPL-2.0, same posture as the JUnit test deps already
-		  present. Not managed by the BOM, so pinned here.
-		-->
 		<jqwik.version>1.10.1</jqwik.version>
 
-		<!--
-		  AWS SDK for Java v2 (Apache-2.0, GPL-3.0-compatible; not managed by the
-		  Spring Boot BOM). Backs two unrelated things: the recording WORM object store
-		  (`s3` — an S3-compatible client plus the S3Presigner that issues the
-		  short-lived, single-object presigned PUT the Gateway uploads the encrypted
-		  recording with, so bytes never proxy through the CP) and the
-		  AWS KMS CA backend (`kms`). Both use the SYNC clients only. Version pinned
-		  via the awssdk BOM (imported below); CVE management is Dependabot's.
-		-->
 		<awssdk.version>2.49.2</awssdk.version>
 
-		<!--
-		  Azure SDK (MIT, GPL-3.0-compatible; not managed by the Spring Boot BOM).
-		  The Azure Key Vault CA backend: the CA private key lives in the vault and
-		  the CP signs by calling it, so no CA private key is in the database or in
-		  process. Version pinned via the azure-sdk-bom imported below.
-		-->
 		<azure.sdk.bom.version>1.3.8</azure.sdk.bom.version>
 
 		<!--
@@ -113,7 +76,6 @@
 
 	<dependencyManagement>
 		<dependencies>
-			<!-- Pin the whole AWS SDK v2 dependency tree to one release (the BOM). -->
 			<dependency>
 				<groupId>software.amazon.awssdk</groupId>
 				<artifactId>bom</artifactId>
@@ -121,7 +83,6 @@
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
-			<!-- Same, for the Azure Key Vault CA backend's tree. -->
 			<dependency>
 				<groupId>com.azure</groupId>
 				<artifactId>azure-sdk-bom</artifactId>
@@ -133,7 +94,6 @@
 	</dependencyManagement>
 
 	<dependencies>
-		<!-- ================= Web (reactive, fully non-blocking) ================= -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webflux</artifactId>
@@ -142,15 +102,6 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
-		<!-- =============== OpenTelemetry distributed tracing =============== -->
-		<!--
-		  One trace stock-client -> Gateway -> CP (authorize + cert-sign) -> node,
-		  W3C-context-propagated over the CP<->GW gRPC plane. Versions
-		  are Boot-managed (spring-boot-dependencies imports the micrometer-tracing +
-		  opentelemetry BOMs) — do NOT hand-pin. The OTLP exporter is OFF unless
-		  management.otlp.tracing.endpoint is set (see application.yml); with no endpoint
-		  only local Logback runs, unchanged.
-		-->
 		<dependency>
 			<groupId>io.micrometer</groupId>
 			<artifactId>micrometer-tracing-bridge-otel</artifactId>
@@ -159,26 +110,11 @@
 			<groupId>io.opentelemetry</groupId>
 			<artifactId>opentelemetry-exporter-otlp</artifactId>
 		</dependency>
-		<!-- jakarta.validation used by the OpenAPI-generated request/response models. -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
 
-		<!-- ================== REST API security =================== -->
-		<!--
-		  Backs the WebFlux security filter chain, the three first-class schemes
-		  (OIDC bearer JWT, mTLS, OAuth client-credentials), and the
-		  OIDC relying-party machinery.
-		    - starter-security          : the reactive SecurityWebFilterChain.
-		    - oauth2-resource-server     : nimbus-jose-jwt ID/bearer-token validation
-		                                   (positive alg allow-list, iss/aud/nonce/exp).
-		    - oauth2-client              : the auth-code + PKCE relying party for the
-		                                   CP-hosted verification page.
-		    - starter-webclient          : the reactive HTTP client the CP uses to reach
-		                                   the IdP (discovery/JWKS/token/device endpoints).
-		  Public meta probes stay unauthenticated via an explicit permitAll rule.
-		-->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
@@ -196,12 +132,10 @@
 			<artifactId>spring-boot-starter-webclient</artifactId>
 		</dependency>
 
-		<!-- ============ gRPC server (Spring gRPC) — Handshake plane ============ -->
 		<!--
-		  CP<->Gateway version-negotiation plane. Spring gRPC binds any
-		  BindableService bean to a standalone Netty gRPC server; the CP overrides
-		  Boot's default plaintext listener with its own mutually-authenticated
-		  TLS 1.3 server (GrpcMtlsServer, VERSIONING.md §7) rather than the
+		  Spring gRPC binds any BindableService bean to a standalone Netty gRPC
+		  server; the CP overrides Boot's default plaintext listener with its own
+		  mutually-authenticated TLS 1.3 server (GrpcMtlsServer) rather than the
 		  auto-configured one.
 		-->
 		<dependency>
@@ -209,41 +143,15 @@
 			<artifactId>spring-boot-starter-grpc-server</artifactId>
 		</dependency>
 
-		<!-- ============ Fully-async data access: R2DBC runtime ================ -->
-		<!--
-		  The application runtime talks to Postgres over R2DBC ONLY (no blocking
-		  JDBC on the WebFlux path). The blocking JDBC driver below is scoped to
-		  Flyway alone.
-		-->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-r2dbc</artifactId>
 		</dependency>
 		<dependency>
-			<!--
-			  COMPILE scope: the R2DBC jsonb converters map
-			  com.fasterxml.jackson JsonNode <-> io.r2dbc.postgresql.codec.Json, so the
-			  driver's Json wrapper type must be on the compile classpath. It is still
-			  only the reactive Postgres driver. See docs/reference/data-model.md
-			  in the SessionLayer/Documentation repo.
-			-->
 			<groupId>org.postgresql</groupId>
 			<artifactId>r2dbc-postgresql</artifactId>
 		</dependency>
 
-		<!-- ============ Flyway migrations: JDBC-ONLY, startup-only ============ -->
-		<!--
-		  Flyway is JDBC-only (no R2DBC support) and runs once at startup against a
-		  DEDICATED migration datasource built from spring.flyway.* . It never
-		  serves request traffic. HikariCP below is the pool for that datasource
-		  only; the blocking postgresql JDBC driver exists solely for Flyway.
-
-		  spring-boot-flyway is Boot 4.x's modular Flyway auto-configuration; it
-		  pulls flyway-core + spring-boot-jdbc (the JDBC autoconfig module — NOT
-		  spring-boot-starter-jdbc). The primary blocking DataSource is disabled by
-		  a DataSourceAutoConfiguration exclude in ControlplaneApplication, so the
-		  app runtime stays R2DBC-only.
-		-->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-flyway</artifactId>
@@ -258,19 +166,11 @@
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
-			<!-- JDBC connection pool for Flyway's dedicated migration datasource ONLY. -->
 			<groupId>com.zaxxer</groupId>
 			<artifactId>HikariCP</artifactId>
 			<scope>runtime</scope>
 		</dependency>
 
-		<!-- ================= Internal mTLS CA (X.509) — BouncyCastle ============ -->
-		<!--
-		  The internal mTLS CA (X.509, ECDSA P-256, distinct from the SSH
-		  CAs): CA self-signed cert issuance, PKCS#10 CSR parse + proof-of-possession,
-		  server/client leaf issuance. bcpkix pulls bcprov + bcutil transitively; all
-		  three pinned to ${bouncycastle.version} (the BOM does not manage BC).
-		-->
 		<dependency>
 			<groupId>org.bouncycastle</groupId>
 			<artifactId>bcpkix-jdk18on</artifactId>
@@ -287,26 +187,13 @@
 			<version>${bouncycastle.version}</version>
 		</dependency>
 
-		<!-- ============ Data-plane RBAC label-regex: RE2/J (linear-time) ======= -->
-		<!--
-		  The anchored-RE2 label operator. Linear-time by construction, so a
-		  catastrophic-backtracking pattern completes in bounded time — no ReDoS
-		  on the decision path (guardrails). NOT java.util.regex.
-		-->
 		<dependency>
 			<groupId>com.google.re2j</groupId>
 			<artifactId>re2j</artifactId>
 			<version>${re2j.version}</version>
 		</dependency>
 
-		<!-- ============ WORM object store (S3/MinIO) — AWS SDK v2 ============= -->
 		<!--
-		  The recording WORM store: an S3-compatible async client + the
-		  S3Presigner. The CP creates the bucket with object-lock enabled and issues a
-		  short-lived, single-object presigned PUT (object-lock mode + retain-until baked
-		  into the signature so the uploader cannot strip the WORM lock). The Gateway
-		  uploads the encrypted bytes directly — never through the CP. The
-		  `s3` artifact bundles the client and the presigner; version from the BOM above.
 
 		  The `netty-nio-client` exclusion is the same hazard the Azure block below
 		  describes: it is Netty-4.1-compiled and this service runs the Boot-managed
@@ -333,13 +220,7 @@
 			</exclusions>
 		</dependency>
 
-		<!-- ============ Azure Key Vault CA backend ============================ -->
 		<!--
-		  The CA private key stays in Key Vault: the CP sends a SHA-256 digest and
-		  gets back a P1363 signature, so no CA private key exists in the database
-		  or in this process. `azure-identity` supplies DefaultAzureCredential, so
-		  managed identity / workload identity / a service principal all work with
-		  no code change.
 
 		  The three exclusions are load-bearing, not tidying:
 
@@ -396,13 +277,7 @@
 			<artifactId>azure-core-http-jdk-httpclient</artifactId>
 		</dependency>
 
-		<!-- ============ AWS KMS CA backend ==================================== -->
 		<!--
-		  The CA private key stays in KMS: the CP sends a SHA-256 digest and gets
-		  back a DER signature, so no CA private key exists in the database or in
-		  this process. The SDK's own DefaultCredentialsProvider covers every
-		  deployment shape (IRSA, instance profile, environment, profile) with no
-		  code change and no credential in configuration.
 
 		  `apache5-client` arrives transitively already, but at runtime scope and by
 		  accident of another module's dependencies. AwsKmsSignerFactory names the
@@ -428,17 +303,6 @@
 			<artifactId>apache5-client</artifactId>
 		</dependency>
 
-		<!-- ================= Observability: SLO metrics + hand-wired SDK ======== -->
-		<!--
-		  The OTel tracer deps (micrometer-tracing-bridge-otel + opentelemetry-exporter-
-		  otlp) are declared next to the actuator starter above. Here:
-		    - opentelemetry-sdk              : the SdkTracerProvider we hand-wire in
-		                                       TracingConfiguration (Boot 4.1 does not
-		                                       auto-configure tracing on this classpath).
-		    - micrometer-registry-prometheus : /actuator/prometheus for the SLO metrics.
-		  All versions are Boot-BOM-managed (opentelemetry-bom + micrometer BOMs) — not
-		  hand-pinned.
-		-->
 		<dependency>
 			<groupId>io.opentelemetry</groupId>
 			<artifactId>opentelemetry-sdk</artifactId>
@@ -448,14 +312,12 @@
 			<artifactId>micrometer-registry-prometheus</artifactId>
 		</dependency>
 
-		<!-- ============================ Tooling =============================== -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>
 		</dependency>
 
-		<!-- ============================== Test =============================== -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
@@ -466,7 +328,6 @@
 			<artifactId>spring-boot-starter-webflux-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-		<!-- WebFlux security test support (mutateWith(mockJwt/...), reactive filters). -->
 		<dependency>
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-test</artifactId>
@@ -492,11 +353,6 @@
 			<artifactId>testcontainers-postgresql</artifactId>
 			<scope>test</scope>
 		</dependency>
-		<!--
-		  Vault container for the SSH-engine backend E2E: enables the Vault
-		  SSH secrets engine via the vendored vault-init flow and signs via /ssh/sign
-		  (never /ssh/issue). Managed by the Boot-imported testcontainers BOM (2.x).
-		-->
 		<dependency>
 			<groupId>org.testcontainers</groupId>
 			<artifactId>testcontainers-vault</artifactId>
@@ -515,24 +371,17 @@
 			<artifactId>testcontainers-localstack</artifactId>
 			<scope>test</scope>
 		</dependency>
-		<!-- In-process gRPC transport for the Handshake service test (no ports). -->
 		<dependency>
 			<groupId>io.grpc</groupId>
 			<artifactId>grpc-inprocess</artifactId>
 			<scope>test</scope>
 		</dependency>
-		<!--
-		  Property-based testing for the deny-overrides algebra invariants
-		  (order-independence / deny-overrides / default-deny / lock / capability
-		  AND-of-denies). Runs on the JUnit Platform alongside Jupiter. Test-only.
-		-->
 		<dependency>
 			<groupId>net.jqwik</groupId>
 			<artifactId>jqwik</artifactId>
 			<version>${jqwik.version}</version>
 			<scope>test</scope>
 		</dependency>
-		<!-- In-memory span exporter for the trace-propagation + no-content-in-telemetry gate. -->
 		<dependency>
 			<groupId>io.opentelemetry</groupId>
 			<artifactId>opentelemetry-sdk-testing</artifactId>
@@ -542,14 +391,12 @@
 
 	<build>
 		<plugins>
-			<!-- ========= Contract-first gRPC codegen (from contracts/proto) ========= -->
 			<!--
 			  protoc version + the protoc-gen-grpc-java plugin + the `generate`
 			  execution are all inherited from spring-boot-starter-parent's plugin
 			  management. We only redirect the proto source root at the FROZEN
 			  contracts so `import "sessionlayer/controlplane/v1/common.proto"`
-			  resolves. Generated code is written to target/ and never committed;
-			  a spec change that breaks the API surface fails the compile (drift gate).
+			  resolves.
 			-->
 			<plugin>
 				<groupId>io.github.ascopes</groupId>
@@ -561,13 +408,6 @@
 				</configuration>
 			</plugin>
 
-			<!-- ========= Contract-first REST codegen (from contracts/openapi) ======= -->
-			<!--
-			  Generates Spring WebFlux API interfaces + models from the FROZEN
-			  OpenAPI spec on every build. Controllers implement the generated
-			  interfaces, so a spec change that alters the surface fails the compile
-			  (this is the drift gate). Generated code is not committed.
-			-->
 			<plugin>
 				<groupId>org.openapitools</groupId>
 				<artifactId>openapi-generator-maven-plugin</artifactId>
@@ -610,24 +450,17 @@
 				</executions>
 			</plugin>
 
-			<!-- ===================== Formatting (spotless) ===================== -->
 			<plugin>
 				<groupId>com.diffplug.spotless</groupId>
 				<artifactId>spotless-maven-plugin</artifactId>
 				<version>${spotless-maven-plugin.version}</version>
 				<configuration>
 					<java>
-						<!-- Only hand-written sources; generated code under target/ is excluded. -->
 						<includes>
 							<include>src/main/java/**/*.java</include>
 							<include>src/test/java/**/*.java</include>
 						</includes>
 						<importOrder/>
-						<!--
-						  cleanthat engine (JavaParser-based) rather than the default
-						  google-java-format engine: it removes unused imports without
-						  reaching into JDK compiler internals.
-						-->
 						<removeUnusedImports>
 							<engine>cleanthat-javaparser-unnecessaryimport</engine>
 						</removeUnusedImports>
@@ -656,7 +489,6 @@
 				</executions>
 			</plugin>
 
-			<!-- ===================== Static analysis (checkstyle) ===================== -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-checkstyle-plugin</artifactId>
@@ -670,7 +502,6 @@
 				</dependencies>
 				<configuration>
 					<configLocation>${project.basedir}/config/checkstyle/checkstyle.xml</configLocation>
-					<!-- Lint hand-written sources only; never the generated code under target/. -->
 					<sourceDirectories>
 						<sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
 					</sourceDirectories>
@@ -694,7 +525,6 @@
 				</executions>
 			</plugin>
 
-			<!-- ===== Integration tests (*IT) — the Testcontainers smoke runs here ===== -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-failsafe-plugin</artifactId>
@@ -709,13 +539,11 @@
 				</executions>
 			</plugin>
 
-			<!-- ===================== GraalVM native (currently unused) ===================== -->
 			<plugin>
 				<groupId>org.graalvm.buildtools</groupId>
 				<artifactId>native-maven-plugin</artifactId>
 			</plugin>
 
-			<!-- ===================== SBOM (CycloneDX 1.6) ===================== -->
 			<!--
 			  Declared WITHOUT a lifecycle-bound execution so it stays out of the
 			  fast `gate` build; release.yml invokes `makeAggregateBom` explicitly.
@@ -734,7 +562,6 @@
 				</configuration>
 			</plugin>
 
-			<!-- ===================== Spring Boot repackage ===================== -->
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
@@ -748,7 +575,6 @@
 				</configuration>
 			</plugin>
 
-			<!-- ===================== Compiler (lombok processor) ===================== -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>

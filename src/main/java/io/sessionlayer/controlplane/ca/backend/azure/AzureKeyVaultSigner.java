@@ -9,20 +9,6 @@ import java.security.GeneralSecurityException;
 import java.security.Signature;
 import java.security.interfaces.ECPublicKey;
 
-/**
- * Production {@link KeyVaultSigner}: a {@link CryptographyClient} bound to one
- * pinned key version, plus the pinned public key (resolved from
- * {@code ca_key_material.public_key} at adoption — never re-fetched here, so
- * construction stays network-free).
- *
- * <p>
- * Every signature is verified locally against the pinned key before it is
- * returned. This is what turns "the vault key is pinned" from a documented
- * intent into an enforced one: a vault that signed with a different key,
- * returned the wrong shape, or returned garbage all fail closed here, at the
- * point of signing, instead of at the far end of the fleet when a node refuses
- * a certificate it does not trust.
- */
 public final class AzureKeyVaultSigner implements KeyVaultSigner {
 
 	private final CryptographyClient client;
@@ -50,11 +36,6 @@ public final class AzureKeyVaultSigner implements KeyVaultSigner {
 		try {
 			signature = client.sign(SignatureAlgorithm.ES256, sha256Digest).getSignature();
 		} catch (RuntimeException e) {
-			// getMessage() is built from the key reference and the exception's
-			// class name only, so it is safe to propagate into an API error or a
-			// span; the SDK exception is kept as the cause purely for an operator
-			// reading a full stack trace, where its own message (a Key Vault error
-			// body, not a credential or key) is legitimately useful.
 			throw new KeyVaultSigningException(keyReference, e);
 		}
 		if (!verifiesAgainstPinnedKey(signature, sha256Digest)) {
@@ -82,13 +63,6 @@ public final class AzureKeyVaultSigner implements KeyVaultSigner {
 		}
 	}
 
-	/**
-	 * Fail-closed signing failure. {@code getMessage()} never carries vault
-	 * response content — only the key reference and the failure's class name — so
-	 * it is safe wherever a message alone is surfaced (an API error, a span). The
-	 * cause, when present, is the real SDK exception and is kept on purpose for
-	 * operator diagnosis; a full stack trace dump is expected to show it.
-	 */
 	public static final class KeyVaultSigningException extends CaSigningFailedException {
 		KeyVaultSigningException(String keyReference, Throwable cause) {
 			super("Key Vault signing failed for key '" + keyReference + "' (" + cause.getClass().getSimpleName() + ")",

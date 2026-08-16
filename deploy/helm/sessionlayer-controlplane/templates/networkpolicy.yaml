@@ -13,8 +13,6 @@ spec:
     - Ingress
     - Egress
   ingress:
-    # The mTLS gRPC plane: Gateways enrolling, renewing, authorizing, signing
-    # certificates and streaming locks, and Agents joining and renewing.
     - from:
         {{- with .Values.networkPolicy.gatewayPodSelector }}
         - podSelector:
@@ -56,8 +54,6 @@ spec:
           port: 53
     {{- end }}
     {{- with .Values.networkPolicy.postgresPodSelector }}
-    # Postgres, the single source of truth. For a managed database replace this
-    # selector with an ipBlock under extraEgress.
     - to:
         - podSelector:
             matchLabels:
@@ -67,8 +63,6 @@ spec:
           port: 5432
     {{- end }}
     {{- with .Values.networkPolicy.wormCidrs }}
-    # Presigned URL issuance and the bucket warm-up on boot. Recording bytes
-    # never pass through this process.
     - to:
         {{- range . }}
         - ipBlock:

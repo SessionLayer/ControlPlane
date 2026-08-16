@@ -21,12 +21,8 @@ public class RecordingRetentionService {
 
 	private static final Logger LOG = LoggerFactory.getLogger(RecordingRetentionService.class);
 
-	// Bound one prune cycle so a large backlog drains across cycles without blowing
-	// the cycle's time budget (a stuck cycle must not wedge the scheduler).
 	private static final int MAX_BATCH = 1000;
 
-	// deleted_by stays null on a retention prune (automated, no human actor); the
-	// audit actor is a system sentinel (the stream's actor column is NOT NULL).
 	private static final String RETENTION_ACTOR = "system:retention";
 
 	// Atomically claim a row for deletion: only a still-un-held, un-pruned,
@@ -72,9 +68,6 @@ public class RecordingRetentionService {
 		this.db = db;
 	}
 
-	// Idempotent by desired state: setting a hold to its current value is a no-op
-	// (no version bump, no duplicate audit) — the response still reflects the
-	// state.
 	public Mono<RecordingSummary> setLegalHold(String actor, UUID recordingId, boolean held, String reason) {
 		return loadRef(recordingId).flatMap(ref -> {
 			if (ref.legalHold() == held) {
@@ -113,8 +106,6 @@ public class RecordingRetentionService {
 					.flatMap(claimed -> recordingStore.deleteObject(claimed.objectKey(), claimed.wormMode())
 							.then(audit.record(actor, recordingId.toString(), "recording.delete", "success",
 									claimed.sessionId(), null, Map.of("delete_mode", "governance")))
-							// The object delete failed: roll the claim back + audit, then surface the
-							// error so the caller never gets a false 204.
 							.onErrorResume(
 									error -> unclaim(recordingId, claimed, actor, "recording.delete", "governance")
 											.then(Mono.error(error))))
@@ -122,11 +113,6 @@ public class RecordingRetentionService {
 		});
 	}
 
-	// Erase every governance recording past retention (bounded per cycle); the
-	// atomic
-	// claim per row re-checks eligibility, so a hold placed since the prunable
-	// query
-	// still protects the object. Per-row failures are logged, never fatal.
 	public Mono<Void> prune(String trigger) {
 		Instant now = Instant.now();
 		AtomicLong deleted = new AtomicLong();
@@ -156,16 +142,11 @@ public class RecordingRetentionService {
 								.then(audit.record(RETENTION_ACTOR, recordingId.toString(), "recording.prune",
 										"success", claimed.sessionId(), null, Map.of("delete_mode", "retention")))
 								.thenReturn(Boolean.TRUE)
-								// The object delete failed: roll the claim back + audit so the row is
-								// re-pruned next cycle rather than falsely reported erased. The error
-								// propagates to prune()'s per-row onErrorResume (counted failed).
 								.onErrorResume(error -> unclaim(recordingId, claimed, RETENTION_ACTOR,
 										"recording.prune", "retention").then(Mono.error(error))))
 				.defaultIfEmpty(Boolean.FALSE);
 	}
 
-	// Roll back a claim whose object delete failed, and audit the failed attempt,
-	// so the recording is NOT falsely reported erased.
 	private Mono<Void> unclaim(UUID recordingId, Claimed claimed, String actor, String action, String mode) {
 		return db.sql(UNCLAIM).bind("id", recordingId).fetch().rowsUpdated()
 				.then(audit.record(actor, recordingId.toString(), action, "error", claimed.sessionId(), null,

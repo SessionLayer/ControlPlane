@@ -20,12 +20,6 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-/**
- * Builds a {@link SshCertSigner} for a CA (per-CA, independent backends) and
- * enforces the HA <b>fail-closed</b> semantics: if there is no active CA of the
- * requested kind, or the key material is missing, it errors — it never returns
- * a signer that would sign with the wrong key or skip signing.
- */
 @Service
 public class CaSignerService {
 
@@ -48,28 +42,17 @@ public class CaSignerService {
 		this.awsKmsSignerFactory = awsKmsSignerFactory;
 	}
 
-	/**
-	 * Signals that no signer is available for a CA — the caller MUST fail closed.
-	 */
 	public static final class NoSignerAvailable extends RuntimeException {
 		public NoSignerAvailable(String message) {
 			super(message);
 		}
 	}
 
-	/**
-	 * The signer for the currently-active CA of a kind, or a fail-closed error. A
-	 * real cert-sign request; the signing-availability SLI is measured over the
-	 * {@code request} population.
-	 */
 	public Mono<SshCertSigner> activeSigner(String kind) {
 		return activeSigner(kind, SloMetrics.SOURCE_REQUEST);
 	}
 
 	public Mono<SshCertSigner> activeSigner(String kind, String source) {
-		// Availability SLI: whether an active signer could be obtained. A missing
-		// CA / key material is NoSignerAvailable ("unavailable" = fail-closed, not an
-		// error); anything else is "error". Client-input rejections never reach here.
 		return caConfigs.findByCaKindAndRotationState(kind, "active")
 				.switchIfEmpty(Mono.error(new NoSignerAvailable("no active " + kind + " CA (fail closed)")))
 				.flatMap(this::signerFor).doOnSuccess(signer -> {
@@ -133,9 +116,6 @@ public class CaSignerService {
 				});
 	}
 
-	// The same guarantee as azureSigner above, kept as its own branch rather than
-	// folded into a shared key-service helper: what "fails closed" means here is
-	// one short, literal reading of every step, not a parameterization of two.
 	private Mono<SshCertSigner> awsKmsSigner(CaConfig config) {
 		AwsKmsSignerFactory factory = awsKmsSignerFactory.getIfAvailable();
 		if (factory == null) {

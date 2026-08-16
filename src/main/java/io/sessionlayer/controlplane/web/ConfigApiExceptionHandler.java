@@ -24,14 +24,6 @@ class ConfigApiExceptionHandler {
 	}
 
 	/**
-	 * Bean-validation failures on a request body. These never reached this advice
-	 * before — it handled {@link ApiProblemException} alone — so they fell through
-	 * to the framework's default body of {@code timestamp/path/status/error/
-	 * requestId}, which names no field. The contract declares a {@code Problem}
-	 * response on every operation, and an operator who cannot see WHICH field was
-	 * rejected has to guess; that is what made two live defects undiagnosable.
-	 *
-	 * <p>
 	 * The status Spring chose is preserved rather than reassigned. The defect is
 	 * the missing field name, not the number, and re-mapping these to {@code 422}
 	 * would silently change the answer of every operation on the surface at once.
@@ -46,11 +38,6 @@ class ConfigApiExceptionHandler {
 		return problem(failure.getStatusCode().value(), detail);
 	}
 
-	/**
-	 * A missing or unconvertible query parameter, path variable, or a body that
-	 * could not be decoded at all. Spring's reason already names the parameter;
-	 * what was missing is the RFC 9457 envelope the contract promises.
-	 */
 	@ExceptionHandler(ServerWebInputException.class)
 	ResponseEntity<ProblemDetail> onInputFailure(ServerWebInputException failure) {
 		return problem(failure.getStatusCode().value(), reasonOf(failure));

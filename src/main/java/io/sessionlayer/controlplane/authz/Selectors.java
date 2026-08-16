@@ -5,11 +5,6 @@ import java.util.Map;
 import java.util.Set;
 import tools.jackson.databind.JsonNode;
 
-/**
- * Typed matchers for the three data-plane grant selectors: identity
- * (identities/ groups/all), node label (AND across keys, OR within), and source
- * IP (pure reducer). Malformed selector throws; evaluator fails closed.
- */
 public final class Selectors {
 
 	private Selectors() {
@@ -52,12 +47,12 @@ public final class Selectors {
 
 	public static boolean labelMatches(JsonNode selector, Map<String, String> labels) {
 		if (selector == null) {
-			return true; // no node constraint → applies to all nodes
+			return true;
 		}
 		requireObject(selector, "node_label_selector");
 		for (var entry : selector.properties()) {
 			if (!keyMatches(entry.getValue(), labels.get(entry.getKey()))) {
-				return false; // AND across keys
+				return false;
 			}
 		}
 		return true;
@@ -67,7 +62,7 @@ public final class Selectors {
 		if (condition.isArray()) {
 			for (JsonNode c : condition.values()) {
 				if (conditionMatches(c, labelValue)) {
-					return true; // OR within a key
+					return true;
 				}
 			}
 			return false;
@@ -82,7 +77,7 @@ public final class Selectors {
 			throw new IllegalArgumentException("label condition missing 'op'");
 		}
 		if (labelValue == null) {
-			return false; // the node has no such label
+			return false;
 		}
 		return switch (op) {
 			case "eq" -> labelValue.equals(requireValue(condition));
@@ -95,7 +90,7 @@ public final class Selectors {
 
 	public static boolean sourceIpPasses(JsonNode condition, String sourceIp) {
 		if (condition == null) {
-			return true; // no source restriction
+			return true;
 		}
 		requireObject(condition, "source_ip_condition");
 		Set<String> permit = cidrs(condition.get("permit_cidrs"));
@@ -103,7 +98,6 @@ public final class Selectors {
 		if (permit.isEmpty() && deny.isEmpty()) {
 			return true;
 		}
-		// Restriction present but source unknown → fail closed (suppressed grant).
 		if (sourceIp == null || sourceIp.isBlank() || !Cidrs.isAddress(sourceIp)) {
 			return false;
 		}

@@ -33,7 +33,6 @@ final class ServerStreamBridge<T> extends BaseSubscriber<T> {
 		if (observer.isReady()) {
 			request(1);
 		}
-		// else: the transport is saturated — onReady() resumes demand.
 	}
 
 	@Override

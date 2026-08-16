@@ -28,10 +28,6 @@ import reactor.core.publisher.Mono;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-/**
- * Audit stream search + get (scope-filtered, not scope-blocked, read-only).
- * Tamper-evidence chain stays verifiable; auditor sees only in-scope rows.
- */
 @RestController
 public class AuditEventController implements AuditEventsApi {
 
@@ -123,10 +119,10 @@ public class AuditEventController implements AuditEventsApi {
 			if (Duration.between(from, now).compareTo(max) > 0) {
 				throw tooWide(max);
 			}
-			return new Window(from, null); // open to now, already bounded below by from
+			return new Window(from, null);
 		}
 		if (to != null) {
-			return new Window(to.minus(max), to); // bound the backward side to the max window
+			return new Window(to.minus(max), to);
 		}
 		return new Window(now.minus(properties.getDefaultWindow()), null);
 	}

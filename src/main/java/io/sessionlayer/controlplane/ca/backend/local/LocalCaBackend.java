@@ -10,17 +10,13 @@ import java.security.interfaces.ECPublicKey;
 
 /**
  * The local (in-process) CA backend: it signs with an in-memory ECDSA private
- * key that was decrypted transiently from its KEK-wrapped form. Java's
- * {@code SHA*withECDSA} produces a DER signature, which is normalized to
- * {@code (r, s)} — the same normalization path as AWS KMS, so the shared code
- * is exercised by the local backend too.
+ * key decrypted transiently from its KEK-wrapped form.
  *
  * <p>
  * <b>Production SHOULD use KMS/KeyVault/Vault</b> so the private key is never
- * in-process; the local backend emits that warning at startup (see
- * {@code LocalCaProvisioner}). The private key is a JCA {@link PrivateKey} that
- * cannot itself be zeroized, so the resident-key exposure is inherent to a
- * local signer and is exactly why a KMS backend is preferred.
+ * in-process: the private key is a JCA {@link PrivateKey} that cannot itself be
+ * zeroized, so the resident-key exposure is inherent to a local signer and is
+ * exactly why a KMS backend is preferred.
  */
 public final class LocalCaBackend implements SignerBackend {
 
@@ -57,7 +53,6 @@ public final class LocalCaBackend implements SignerBackend {
 			signature.update(toBeSigned);
 			return EcdsaSignatures.fromDer(signature.sign());
 		} catch (Exception e) {
-			// Fail closed: never return a wrong/empty signature.
 			throw new IllegalStateException("local CA signing failed", e);
 		}
 	}

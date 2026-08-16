@@ -28,10 +28,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-/**
- * Agent join tokens (RBAC + audited). Issuance returns raw single-use token
- * once; revoke is idempotent.
- */
 @RestController
 public class JoinTokenController implements JoinTokensApi {
 
@@ -64,7 +60,6 @@ public class JoinTokenController implements JoinTokensApi {
 				throw new JoinTokenValidationException("invalid nodeName");
 			}
 			Duration ttl = clampTtl(req.getTtlSeconds());
-			// Persist + audit atomically so a mint that cannot be audited never stands.
 			Mono<AgentJoinTokenService.MintedJoinToken> minted = tx
 					.transactional(
 							joinTokens.mint(nodeName, subject.identity(), ttl)

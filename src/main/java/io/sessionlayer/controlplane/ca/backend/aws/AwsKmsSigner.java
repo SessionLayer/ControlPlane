@@ -11,20 +11,6 @@ import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 
-/**
- * Production {@link KmsSigner}: a shared {@link KmsClient} plus the one key ARN
- * this signer may name, and the pinned public key (resolved from
- * {@code ca_key_material.public_key} at adoption — never re-fetched here, so
- * construction stays network-free).
- *
- * <p>
- * Every signature is verified locally against the pinned key before it is
- * returned. This is what turns "the KMS key is pinned" from a documented intent
- * into an enforced one: KMS signing with a different key, returning the wrong
- * encoding, or returning truncated bytes all fail closed here, at the point of
- * signing, instead of at the far end of the fleet when a node refuses a
- * certificate it does not trust.
- */
 public final class AwsKmsSigner implements KmsSigner {
 
 	private final KmsClient kms;
@@ -54,16 +40,9 @@ public final class AwsKmsSigner implements KmsSigner {
 					.sign(SignRequest.builder().keyId(key.keyArn()).signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
 							.messageType(MessageType.DIGEST).message(SdkBytes.fromByteArray(sha256Digest)).build());
 		} catch (RuntimeException e) {
-			// getMessage() is built from the redacted key reference and the exception's
-			// class name only, so it is safe to propagate into an API error or a span;
-			// the SDK exception is kept as the cause purely for an operator reading a
-			// full stack trace, where its own message (a KMS error body, not a
-			// credential or key) is legitimately useful.
 			throw new KmsSigningException(key.redacted(), e);
 		}
 		if (!key.keyArn().equals(response.keyId())) {
-			// The returned id is deliberately not echoed: it is whatever answered,
-			// and the only fact worth reporting is that it was not the pinned key.
 			throw new KmsSigningException(key.redacted(),
 					"the signature is attributed to a different key than the pinned one");
 		}

@@ -10,12 +10,6 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-/**
- * Mints and atomically consumes the single-use break-glass token. Bound to
- * {gatewayId, identity, nodeId, sourceAddress, exp}, carrying the credential's
- * scoped allowedPrincipals. Stores hash only. Fail closed on any mismatch;
- * never distinguishes reason (deny).
- */
 @Service
 public class BreakglassTokenService {
 
@@ -56,13 +50,10 @@ public class BreakglassTokenService {
 	}
 
 	private static boolean nodeMismatch(UUID tokenNode, UUID requestNode) {
-		// A fleet-scoped token (no node binding) tolerates any node; a bound token must
-		// match the Authorize node exactly.
 		return tokenNode != null && !tokenNode.equals(requestNode);
 	}
 
 	private static boolean sourceMismatch(String tokenSource, String requestSource) {
-		// Source is a deny-only binding: a bound token requires the same source.
 		return tokenSource != null && !tokenSource.equals(requestSource);
 	}
 

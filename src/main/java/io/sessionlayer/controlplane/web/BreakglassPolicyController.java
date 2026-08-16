@@ -18,10 +18,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-/**
- * Break-glass policies CRUD (RBAC + audited, idempotency-key guarded). Omitted
- * safety toggles default to secure (fail SAFE).
- */
 @RestController
 public class BreakglassPolicyController implements BreakglassPoliciesApi {
 

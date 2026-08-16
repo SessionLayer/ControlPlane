@@ -27,26 +27,6 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 
-/**
- * Rotation onto {@code azure_keyvault}, end to end: real Postgres, the real
- * {@code CaConfigService}/{@code CaRotationService}/{@link AzureKeyVaultCaProvisioner}
- * dispatch, with only the vault call itself faked —
- * {@link AzureKeyVaultSignerFactory} swapped for a mock, the same
- * seam-substitution {@code AuditForwarderSeamIT} uses for its own external
- * dependency. The genuine Key Vault wire contract (request shape, bearer
- * challenge, P1363 handling) is {@code KeyVaultSdkContractTest}'s job, not this
- * one's — this proves the write path exists end to end: an active CA can
- * actually move onto Key Vault.
- *
- * <p>
- * Exercises {@code CaConfigService.rotate} directly rather than
- * {@code POST /v1/cas/{id}/rotate}, to keep the assertions on the rows written
- * rather than on a response body. The HTTP surface is wired:
- * {@code CaController.rotateCa} passes {@code RotateCaRequest.backend} straight
- * through, and the full-stack harness drives that path over REST against a real
- * Key Vault endpoint. This test owns the database-level guarantees the harness
- * cannot see — that a refused rotation writes nothing at all.
- */
 class AzureKeyVaultRotationIT extends AbstractAuthIT {
 
 	private static final String VAULT_URI = "https://myvault.vault.azure.net";
@@ -81,7 +61,9 @@ class AzureKeyVaultRotationIT extends AbstractAuthIT {
 
 	@AfterEach
 	void resetCas() {
-		// ca_key_material rows cascade with their ca_config row (V2/V30).
+		// runtime.ca_key_material has NO FK to config.ca_config (V12: a snapshot ref
+		// across the runtime/config boundary), so its rows do not cascade — they are
+		// left behind and each test seeds its own ids.
 		caConfigs.deleteAll().block();
 		Mockito.reset(azureFactory);
 	}
@@ -116,7 +98,7 @@ class AzureKeyVaultRotationIT extends AbstractAuthIT {
 		assertThat(active.keyReference()).isEqualTo("https://myvault.vault.azure.net/keys/session-ca/" + VERSION);
 		assertThat(active.algorithm()).isEqualTo("ecdsa-p256");
 		assertThat(active.rotationState()).isEqualTo("active");
-		assertThat(active.id()).isNotEqualTo(id); // rotation is a NEW row, promoted
+		assertThat(active.id()).isNotEqualTo(id);
 
 		CaKeyMaterial material = caKeyMaterials.findByCaConfigId(active.id()).block();
 		assertThat(material).isNotNull();
@@ -147,7 +129,6 @@ class AzureKeyVaultRotationIT extends AbstractAuthIT {
 				.block()).isInstanceOf(ApiProblemException.class).hasMessageContaining("no key version");
 
 		assertThat(caConfigs.count().block()).isEqualTo(before);
-		// The active CA is still local, untouched, still the one seeded.
 		CaConfig stillActive = caConfigs.findByCaKindAndRotationState("session", "active").block();
 		assertThat(stillActive.id()).isEqualTo(id);
 		assertThat(stillActive.backend()).isEqualTo("local");
@@ -169,16 +150,6 @@ class AzureKeyVaultRotationIT extends AbstractAuthIT {
 		assertThat(caConfigs.count().block()).isEqualTo(before);
 	}
 
-	/**
-	 * A third, separate rejection from
-	 * {@link #aVersionLessReferenceIsRefusedAtRotationAndWritesNothing}: that case
-	 * has no fourth segment at all; this one has a fourth segment that merely
-	 * occupies the version position without being a real Key Vault version (32
-	 * lowercase hex characters). Low severity on its own (a bogus version already
-	 * fails closed at adoption, since a real vault's {@code GET} would 404 and the
-	 * rotation would abort having written nothing regardless), closed here so the
-	 * exact-version pinning rule is actually enforced at parse time.
-	 */
 	@Test
 	void aMalformedKeyVersionIsRefusedAtRotationAndWritesNothing() {
 		when(azureFactory.vaultUri()).thenReturn(VAULT_URI);

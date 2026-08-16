@@ -1,28 +1,10 @@
--- V11 — non-owner CP runtime DB role (writer-role hardening). SessionLayer CP.
---
 -- The append-only + schema-boundary guarantees must hold against a COMPROMISED
 -- APPLICATION DB CREDENTIAL, not only the honest/ORM path the V4 trigger covers. A
 -- trigger cannot stop a role that OWNS the table (ALTER TABLE ... DISABLE TRIGGER /
 -- DROP) or is a superuser (session_replication_role = replica). The fix is to run
 -- the R2DBC runtime as a non-owner, non-superuser role with least privilege, while
--- Flyway migrations keep running as the owner/DDL role (the jdbc-flyway /
--- r2dbc-runtime split).
---
--- This migration runs as the owner. It creates the restricted `cp_runtime` role and
--- grants it: CRUD on config.* and runtime.* EXCEPT runtime.audit_event, on which it
--- gets INSERT/SELECT only; EXECUTE on the helper functions; and default privileges so
--- future owner-created tables auto-grant. It gets NO CREATE, NO ownership, and cannot
--- ALTER/DROP/DISABLE TRIGGER. The runtime connects as this role (spring.r2dbc.username);
--- Flyway connects as the owner (spring.flyway.user). The dedicated IT WriterRoleIT
--- proves the negative capabilities against this credential.
---
--- Password: sourced from the Flyway placeholder ${cpRuntimePassword} (dev default set
--- in application.properties; MUST be overridden + rotated out-of-band in production).
--- Flyway checksums the raw file, so changing the placeholder value never causes a
--- checksum mismatch.
+-- Flyway migrations keep running as the owner/DDL role.
 
--- 1. The restricted role (idempotent; roles are cluster-global). Non-superuser,
---    non-createdb, non-createrole, non-bypassrls, non-owner.
 DO $do$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'cp_runtime') THEN
@@ -32,20 +14,16 @@ END
 $do$;
 ALTER ROLE cp_runtime WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS PASSWORD '${cpRuntimePassword}';
 
--- 2. Schema usage (no CREATE — cannot add objects to either schema).
 GRANT USAGE ON SCHEMA config, runtime TO cp_runtime;
 
--- 3. CONFIG: full CRUD (UI/API config writes + cold-start writes ca_config /
---    operator_settings). No DDL.
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA config TO cp_runtime;
 
--- 4. RUNTIME: full CRUD, then lock audit_event down to INSERT/SELECT.
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA runtime TO cp_runtime;
 REVOKE UPDATE, DELETE, TRUNCATE ON runtime.audit_event FROM cp_runtime;
 
--- 4a. Lock every existing audit partition (seeded in V7, before this role existed)
---     to INSERT/SELECT — defense in depth so a direct-partition UPDATE/DELETE by a
---     compromised credential is also refused, not just access via the parent.
+-- Lock every existing audit partition (seeded in V7, before this role existed) to
+-- INSERT/SELECT — defense in depth so a direct-partition UPDATE/DELETE by a
+-- compromised credential is also refused, not just access via the parent.
 DO $lock$
 DECLARE part record;
 BEGIN
@@ -63,19 +41,16 @@ BEGIN
 END
 $lock$;
 
--- 5. Sequences (belt-and-suspenders; identity columns need no explicit grant).
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA config, runtime TO cp_runtime;
 
--- 6. Function EXECUTE. Postgres grants EXECUTE to PUBLIC by default, which would make
---    the restricted role able to call EVERY function — including the SECURITY DEFINER
---    audit_prune_before, which DROPs audit partitions (a DDL erase the append-only
---    trigger cannot stop). So REVOKE from PUBLIC first, then grant ONLY the safe
---    functions the runtime role needs.
+-- Postgres grants EXECUTE to PUBLIC by default, which would make the restricted role
+-- able to call EVERY function — including the SECURITY DEFINER audit_prune_before,
+-- which DROPs audit partitions (a DDL erase the append-only trigger cannot stop). So
+-- REVOKE from PUBLIC first, then grant ONLY the safe functions the runtime role needs.
 REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA runtime FROM PUBLIC;
 REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA config FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION runtime.is_ip_or_cidr(text) TO cp_runtime;          -- CHECK-constraint validator
-GRANT EXECUTE ON FUNCTION runtime.recording_prunable(timestamptz) TO cp_runtime; -- read-only helper
--- Create-ahead is INSERT-adjacent (bounded, low-risk) so the app may pre-create partitions:
+GRANT EXECUTE ON FUNCTION runtime.is_ip_or_cidr(text) TO cp_runtime;
+GRANT EXECUTE ON FUNCTION runtime.recording_prunable(timestamptz) TO cp_runtime;
 GRANT EXECUTE ON FUNCTION runtime.audit_ensure_partition(date) TO cp_runtime;
 GRANT EXECUTE ON FUNCTION runtime.audit_ensure_partitions(date, integer) TO cp_runtime;
 -- audit_prune_before is DELIBERATELY NOT granted to cp_runtime: retention (partition
@@ -84,9 +59,9 @@ GRANT EXECUTE ON FUNCTION runtime.audit_ensure_partitions(date, integer) TO cp_r
 ALTER DEFAULT PRIVILEGES IN SCHEMA runtime REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
 ALTER DEFAULT PRIVILEGES IN SCHEMA config REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
 
--- 7. Future owner-created tables auto-grant CRUD to cp_runtime (so later sessions need
---    no re-grant). New audit partitions are corrected to INSERT/SELECT by
---    audit_ensure_partition (which REVOKE ALL + GRANT INSERT,SELECT after creating).
+-- Future owner-created tables auto-grant CRUD to cp_runtime. New audit partitions are
+-- corrected to INSERT/SELECT by audit_ensure_partition (which REVOKE ALL + GRANT
+-- INSERT,SELECT after creating).
 ALTER DEFAULT PRIVILEGES IN SCHEMA config
     GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO cp_runtime;
 ALTER DEFAULT PRIVILEGES IN SCHEMA runtime
@@ -96,8 +71,6 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA config
 ALTER DEFAULT PRIVILEGES IN SCHEMA runtime
     GRANT USAGE, SELECT ON SEQUENCES TO cp_runtime;
 
--- 8. Read-only visibility into Flyway's migration history (ops/health can report the
---    schema version; no secrets). Guarded so a non-default history table/schema is a no-op.
 DO $fh$
 BEGIN
     IF to_regclass('public.flyway_schema_history') IS NOT NULL THEN

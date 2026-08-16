@@ -86,7 +86,7 @@ class LockIngestValidationTest {
 
 	@Test
 	void reasonMustBePresentAndBounded() {
-		LockIngestValidation.checkReason("incident-123"); // ok
+		LockIngestValidation.checkReason("incident-123");
 		assertThatThrownBy(() -> LockIngestValidation.checkReason(null)).isInstanceOf(LockValidationException.class);
 		assertThatThrownBy(() -> LockIngestValidation.checkReason("  ")).isInstanceOf(LockValidationException.class);
 		assertThatThrownBy(() -> LockIngestValidation.checkReason("x".repeat(4097)))

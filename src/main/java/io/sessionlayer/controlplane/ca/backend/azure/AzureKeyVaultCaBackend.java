@@ -7,13 +7,6 @@ import io.sessionlayer.controlplane.ca.sign.EcdsaSignatures;
 import java.security.MessageDigest;
 import java.security.interfaces.ECPublicKey;
 
-/**
- * Azure Key Vault CA backend: the CA private key never leaves Key Vault. It
- * hashes the to-be-signed bytes to a SHA-256 digest, has Key Vault sign it, and
- * normalizes the returned <b>P1363</b> {@code r‖s} signature to OpenSSH
- * {@code (r, s)} via {@link EcdsaSignatures#fromP1363}. Signing is delegated to
- * the injectable {@link KeyVaultSigner} seam.
- */
 public final class AzureKeyVaultCaBackend implements SignerBackend {
 
 	private final CaKeyType keyType;

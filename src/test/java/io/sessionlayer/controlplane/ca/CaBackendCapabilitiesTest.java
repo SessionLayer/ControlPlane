@@ -36,11 +36,9 @@ class CaBackendCapabilitiesTest {
 
 	/**
 	 * The refusal names alternatives, which reads as a verified allowlist — so
-	 * every backend it names has to be one that genuinely signs. An earlier version
-	 * steered an operator from one unusable backend to another with the platform's
-	 * endorsement. Checked against {@code isImplemented} rather than a literal
-	 * list, so adding a seam and naming it here fails this test instead of shipping
-	 * the same defect.
+	 * every backend it names has to be one that genuinely signs. Checked against
+	 * {@code isImplemented} rather than a literal list, so adding a seam and naming
+	 * it here fails this test instead of shipping the same defect.
 	 */
 	@Test
 	void everyAlternativeTheRefusalNamesIsABackendThatActuallySigns() {
@@ -61,11 +59,6 @@ class CaBackendCapabilitiesTest {
 		}
 	}
 
-	/**
-	 * The write path and the signer must ask the SAME question, or a backend the
-	 * API accepts and one that can sign become different sets — which is the defect
-	 * this class exists to prevent, one level up.
-	 */
 	@Test
 	void theImplementedPredicateIsTheOneTheSignerAsks() {
 		for (String signs : new String[]{"local", "azure_keyvault", "aws_kms"}) {
@@ -74,12 +67,6 @@ class CaBackendCapabilitiesTest {
 		assertThat(CaBackendCapabilities.isImplemented("vault")).isFalse();
 	}
 
-	/**
-	 * The per-backend algorithm table is still asserted directly rather than
-	 * through {@code validate}, which no longer reaches it for {@code vault}. It
-	 * describes what that seam could sign once wired, so it has to stay correct for
-	 * whoever wires it.
-	 */
 	@Test
 	void theCapabilityTableStillDescribesWhatEachSeamCouldSign() {
 		assertThat(CaBackendCapabilities.forBackend("local").supports("ecdsa-p384")).isTrue();

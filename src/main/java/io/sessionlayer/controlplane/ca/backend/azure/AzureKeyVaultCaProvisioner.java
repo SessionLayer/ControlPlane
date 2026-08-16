@@ -9,17 +9,6 @@ import java.security.interfaces.ECPublicKey;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.stereotype.Component;
 
-/**
- * Adopts an existing Key Vault key as a CA: the rotation-time bridge between
- * {@link KeyVaultKeyReference} (write-path validation) and
- * {@link AzureKeyVaultSignerFactory#fetchPublicKey} (the one vault read this
- * whole seam performs). Present only when
- * {@code sessionlayer.ca.azure.enabled=true} — its absence is the same "not
- * configured" branch {@link AzureKeyVaultSignerFactory}'s absence is for
- * signing, so {@code CaRotationService.NoProvisionerForBackend} is the correct
- * refusal on a Control Plane with no Key Vault support, not a fallback to a
- * database key.
- */
 @Component
 @ConditionalOnBooleanProperty(name = "sessionlayer.ca.azure.enabled")
 public class AzureKeyVaultCaProvisioner implements CaKeyProvisioner {
@@ -35,14 +24,6 @@ public class AzureKeyVaultCaProvisioner implements CaKeyProvisioner {
 		return "azure_keyvault";
 	}
 
-	/**
-	 * Refuses an unversioned or wrong-vault {@code keyReference} before ever
-	 * calling the vault (the write-path enforcement of the pinning and allow-list
-	 * anchor), then resolves the key's public half — the one network call this
-	 * makes, and the one point a CA's whole trust chain is rooted at, so a
-	 * mismatched or wrong-shaped key fails here rather than getting silently
-	 * adopted.
-	 */
 	@Override
 	public Provisioned provision(Request request) {
 		CaBackendCapabilities.validate(backend(), request.algorithm());

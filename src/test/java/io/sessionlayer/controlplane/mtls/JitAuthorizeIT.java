@@ -64,7 +64,7 @@ class JitAuthorizeIT extends AbstractMtlsIT {
 		String identity = "alice-" + unique();
 		String zone = unique();
 		UUID nodeId = seedNode(zone);
-		seedZeroChainPolicy(zone, 1800); // 30-min JIT grant, auto-approved
+		seedZeroChainPolicy(zone, 1800);
 		JitRequest grant = jit.submit(identity, nodeId, "deploy", List.of("shell", "exec"), "prod fix").block();
 		assertThat(grant.state()).isEqualTo(JitRequest.APPROVED);
 
@@ -120,7 +120,6 @@ class JitAuthorizeIT extends AbstractMtlsIT {
 		UUID nodeId = seedNode(zone);
 		seedZeroChainPolicy(zone, 1800);
 		jit.submit(identity, nodeId, "deploy", List.of("shell"), "fix").block();
-		// A Lock on the node denies even a JIT-elevated connect (deny wins).
 		accessLocks.save(AccessLock.create(JSON.objectNode().put("node_id", nodeId.toString()), "strict", null, null,
 				"incident", "tester")).block();
 

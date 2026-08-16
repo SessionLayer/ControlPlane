@@ -66,8 +66,6 @@ public class SessionLimitPolicyConfigService {
 	}
 
 	public Mono<Void> delete(UUID id, String actor) {
-		// Idempotent + auditable: capture the before-state, then delete + record the
-		// change (before/after); a delete of a missing row is still audited.
 		return policies.findById(id).flatMap(before -> deleteWithAudit(id, actor, before))
 				.switchIfEmpty(Mono.defer(() -> deleteWithAudit(id, actor, null)));
 	}
@@ -95,8 +93,6 @@ public class SessionLimitPolicyConfigService {
 		requirePositive("maxConcurrentSessions", maxConcurrentSessions);
 		requirePositive("maxSessionSeconds", maxSessionSeconds);
 		requirePositive("idleTimeoutSeconds", idleTimeoutSeconds);
-		// An all-null policy is a no-op that silently enforces nothing — reject it
-		// pre-commit: no dead config.
 		if (maxConcurrentSessions == null && maxSessionSeconds == null && idleTimeoutSeconds == null) {
 			throw ApiProblemException.validation(
 					"at least one of maxConcurrentSessions/maxSessionSeconds/idleTimeoutSeconds must be set");

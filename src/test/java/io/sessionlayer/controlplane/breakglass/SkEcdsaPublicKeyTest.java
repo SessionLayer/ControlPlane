@@ -9,10 +9,9 @@ import java.util.Base64;
 import org.junit.jupiter.api.Test;
 
 /**
- * The sk-ecdsa FIDO2 wire parser + OpenSSH SHA-256 fingerprint. The fingerprint
- * MUST be byte-identical to {@code ssh-keygen -lf} (which the Gateway sends),
- * i.e. {@code "SHA256:" + base64-nopad(SHA-256(blob))} over the exact wire
- * bytes; and a non-sk / malformed key must fail closed.
+ * The fingerprint MUST be byte-identical to {@code ssh-keygen -lf} (which the
+ * Gateway sends), i.e. {@code "SHA256:" + base64-nopad(SHA-256(blob))} over the
+ * exact wire bytes.
  */
 class SkEcdsaPublicKeyTest {
 

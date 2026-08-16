@@ -20,24 +20,12 @@ import java.time.Instant;
 import java.util.List;
 import javax.net.ssl.X509TrustManager;
 
-/**
- * TLS material for CP's self-managed mTLS gRPC server (TLS 1.3, ephemeral
- * server key, internal CA trust, PKIX re-validation via
- * {@code AuthInterceptor}).
- */
 public record MtlsServerContext(SslContext sslContext, X509Certificate caCertificate, X509TrustManager trustManager) {
 
-	/**
-	 * Server cert lifetime (re-minted on restart, independent of Gateway
-	 * identity-cert TTL).
-	 */
 	private static final Duration SERVER_CERT_TTL = Duration.ofDays(365);
 
 	private static final SecureRandom RANDOM = new SecureRandom();
 
-	/**
-	 * {@code hostnames} become DNS SANs (first is CN).
-	 */
 	public static MtlsServerContext create(X509CaBackend backend, List<String> hostnames, Duration backdate) {
 		if (hostnames == null || hostnames.isEmpty()) {
 			throw new IllegalArgumentException("at least one server hostname (SAN) is required");

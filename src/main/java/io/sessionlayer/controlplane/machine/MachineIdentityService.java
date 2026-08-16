@@ -25,10 +25,6 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-/**
- * Machine identity: issues/revokes credentials and runs the OAuth token
- * endpoint.
- */
 @Service
 public class MachineIdentityService {
 
@@ -68,7 +64,6 @@ public class MachineIdentityService {
 	public record IssuedCredential(ServiceAccountCredential credential, String clientSecret) {
 	}
 
-	/** Signals a rejected client-credentials request (fail closed → 400/401). */
 	public static final class TokenRequestDenied extends RuntimeException {
 		public TokenRequestDenied(String message) {
 			super(message);

@@ -65,7 +65,7 @@ class JitLifecycleIT extends AbstractAuthIT {
 
 		JitRequest submitted = jit.submit(requester, node, "deploy", List.of(), "need access").block();
 		assertThat(submitted.state()).isEqualTo(JitRequest.PENDING_APPROVAL);
-		assertThat(submitted.grantExpiresAt()).isNull(); // the grant clock starts at approval
+		assertThat(submitted.grantExpiresAt()).isNull();
 
 		JitRequest approved = jit.approve(submitted.id(), "boss@corp", List.of(), "ok").block();
 		assertThat(approved.state()).isEqualTo(JitRequest.APPROVED);
@@ -94,7 +94,7 @@ class JitLifecycleIT extends AbstractAuthIT {
 		JitRequest submitted = jit.submit("dave-" + unique(), node, "deploy", List.of(), "two-level").block();
 
 		JitRequest afterFirst = jit.approve(submitted.id(), "approver-a@corp", List.of("l1"), null).block();
-		assertThat(afterFirst.state()).isEqualTo(JitRequest.PENDING_APPROVAL); // still needs level 2
+		assertThat(afterFirst.state()).isEqualTo(JitRequest.PENDING_APPROVAL);
 
 		JitException reacted = catchThrowableOfType(JitException.class,
 				() -> jit.approve(submitted.id(), "approver-a@corp", List.of("l1", "l2"), null).block());
@@ -143,8 +143,6 @@ class JitLifecycleIT extends AbstractAuthIT {
 				List.of("shell"), "x", JitRequest.PENDING_APPROVAL, UUID.randomUUID(), "p", 3600, chain,
 				mapper.createArrayNode(), Instant.now().minus(1, ChronoUnit.MINUTES), null, Instant.now())).block();
 
-		// The approval lands after the window: rejected, and the request is EXPIRED (no
-		// fresh grant TTL) — not left PENDING for the next sweep to catch.
 		JitException tooLate = catchThrowableOfType(JitException.class,
 				() -> jit.approve(overdue.id(), "boss@corp", List.of(), "ok").block());
 		assertThat(tooLate.reason()).isEqualTo(JitException.Reason.NOT_PENDING);
@@ -194,7 +192,7 @@ class JitLifecycleIT extends AbstractAuthIT {
 
 	@Test
 	void submitAgainstANonRequestableTargetIsRejected() {
-		UUID node = seedNode(unique()); // a zone no JIT policy governs
+		UUID node = seedNode(unique());
 		JitException failure = catchThrowableOfType(JitException.class,
 				() -> jit.submit("ivy-" + unique(), node, "deploy", List.of(), "x").block());
 		assertThat(failure.reason()).isEqualTo(JitException.Reason.NOT_REQUESTABLE);

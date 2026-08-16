@@ -3,10 +3,6 @@ package io.sessionlayer.controlplane.breakglass;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/**
- * Properties for the break-glass access model (sessionlayer.breakglass.*).
- * Configures grant TTL, token TTL, offline code defaults, and review SLA.
- */
 @ConfigurationProperties(prefix = "sessionlayer.breakglass")
 public class BreakglassProperties {
 
