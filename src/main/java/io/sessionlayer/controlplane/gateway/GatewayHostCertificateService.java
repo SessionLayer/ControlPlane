@@ -78,10 +78,9 @@ public class GatewayHostCertificateService {
 							null, null, Map.of("principals", String.join(",", principals), "not_after",
 									Long.toString(notAfter.getEpochSecond())))
 							.thenReturn(cert));
-		})
-				.onErrorResume(CaSignerService.NoSignerAvailable.class,
-						unavailable -> audit.record(identity.name(), identity.name(), "gateway.host_cert.sign",
-								"denied", null, null, Map.of("reason", "ca_unavailable")).then(Mono.error(unavailable)))
+		}).onErrorResume(CaSignerService.NoSignerAvailable.class,
+				unavailable -> audit.record(identity.name(), identity.name(), "gateway.host_cert.sign", "denied", null,
+						null, Map.of("reason", "ca_unavailable")).then(Mono.error(unavailable)))
 				// A key service that was reached and then refused is neither an absent CA
 				// nor a client fault, so it needs its own audited branch. The reason is a
 				// fixed constant: a key service's response text must not reach the audit

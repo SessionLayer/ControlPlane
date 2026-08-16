@@ -287,8 +287,8 @@ class CaCrudIT extends AbstractConfigApiIT {
 		client.post().uri("/v1/cas/" + id + "/rotate").header("Authorization", "Bearer " + token)
 				.contentType(MediaType.APPLICATION_JSON).bodyValue(Map.of()).exchange().expectStatus().isOk()
 				.expectBody().jsonPath("$.caKind").isEqualTo("session").jsonPath("$.rotationState").isEqualTo("active")
-				.jsonPath("$.id").value(newId -> assertThat(newId).isNotEqualTo(id))
-				.jsonPath("$.keyReference").value(ref -> assertThat((String) ref).doesNotContain("PRIVATE KEY"));
+				.jsonPath("$.id").value(newId -> assertThat(newId).isNotEqualTo(id)).jsonPath("$.keyReference")
+				.value(ref -> assertThat((String) ref).doesNotContain("PRIVATE KEY"));
 
 		client.get().uri("/v1/cas/" + id).header("Authorization", "Bearer " + token).exchange().expectStatus().isOk()
 				.expectBody().jsonPath("$.rotationState").isEqualTo("outgoing");

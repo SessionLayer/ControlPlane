@@ -100,7 +100,8 @@ public class RecordingController implements RecordingsApi {
 						}));
 	}
 
-	// An out-of-scope deny completes empty → a bodiless 403 (no existence/permission
+	// An out-of-scope deny completes empty → a bodiless 403 (no
+	// existence/permission
 	// disclosure), matching the platform-RBAC gate.
 	private Mono<ResponseEntity<SignedUrl>> issue(UUID recordingId, String idempotencyKey, ServerWebExchange exchange,
 			BiFunction<PlatformSubject, UUID, Mono<PresignedAccess>> op) {

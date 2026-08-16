@@ -23,7 +23,8 @@ public class OtpService {
 
 	// Both sides cast to `inet` (not the strict `cidr`), so an operator-friendly
 	// host-bits CIDR (e.g. 192.168.1.5/24, which the schema stores via lenient
-	// ::inet) does not throw at query time; `<<=` uses the stored masklen's network.
+	// ::inet) does not throw at query time; `<<=` uses the stored masklen's
+	// network.
 	private static final String CONSUME = """
 			UPDATE runtime.otp SET used = true, used_at = now()
 			WHERE otp_hash = :hash AND used = false AND expires_at > now()

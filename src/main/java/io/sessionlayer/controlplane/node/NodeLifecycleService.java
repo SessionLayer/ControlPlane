@@ -30,9 +30,9 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * Every mutation is one transaction (state + lock + audit) and any lock delta is
- * pushed to Gateways <b>after</b> commit, so a Gateway can never be pushed a lock
- * a rolled-back transaction never stored.
+ * Every mutation is one transaction (state + lock + audit) and any lock delta
+ * is pushed to Gateways <b>after</b> commit, so a Gateway can never be pushed a
+ * lock a rolled-back transaction never stored.
  */
 @Service
 public class NodeLifecycleService {
@@ -109,8 +109,8 @@ public class NodeLifecycleService {
 
 	/**
 	 * Delete-then-insert inside one transaction: no reader may observe the node
-	 * anchorless or still trusting the superseded key, and a rollback leaves the old
-	 * anchors exactly as they were.
+	 * anchorless or still trusting the superseded key, and a rollback leaves the
+	 * old anchors exactly as they were.
 	 */
 	public Mono<List<NodeHostKey>> replaceHostAnchors(UUID nodeId, String hostCertificateLine, String pinnedHostKeyLine,
 			String actor) {

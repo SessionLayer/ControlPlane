@@ -20,8 +20,8 @@ import org.junit.jupiter.api.Test;
  * </pre>
  *
  * Run it on its own, as above: the LocalStack fixture the other KMS tests share
- * installs its container credentials into this JVM's system properties, which are
- * the first link of the default chain and would shadow the operator's.
+ * installs its container credentials into this JVM's system properties, which
+ * are the first link of the default chain and would shadow the operator's.
  *
  * <p>
  * The key must be {@code ECC_NIST_P256} with {@code SIGN_VERIFY} usage.

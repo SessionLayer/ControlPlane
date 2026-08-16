@@ -7,9 +7,9 @@ import reactor.core.publisher.Mono;
 
 /**
  * Single-use guard for OAuth {@code private_key_jwt} client-assertion
- * {@code jti} values: RFC 7523 §3 requires that an assertion's {@code jti}
- * MUST NOT replay within its lifetime. Fail-closed: a store error is treated
- * as a replay (deny).
+ * {@code jti} values: RFC 7523 §3 requires that an assertion's {@code jti} MUST
+ * NOT replay within its lifetime. Fail-closed: a store error is treated as a
+ * replay (deny).
  */
 @Service
 public class ConsumedAssertionStore {

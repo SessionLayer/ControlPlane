@@ -26,8 +26,8 @@ import reactor.test.StepVerifier;
 /**
  * Two replicas booting together both reconcile the session-limit defaults, so
  * one loses the optimistic-lock race. Propagating that failure out of an
- * {@code ApplicationReadyEvent} listener is the shape that crash-loops a control
- * plane rather than degrading it.
+ * {@code ApplicationReadyEvent} listener is the shape that crash-loops a
+ * control plane rather than degrading it.
  *
  * <p>
  * These run through {@link BootstrapService#runAtStartup()} rather than the

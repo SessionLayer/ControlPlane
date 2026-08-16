@@ -22,9 +22,9 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 /**
- * The recording-key sub-resource is gated on {@code recording:key-manage} rather
- * than {@code settings:write}: its holder can point future recordings at a key
- * whose private half they control, which no other setting confers.
+ * The recording-key sub-resource is gated on {@code recording:key-manage}
+ * rather than {@code settings:write}: its holder can point future recordings at
+ * a key whose private half they control, which no other setting confers.
  */
 @RestController
 public class OperatorSettingsController implements OperatorSettingsApi {

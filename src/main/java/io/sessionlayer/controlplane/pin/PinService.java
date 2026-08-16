@@ -67,10 +67,10 @@ public class PinService {
 	}
 
 	/**
-	 * The unfiltered form is deliberate: a pin authenticates on its own and outlives
-	 * the session it was created for, so one nobody has accounted for is standing
-	 * access. It discloses nothing new — {@code user:manage}, the permission gating
-	 * this read, also MINTS pins.
+	 * The unfiltered form is deliberate: a pin authenticates on its own and
+	 * outlives the session it was created for, so one nobody has accounted for is
+	 * standing access. It discloses nothing new — {@code user:manage}, the
+	 * permission gating this read, also MINTS pins.
 	 */
 	public Flux<Pin> listActive(String identity) {
 		Instant now = Instant.now();

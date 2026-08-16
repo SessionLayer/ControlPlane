@@ -13,12 +13,7 @@ public record DataPlaneDecision(Effect effect, Reason reason, Set<String> allowe
 
 	/** The decision-log reason (server-side only). */
 	public enum Reason {
-		ALLOWED,
-		LOCKED,
-		EXPLICIT_DENY,
-		NO_MATCHING_ALLOW,
-		PRINCIPAL_NOT_ALLOWED,
-		EVALUATION_ERROR
+		ALLOWED, LOCKED, EXPLICIT_DENY, NO_MATCHING_ALLOW, PRINCIPAL_NOT_ALLOWED, EVALUATION_ERROR
 	}
 
 	public boolean allowed() {

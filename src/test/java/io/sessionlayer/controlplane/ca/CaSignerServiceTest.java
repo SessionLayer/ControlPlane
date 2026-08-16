@@ -29,8 +29,8 @@ import reactor.test.StepVerifier;
 
 /**
  * There is no code path from a key-service {@code ca_config} row to
- * {@link LocalCaFactory}: a CA the operator configured for Key Vault or KMS must
- * never fall back to signing from the database.
+ * {@link LocalCaFactory}: a CA the operator configured for Key Vault or KMS
+ * must never fall back to signing from the database.
  */
 class CaSignerServiceTest {
 

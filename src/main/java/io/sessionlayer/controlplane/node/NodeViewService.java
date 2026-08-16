@@ -17,8 +17,9 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
- * Health for an agentless node is always {@code unknown} by design: the CP holds
- * no continuous liveness signal for a node it dials on demand, and runs no probe.
+ * Health for an agentless node is always {@code unknown} by design: the CP
+ * holds no continuous liveness signal for a node it dials on demand, and runs
+ * no probe.
  */
 @Service
 public class NodeViewService {

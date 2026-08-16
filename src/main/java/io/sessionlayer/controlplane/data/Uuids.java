@@ -16,9 +16,7 @@ public final class Uuids {
 		RANDOM.nextBytes(rand);
 
 		long rand12 = (((long) (rand[0] & 0xFF) << 8) | (rand[1] & 0xFF)) & 0x0FFFL;
-		long msb = ((unixTsMs & 0xFFFFFFFFFFFFL) << 16)
-				| 0x7000L
-				| rand12;
+		long msb = ((unixTsMs & 0xFFFFFFFFFFFFL) << 16) | 0x7000L | rand12;
 
 		long lsb = 0L;
 		for (int i = 2; i < 10; i++) {

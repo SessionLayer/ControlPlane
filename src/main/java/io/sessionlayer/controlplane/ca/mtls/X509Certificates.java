@@ -32,8 +32,8 @@ import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 
 /**
  * Signing uses the JDK's default providers — BouncyCastle is never registered
- * globally with {@code Security.addProvider}, so its algorithms stay scoped to the
- * builders here rather than becoming JVM-wide.
+ * globally with {@code Security.addProvider}, so its algorithms stay scoped to
+ * the builders here rather than becoming JVM-wide.
  */
 public final class X509Certificates {
 

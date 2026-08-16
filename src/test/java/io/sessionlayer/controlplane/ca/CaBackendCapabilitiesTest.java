@@ -35,8 +35,8 @@ class CaBackendCapabilitiesTest {
 	}
 
 	/**
-	 * The refusal names alternatives, which reads as a verified allowlist — so every
-	 * backend it names has to be one that genuinely signs. Checked against
+	 * The refusal names alternatives, which reads as a verified allowlist — so
+	 * every backend it names has to be one that genuinely signs. Checked against
 	 * {@code isImplemented} rather than a literal list, so adding a seam and naming
 	 * it here fails this test instead of shipping the same defect.
 	 */

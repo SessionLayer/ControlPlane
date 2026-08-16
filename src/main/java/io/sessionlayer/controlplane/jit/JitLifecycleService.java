@@ -256,13 +256,12 @@ public class JitLifecycleService {
 		return committed.map(revocation -> {
 			lockFeedHub.publishAdded(revocation.lock());
 			return revocation.request();
-		})
-				.onErrorResume(OptimisticLockingFailureException.class,
-						race -> requests.findById(requestId)
-								.flatMap(fresh -> JitRequest.REVOKED.equals(fresh.state())
-										? Mono.just(fresh)
-										: Mono.error(new JitException(JitException.Reason.NOT_REVOCABLE,
-												"only an approved or active grant can be revoked"))));
+		}).onErrorResume(OptimisticLockingFailureException.class,
+				race -> requests.findById(requestId)
+						.flatMap(fresh -> JitRequest.REVOKED.equals(fresh.state())
+								? Mono.just(fresh)
+								: Mono.error(new JitException(JitException.Reason.NOT_REVOCABLE,
+										"only an approved or active grant can be revoked"))));
 	}
 
 	private record Revocation(JitRequest request, AccessLock lock) {

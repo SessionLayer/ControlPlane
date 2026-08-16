@@ -228,8 +228,7 @@ class AwsKmsSignerTest {
 		AwsKmsSigner signer = new AwsKmsSigner(clientReturning(response), (ECPublicKey) ca.getPublic(), KEY);
 
 		assertThatThrownBy(() -> signer.signDigestDer(digest)).isInstanceOf(KmsSigningException.class)
-				.hasMessageContaining("attributed to a different key")
-				.hasMessageNotContaining("99998888");
+				.hasMessageContaining("attributed to a different key").hasMessageNotContaining("99998888");
 	}
 
 	@Test

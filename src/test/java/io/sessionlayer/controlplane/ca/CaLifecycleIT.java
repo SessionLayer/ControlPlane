@@ -111,7 +111,8 @@ class CaLifecycleIT {
 	/**
 	 * Both rotations are checked against the actual generated key (its EC field
 	 * size), not just the {@code ca_config.algorithm} label, so a fix that only
-	 * relabels the row without generating a real stronger key would still fail here.
+	 * relabels the row without generating a real stronger key would still fail
+	 * here.
 	 *
 	 * <p>
 	 * Exercised on {@code host}, not {@code session}: two rotations with no drain
