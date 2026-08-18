@@ -119,7 +119,7 @@ public class OuterLegAuthService extends OuterLegAuthGrpc.OuterLegAuthImplBase {
 		};
 		boolean approved = wire == DeviceFlowStatus.DEVICE_FLOW_STATUS_APPROVED && status.identity() != null
 				&& !status.identity().isBlank();
-		// Device-flow logins carry no cert/OTP principal reducer — RBAC alone decides
+		// Device-flow logins carry no cert/OTP principal reducer - RBAC alone decides
 		// the logins (principals empty). Groups are not persisted on the device_flow
 		// row, so they are empty here; group-based selectors for device-flow logins
 		// would require persisting the OIDC groups captured at the verification page.

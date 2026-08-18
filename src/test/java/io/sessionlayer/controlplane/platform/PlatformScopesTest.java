@@ -48,7 +48,7 @@ class PlatformScopesTest {
 	@Test
 	void degenerateFacetCoversNothing() {
 		// A present-but-empty recognized facet imposes NO constraint. It must cover
-		// NOTHING (fail closed), matching AuditSearchSql's non-empty-AND predicate — a
+		// NOTHING (fail closed), matching AuditSearchSql's non-empty-AND predicate - a
 		// scoped auditor could otherwise read out-of-scope events by id (the search hid
 		// them, the get-by-id matcher did not).
 		assertThat(PlatformScopes.covers(JSON.objectNode().set("node_labels", JSON.objectNode()), REQUEST)).isFalse();

@@ -53,7 +53,7 @@ public class SecurityProperties {
 
 		/**
 		 * The gate denies a CIDR it cannot parse rather than raising, so a typo would
-		 * otherwise be indistinguishable from a correct non-match — on the one path an
+		 * otherwise be indistinguishable from a correct non-match - on the one path an
 		 * operator walks holding no other credential. Refuse to start instead, naming
 		 * the entry. Only when enabled: a stale entry under a disabled hatch must not
 		 * take the Control Plane down over a feature nobody asked for.

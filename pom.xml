@@ -12,7 +12,7 @@
 	<artifactId>controlplane</artifactId>
 	<version>0.0.2</version>
 	<name>SessionLayer Control Plane</name>
-	<description>SessionLayer Control Plane — API-first control/management plane.</description>
+	<description>SessionLayer Control Plane - API-first control/management plane.</description>
 	<url>https://github.com/SessionLayer/ControlPlane</url>
 	<licenses>
 		<license>
@@ -197,7 +197,7 @@
 		  The `netty-nio-client` exclusion is the same hazard the Azure block below
 		  describes: it is Netty-4.1-compiled and this service runs the Boot-managed
 		  Netty 4.2, whose `netty-codec` split would break it on first use. Nothing
-		  here builds an async AWS client, so it is never loaded — but "never loaded"
+		  here builds an async AWS client, so it is never loaded - but "never loaded"
 		  is a property of today's code, and the artifact is one `AsyncClient` away
 		  from being the default transport. Excluding it from `kms` alone would be
 		  theatre while this dependency still supplied it.
@@ -226,7 +226,7 @@
 		    1.2; this service runs Netty 4.2 and reactor-netty 1.3 (Boot-managed,
 		    and Boot's dependencyManagement wins). Netty 4.2 split `netty-codec`
 		    into `netty-codec-base`/`-compression`, so the 4.1-compiled client
-		    would fail on its first vault call — i.e. exactly while signing a
+		    would fail on its first vault call - i.e. exactly while signing a
 		    certificate. It also drags in netty-tcnative-boringssl-static, and
 		    BoringSSL is an OpenSSL fork this build does not admit. The JDK
 		    HttpClient provider replaces it: no native code, no second Netty.
@@ -358,8 +358,8 @@
 		<!--
 		  LocalStack container for the aws_kms CA backend: its KMS does real
 		  asymmetric key generation and real ECDSA signing over the real AWS
-		  protocol, so the integration tests drive the genuine SDK — request
-		  signing, endpoint resolution, credential chain, DER response handling —
+		  protocol, so the integration tests drive the genuine SDK - request
+		  signing, endpoint resolution, credential chain, DER response handling -
 		  instead of a double of our own signer seam. Managed by the
 		  Boot-imported testcontainers BOM (2.x).
 		-->

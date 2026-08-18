@@ -167,7 +167,7 @@ class JitMergeAuthorizeIT extends AbstractMtlsIT {
 		seedZeroChainPolicy(zone, 1800, List.of("shell", "exec"));
 		JitRequest grant = jit.submit(identity, nodeId, "root", List.of("shell"), "incident fix").block();
 		// A "principal" facet is unscoped by identity/node (matches ANY connect
-		// requesting that login, per LockMatching's OR-across-facets semantics) — the
+		// requesting that login, per LockMatching's OR-across-facets semantics) - the
 		// shared Postgres container spans every test in this class, so the lock is
 		// deleted at the end to avoid leaking into a sibling test that also requests
 		// "root".
@@ -322,7 +322,7 @@ class JitMergeAuthorizeIT extends AbstractMtlsIT {
 		List<AccessLock> locks = accessLocks.findAll().collectList().block();
 		assertThat(locks).anySatisfy(l -> assertThat(l.reason()).contains("jit revoked"));
 
-		// The teardown lock is identity-scoped and short-lived, not session-scoped —
+		// The teardown lock is identity-scoped and short-lived, not session-scoped -
 		// it blocks EVERY connect for this identity (standing included) until it
 		// expires, exactly as it would for a pure-standing or pure-JIT session. This
 		// is accessModel-blind by construction (LockMatching never reads accessModel),

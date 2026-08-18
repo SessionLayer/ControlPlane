@@ -26,10 +26,10 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Cloud CA backends: the KMS and Azure backends are implemented (vault has a
- * class but no bean — CaBackendCapabilities.isImplemented is false for it), and
+ * class but no bean - CaBackendCapabilities.isImplemented is false for it), and
  * their signature normalization and TBS assembly are exercised
  * deterministically with an <b>injected signer double</b> (correct testing of
- * an external dependency, not a deferral — no cloud credentials in CI). The
+ * an external dependency, not a deferral - no cloud credentials in CI). The
  * doubles are backed by a real EC key so the resulting certificate verifies
  * cryptographically.
  */

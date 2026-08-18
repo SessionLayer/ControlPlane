@@ -56,7 +56,7 @@ class AwsKmsRotationIT extends AbstractAuthIT {
 	@AfterEach
 	void resetCas() {
 		// runtime.ca_key_material has NO FK to config.ca_config (V12: a snapshot ref
-		// across the runtime/config boundary), so its rows do not cascade — they are
+		// across the runtime/config boundary), so its rows do not cascade - they are
 		// left behind and each test seeds its own ids.
 		caConfigs.deleteAll().block();
 	}
@@ -113,7 +113,7 @@ class AwsKmsRotationIT extends AbstractAuthIT {
 	}
 
 	/**
-	 * The signer is still built — construction is I/O-free by design — and it is
+	 * The signer is still built - construction is I/O-free by design - and it is
 	 * still the KMS one, so a key that stops signing surfaces as a refused
 	 * certificate rather than as a certificate no node trusts.
 	 */

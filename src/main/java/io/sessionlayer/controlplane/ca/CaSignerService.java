@@ -67,7 +67,7 @@ public class CaSignerService {
 		return Mono.defer(() -> {
 			// Same predicate the write path refuses on (CaBackendCapabilities.validate),
 			// so a backend the API accepts and one this can sign with cannot become
-			// different sets. This also refuses vault before dispatch is reached — it
+			// different sets. This also refuses vault before dispatch is reached - it
 			// has a class but no bean, so isImplemented is false for it.
 			CaBackendCapabilities.validate(config.backend(), config.algorithm());
 			return switch (config.backend()) {
@@ -75,7 +75,7 @@ public class CaSignerService {
 				case "azure_keyvault" -> azureSigner(config);
 				case "aws_kms" -> awsKmsSigner(config);
 				// Defensive only: CaBackendCapabilities.isImplemented, checked above by
-				// validate(), is the single source of truth for which backends reach here —
+				// validate(), is the single source of truth for which backends reach here -
 				// a backend flipped true there with no case added here must still fail
 				// closed, never fall through to local.
 				default -> Mono.error(new NoSignerAvailable(
@@ -131,7 +131,7 @@ public class CaSignerService {
 					} catch (KmsKeyArn.InvalidKeyReference malformed) {
 						// The rule, never the reference. Here the string is the STORED
 						// key_reference, not the caller's own submission, and this message is
-						// logged on every certificate request the CA takes — so echoing it
+						// logged on every certificate request the CA takes - so echoing it
 						// would write the AWS account id into the log at request volume. The
 						// 422 on the write path is where an operator sees their own value.
 						return Mono.error(new NoSignerAvailable(

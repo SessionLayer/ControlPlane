@@ -26,7 +26,7 @@ import reactor.core.publisher.Mono;
  * back. That makes the CEILING the ratchet's matching guard rather than a
  * nicety: a retention far enough out overflows the retain-until timestamp when
  * it is stamped onto a recording, every {@code BeginRecording} then fails, and
- * every session is refused (strict) or runs unrecorded (strict off) — with no
+ * every session is refused (strict) or runs unrecorded (strict off) - with no
  * way back down through this API.
  *
  * <p>
@@ -84,7 +84,7 @@ class OperatorSettingsRetentionRatchetTest {
 
 	/**
 	 * The positive control. Without a case that reaches the write, every assertion
-	 * above passes against a service that refuses everything — and a guard that
+	 * above passes against a service that refuses everything - and a guard that
 	 * cannot be satisfied looks exactly like a guard that works.
 	 */
 	@Test

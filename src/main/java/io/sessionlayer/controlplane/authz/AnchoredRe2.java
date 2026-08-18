@@ -3,7 +3,7 @@ package io.sessionlayer.controlplane.authz;
 import com.google.re2j.Pattern;
 
 /**
- * Anchored RE2/J label operator — no backtracking, so ReDoS-safe.
+ * Anchored RE2/J label operator - no backtracking, so ReDoS-safe.
  */
 public final class AnchoredRe2 {
 

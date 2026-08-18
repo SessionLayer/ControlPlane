@@ -59,7 +59,7 @@ public final class LocalCaKeyStore {
 				d.destroy();
 			}
 		} catch (Exception ignored) {
-			// Most JCA private keys throw DestroyFailedException (no-op destroy) — the
+			// Most JCA private keys throw DestroyFailedException (no-op destroy) - the
 			// scalar lives in an immutable BigInteger and is reclaimed only by GC; this is
 			// inherent to a local software signer (why production SHOULD use
 			// KMS/KeyVault/Vault).

@@ -28,7 +28,7 @@ import org.springframework.stereotype.Component;
  * provisions) the internal mTLS CA, mints the server certificate +
  * {@link MtlsServerContext}, binds every {@link BindableService} bean behind
  * the {@link AuthInterceptor}, and starts listening. A failure here crashes the
- * boot (fail closed — the orchestrator heals), never a plaintext fallback.
+ * boot (fail closed - the orchestrator heals), never a plaintext fallback.
  */
 @Component
 public class GrpcMtlsServer implements SmartLifecycle {

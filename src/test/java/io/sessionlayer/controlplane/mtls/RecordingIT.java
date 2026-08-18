@@ -382,7 +382,7 @@ class RecordingIT extends AbstractMtlsIT {
 		RecordingRef ref = recordings.findBySessionId(sessionId).block();
 		assertThat(ref.objectVersionId()).isEqualTo("ver-abc-123");
 
-		// A same-status re-finalize with an EVIL version id is an idempotent no-op —
+		// A same-status re-finalize with an EVIL version id is an idempotent no-op -
 		// the
 		// pinned version does not move (belt; the DB write-once trigger is the
 		// suspenders).
@@ -391,7 +391,7 @@ class RecordingIT extends AbstractMtlsIT {
 		assertThat(recordings.findBySessionId(sessionId).block().objectVersionId()).isEqualTo("ver-abc-123");
 	}
 
-	// A finalized recording is terminal — RequestUpload is refused so a
+	// A finalized recording is terminal - RequestUpload is refused so a
 	// compromised/buggy Gateway can't shadow the WORM-locked object with a later
 	// version to the same key.
 	@Test
@@ -501,7 +501,7 @@ class RecordingIT extends AbstractMtlsIT {
 		Instant retainUntil = Instant.now().plus(Duration.ofDays(1));
 		PresignedAccess upload = worm.ensureReady().then(worm.presignUpload(objectKey, "compliance", retainUntil))
 				.block();
-		// The object-lock headers are part of the signature — surfaced so the uploader
+		// The object-lock headers are part of the signature - surfaced so the uploader
 		// replays them verbatim (the lock cannot be stripped).
 		assertThat(upload.requiredHeaders().keySet().stream().map(String::toLowerCase))
 				.anyMatch(h -> h.contains("object-lock-mode"));

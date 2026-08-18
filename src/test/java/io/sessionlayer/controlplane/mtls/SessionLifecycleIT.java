@@ -216,7 +216,7 @@ class SessionLifecycleIT extends AbstractMtlsIT {
 		Instant before = sessionLeases.findBySessionId(sessionId).block().expiresAt();
 		extend(gateway, sessionId);
 		Instant after = sessionLeases.findBySessionId(sessionId).block().expiresAt();
-		assertThat(after).isEqualTo(before); // 1h remaining > the 15m window — untouched
+		assertThat(after).isEqualTo(before); // 1h remaining > the 15m window - untouched
 	}
 
 	@Test
@@ -239,7 +239,7 @@ class SessionLifecycleIT extends AbstractMtlsIT {
 		assertThatThrownBy(() -> extend(gateway, released)).isInstanceOfSatisfying(StatusRuntimeException.class,
 				e -> assertThat(e.getStatus().getCode()).isEqualTo(Status.Code.FAILED_PRECONDITION));
 		assertThat(sessionLeases.findBySessionId(released).block().releasedAt()).isNotNull();
-		// The reaped-a-live-session signature is LOUD — a refused extend for a
+		// The reaped-a-live-session signature is LOUD - a refused extend for a
 		// session that is NOT ended warns (silent under-count would otherwise be
 		// invisible) and the refusal is counted.
 		assertThat(lifecycleCount("extend_session_lease", "refused")).isEqualTo(refusedBefore + 1);

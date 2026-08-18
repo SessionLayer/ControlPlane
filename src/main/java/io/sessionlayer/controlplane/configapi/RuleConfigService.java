@@ -91,7 +91,7 @@ public class RuleConfigService {
 	 * An allow's grant has a lifetime and must carry one; a deny grants nothing, so
 	 * it has none to bound and may omit it. A value sent on a deny is STORED as
 	 * given rather than nulled: "ignored" describes what the evaluator does with it
-	 * — {@code DenyOverridesPolicyEngine} reads a TTL only from allows — and
+	 * - {@code DenyOverridesPolicyEngine} reads a TTL only from allows - and
 	 * rewriting a caller's field on their behalf would change what a published
 	 * endpoint echoes, and silently drop the value on the next update of any deny
 	 * rule that already carries one.

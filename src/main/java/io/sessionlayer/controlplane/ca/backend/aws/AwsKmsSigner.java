@@ -51,7 +51,7 @@ public final class AwsKmsSigner implements KmsSigner {
 					"signature was produced with " + response.signingAlgorithm() + ", not ECDSA_SHA_256");
 		}
 		// The SDK models the signature as optional, so an absent one is a null here
-		// rather than an exception — checked so it fails as a signing refusal and not
+		// rather than an exception - checked so it fails as a signing refusal and not
 		// as a NullPointerException with no key in its message.
 		if (response.signature() == null) {
 			throw new KmsSigningException(key.redacted(), "the response carried no signature");
@@ -82,8 +82,8 @@ public final class AwsKmsSigner implements KmsSigner {
 
 	/**
 	 * Fail-closed signing failure. {@code getMessage()} never carries KMS response
-	 * content — only the <b>account-redacted</b> key reference and the failure's
-	 * class name — so it is safe wherever a message alone is surfaced. That matters
+	 * content - only the <b>account-redacted</b> key reference and the failure's
+	 * class name - so it is safe wherever a message alone is surfaced. That matters
 	 * more here than it reads: {@code GrpcErrors} logs this message at WARN on
 	 * every signing refusal, so an unredacted ARN would write the AWS account id
 	 * into the Control Plane's logs on exactly the failure an operator is most

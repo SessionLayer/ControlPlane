@@ -68,7 +68,7 @@ final class LockIngestValidation {
 
 	static Integer normalizeTtl(Long ttlSeconds) {
 		if (ttlSeconds == null) {
-			return null; // no expiry — the lock stands until released
+			return null; // no expiry - the lock stands until released
 		}
 		if (ttlSeconds <= 0 || ttlSeconds > Integer.MAX_VALUE) {
 			throw invalid("ttlSeconds must be a positive number of seconds");

@@ -11,8 +11,8 @@ public class NodeRequestException extends RuntimeException {
 	public enum Reason {
 		INVALID_ARGUMENT, NOT_FOUND, CONFLICT,
 		/**
-		 * Well-formed request, unusable content — an empty or malformed anchor set on a
-		 * host-anchor replace — 422. Distinct from INVALID_ARGUMENT because the anchors
+		 * Well-formed request, unusable content - an empty or malformed anchor set on a
+		 * host-anchor replace - 422. Distinct from INVALID_ARGUMENT because the anchors
 		 * contract states these as {@code 422}.
 		 */
 		UNPROCESSABLE

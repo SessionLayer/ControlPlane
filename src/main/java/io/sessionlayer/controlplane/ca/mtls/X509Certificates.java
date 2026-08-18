@@ -31,7 +31,7 @@ import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 
 /**
- * Signing uses the JDK's default providers — BouncyCastle is never registered
+ * Signing uses the JDK's default providers - BouncyCastle is never registered
  * globally with {@code Security.addProvider}, so its algorithms stay scoped to
  * the builders here rather than becoming JVM-wide.
  */
@@ -87,7 +87,7 @@ public final class X509Certificates {
 			KeyPurposeId purposeId = switch (spec.purpose()) {
 				case SERVER -> KeyPurposeId.id_kp_serverAuth;
 				case CLIENT -> KeyPurposeId.id_kp_clientAuth;
-				// A data/artifact signer, not a TLS endpoint — the closest standard EKU.
+				// A data/artifact signer, not a TLS endpoint - the closest standard EKU.
 				case CONTEXT_SIGNER -> KeyPurposeId.id_kp_codeSigning;
 			};
 			builder.addExtension(Extension.extendedKeyUsage, false, new ExtendedKeyUsage(purposeId));
@@ -131,7 +131,7 @@ public final class X509Certificates {
 	}
 
 	/**
-	 * Build a PKIX {@link X509TrustManager} anchored on a single CA certificate —
+	 * Build a PKIX {@link X509TrustManager} anchored on a single CA certificate -
 	 * used by the {@code AuthInterceptor} to independently re-validate a presented
 	 * client-cert chain against the internal CA (not relying solely on the
 	 * TLS-layer toggle, per the trust model in VERSIONING.md §7).

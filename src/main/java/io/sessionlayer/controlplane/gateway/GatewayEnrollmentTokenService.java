@@ -42,7 +42,7 @@ public class GatewayEnrollmentTokenService {
 	}
 
 	/**
-	 * Revoke by marking the token consumed — {@code cp_runtime} holds no DELETE on
+	 * Revoke by marking the token consumed - {@code cp_runtime} holds no DELETE on
 	 * this table (V15 least-privilege) and the enrollment path already refuses a
 	 * consumed token. Idempotent: absent / already-consumed is a no-op, and losing
 	 * the optimistic race means a concurrent consume already reached the same end

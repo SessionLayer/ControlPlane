@@ -63,7 +63,7 @@ class MtlsTrustAnchorIT extends AbstractAuthIT {
 				.header("Authorization", "Bearer " + bearer).exchange().expectStatus().isOk()
 				.expectBody(MtlsTrustAnchor.class).returnResult().getResponseBody();
 
-		// The PEM must be a parseable X.509 whose public key is the CA's — the load
+		// The PEM must be a parseable X.509 whose public key is the CA's - the load
 		// -bearing proof that ca_certificate, not a sibling column, was read.
 		X509Certificate exported = X509Certificates.parse(der(anchor.getPem()));
 		X509Certificate actual = mtlsCa.activeBackend().block().caCertificate();

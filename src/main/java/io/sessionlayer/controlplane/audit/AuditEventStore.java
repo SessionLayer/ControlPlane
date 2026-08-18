@@ -32,7 +32,7 @@ public interface AuditEventStore {
 
 	/**
 	 * Full dimension set. Producer must validate sourceIp (valid IP/CIDR literal)
-	 * and capabilities (raw vocab) — bad values violate column CHECK and roll back
+	 * and capabilities (raw vocab) - bad values violate column CHECK and roll back
 	 * the enclosing transaction.
 	 */
 	record AuditRecord(String actor, String subject, String action, String outcome, UUID sessionId, UUID nodeId,
@@ -138,7 +138,7 @@ public interface AuditEventStore {
 	 * @param scopeGrants
 	 *            the caller's scoped {@code audit:read} grants (each a
 	 *            {@code role_binding.scope} object) OR-ed together; <b>empty means
-	 *            unrestricted</b> (the caller holds an unscoped grant) — the
+	 *            unrestricted</b> (the caller holds an unscoped grant) - the
 	 *            controller must have already denied a caller with no grant at all
 	 */
 	record AuditQuery(String actor, String subject, String action, String outcome, UUID sessionId, UUID nodeId,

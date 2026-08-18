@@ -24,7 +24,7 @@ class CaBackendCapabilitiesTest {
 	 * {@code vault} is an integration seam: its class consumes an interface nothing
 	 * in this build implements, no bean constructs it, and
 	 * {@code CaSignerService.signerFor} refuses it before per-backend dispatch is
-	 * reached. Accepting it stores a CA that cannot issue a single certificate —
+	 * reached. Accepting it stores a CA that cannot issue a single certificate -
 	 * fleet-wide, since the session CA gates every new session.
 	 */
 	@Test
@@ -35,7 +35,7 @@ class CaBackendCapabilitiesTest {
 	}
 
 	/**
-	 * The refusal names alternatives, which reads as a verified allowlist — so
+	 * The refusal names alternatives, which reads as a verified allowlist - so
 	 * every backend it names has to be one that genuinely signs. Checked against
 	 * {@code isImplemented} rather than a literal list, so adding a seam and naming
 	 * it here fails this test instead of shipping the same defect.

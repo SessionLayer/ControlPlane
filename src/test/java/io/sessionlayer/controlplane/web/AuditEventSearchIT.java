@@ -160,7 +160,7 @@ class AuditEventSearchIT extends AbstractConfigApiIT {
 		// so it must cover NOTHING (fail closed). The search predicate (AuditSearchSql)
 		// and the single-event scope check (PlatformScopes.covers via
 		// AuditScopeMatcher)
-		// MUST agree — else a scoped auditor reads via GET /{id} an event the search
+		// MUST agree - else a scoped auditor reads via GET /{id} an event the search
 		// hid.
 		UUID run = UUID.randomUUID();
 		String tag = run.toString().substring(0, 8);
@@ -173,7 +173,7 @@ class AuditEventSearchIT extends AbstractConfigApiIT {
 		assertThat(ids(query(scoped, "correlationId", run.toString()))).isEmpty();
 		assertThat(getStatus(scoped, event.id())).isEqualTo(404);
 
-		// The event genuinely exists — an unrestricted auditor gets it — so the scoped
+		// The event genuinely exists - an unrestricted auditor gets it - so the scoped
 		// 404 is a scope denial, not a missing row.
 		String unrestricted = tokenWith("svc-audit-degen-all-" + run, PlatformPermissions.AUDIT_READ);
 		assertThat(getStatus(unrestricted, event.id())).isEqualTo(200);

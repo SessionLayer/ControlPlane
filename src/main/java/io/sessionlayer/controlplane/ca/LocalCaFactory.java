@@ -98,7 +98,7 @@ public class LocalCaFactory implements CaKeyProvisioner {
 	// warning would go silent after first boot).
 	private void warn(String kind) {
 		if (kekProvider.isDevDefault()) {
-			LOG.warn("SECURITY: the local CA KEK is the built-in DEV default (public constant) — set a real KEK "
+			LOG.warn("SECURITY: the local CA KEK is the built-in DEV default (public constant) - set a real KEK "
 					+ "(sessionlayer.ca.local.kek-base64 / env). This is dev/test ONLY.");
 		}
 		LOG.warn("local CA backend in use for the {} CA; production SHOULD use KMS/KeyVault/Vault so the CA "

@@ -28,8 +28,8 @@ CREATE TABLE runtime.audit_event (
 COMMENT ON TABLE runtime.audit_event IS 'Design §12.2 / FR-AUD-9: single correlated audit stream. PARTITION BY RANGE(occurred_at) for FR-AUD-6 retention (drop old partitions, no DELETE). Append-only trigger + seq chain order re-applied. Composite PK (id, occurred_at); id alone is globally unique (UUIDv7). Hash-chain cols are application-populated.';
 
 -- BEFORE ROW triggers on a partitioned parent are cloned to every current and future
--- partition automatically (PG 13+), so a stray UPDATE/DELETE on any partition — via the
--- parent or directly — is rejected.
+-- partition automatically (PG 13+), so a stray UPDATE/DELETE on any partition - via the
+-- parent or directly - is rejected.
 CREATE TRIGGER audit_event_no_update_delete
     BEFORE UPDATE OR DELETE ON runtime.audit_event
     FOR EACH ROW EXECUTE FUNCTION runtime.audit_event_immutable();

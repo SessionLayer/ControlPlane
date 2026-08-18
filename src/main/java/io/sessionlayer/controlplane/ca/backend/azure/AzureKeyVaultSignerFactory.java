@@ -24,17 +24,17 @@ import org.springframework.stereotype.Component;
 
 /**
  * Builds {@link KeyVaultSigner}s and resolves adoption-time public keys.
- * Present only when {@code sessionlayer.ca.azure.enabled=true} — its absence as
+ * Present only when {@code sessionlayer.ca.azure.enabled=true} - its absence as
  * a bean IS the "Azure support not configured" branch {@code CaSignerService}
  * refuses on, so there is nothing here that quietly degrades.
  *
  * <p>
  * The {@link TokenCredential} and the JDK {@link HttpClient} are built once, at
- * bean construction, and building them does no I/O — the SDK resolves the
+ * bean construction, and building them does no I/O - the SDK resolves the
  * credential chain and opens no connection until a request is made (proven by
  * {@code AzureCredentialsSmokeTest}). One exception: {@code WORKLOAD_IDENTITY}
  * validates its AKS-injected properties (tenant id, federated token file path)
- * eagerly and throws if they are absent, still without touching the network —
+ * eagerly and throws if they are absent, still without touching the network -
  * off an actual Workload-Identity-Federated pod this fails the bean at
  * construction, which is the correct fail-closed shape for that credential, not
  * a defect. Signer construction ({@link #signerFor}) is likewise I/O-free: only

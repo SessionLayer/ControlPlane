@@ -38,7 +38,7 @@ groups:
         labels: { severity: critical, slo: availability }
         annotations:
           summary: "CP CA-signer availability < 99.9%"
-          description: "Availability = {{ $value | humanizePercentage }} over 30m of REAL sign requests. The session CA gates all NEW sessions — this is an SLO peer of the datastore. Fails CLOSED (no cert ever issued), so this is a hard new-session outage, not a security regression."
+          description: "Availability = {{ $value | humanizePercentage }} over 30m of REAL sign requests. The session CA gates all NEW sessions - this is an SLO peer of the datastore. Fails CLOSED (no cert ever issued), so this is a hard new-session outage, not a security regression."
           runbook_url: "https://github.com/SessionLayer/Documentation/blob/main/docs/operations/troubleshooting.md#service-temporarily-unavailable"
 
       # A fast-burn companion so a total signer outage pages in minutes, not after
@@ -63,7 +63,7 @@ groups:
         labels: { severity: critical }
         annotations:
           summary: "CP Authorize error-rate > 10%"
-          description: "Errored (not deny — {{ $value | humanizePercentage }}) establishment decisions. Errors fail closed; a spike means a degraded dependency (DB/lock-stream) turning legitimate sessions away. Investigate before it becomes an availability incident."
+          description: "Errored (not deny - {{ $value | humanizePercentage }}) establishment decisions. Errors fail closed; a spike means a degraded dependency (DB/lock-stream) turning legitimate sessions away. Investigate before it becomes an availability incident."
           runbook_url: "https://github.com/SessionLayer/Documentation/blob/main/docs/operations/troubleshooting.md#access-denied-by-policy-when-the-user-swears-they-should-have-access"
 
       - alert: NoAuthorizeTraffic

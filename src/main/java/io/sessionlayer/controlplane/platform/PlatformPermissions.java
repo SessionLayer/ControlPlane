@@ -34,7 +34,7 @@ public final class PlatformPermissions {
 	/**
 	 * {@link #METRICS_READ} is deliberately absent. The meter set is a fleet-wide
 	 * aggregate with no per-node or per-user dimension to narrow, so a scope could
-	 * only be a no-op or serve a silently PARTIAL meter set — and a scraper that
+	 * only be a no-op or serve a silently PARTIAL meter set - and a scraper that
 	 * receives incomplete metrics without knowing it builds confident wrong
 	 * dashboards, which is worse than the clean 403 it gets without the permission.
 	 */

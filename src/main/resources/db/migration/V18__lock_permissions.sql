@@ -1,5 +1,5 @@
 -- config.platform_role.permissions CHECK-constrains the allowed permission
--- vocabulary (V2), so it must widen to admit lock:read and lock:write — otherwise a
+-- vocabulary (V2), so it must widen to admit lock:read and lock:write - otherwise a
 -- platform-admin role carrying every PlatformPermissions.ALL entry (incl. the
 -- first-admin bootstrap role) would violate the CHECK.
 --

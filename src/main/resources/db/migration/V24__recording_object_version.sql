@@ -2,8 +2,8 @@
 -- PUT to the same key becomes the "current" version an unversioned GET returns. A
 -- compromised CP (which holds the customer PUBLIC key and so can SEAL a forgery) or
 -- a compromised Gateway could shadow a finalized recording with a re-sealed version
--- to the same key. Recording the version id the Gateway actually PUT — and pinning
--- replay/export to it — makes the finalized bytes the only ones served. The column
+-- to the same key. Recording the version id the Gateway actually PUT - and pinning
+-- replay/export to it - makes the finalized bytes the only ones served. The column
 -- is WRITE-ONCE (like hash_chain_head / content_digest), so even a compromised app
 -- credential (cp_runtime) cannot repoint it; a DB superuser rewriting it remains a
 -- residual.

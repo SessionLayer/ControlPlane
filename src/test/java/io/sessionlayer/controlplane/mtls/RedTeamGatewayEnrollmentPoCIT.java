@@ -326,7 +326,7 @@ class RedTeamGatewayEnrollmentPoCIT extends AbstractMtlsIT {
 
 			try (Socket plain = new Socket(InetAddress.getLoopbackAddress(), port)) {
 				// createSocket(Socket, host, port, autoClose) takes `host` as the peer identity
-				// for endpoint identification WITHOUT re-resolving it — exactly the
+				// for endpoint identification WITHOUT re-resolving it - exactly the
 				// "connect to this address, verify this name" shape the Gateway uses.
 				SSLSocket client = (SSLSocket) clientCtx.getSocketFactory().createSocket(plain, expectedName, port,
 						true);

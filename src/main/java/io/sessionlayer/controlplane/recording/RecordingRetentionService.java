@@ -45,7 +45,7 @@ public class RecordingRetentionService {
 
 	// The atomic claim commits pruned_at FIRST (to close the legal-hold TOCTOU),
 	// but the OBJECT delete can still fail. If it does, roll the claim back so the
-	// row is re-selected next cycle — otherwise metadata reports "erased" while the
+	// row is re-selected next cycle - otherwise metadata reports "erased" while the
 	// encrypted bytes persist (false erasure + orphaned object). The re-claim
 	// re-asserts hold/compliance, so a hold placed meanwhile still protects.
 	private static final String UNCLAIM = """

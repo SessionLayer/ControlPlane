@@ -10,7 +10,7 @@ The release workflow builds `ghcr.io/sessionlayer/controlplane:<tag>` from
 `Dockerfile` on every `v*` tag, for `linux/amd64` and `linux/arm64`. Each push
 carries an SPDX SBOM and SLSA provenance as in-toto attestations on the index,
 and a keyless Sigstore signature over the index and both platform manifests. No
-`:latest` tag is published — pin a tag, or a digest.
+`:latest` tag is published - pin a tag, or a digest.
 
 The runtime is a Java 25 runtime on a distroless base: no shell, no package
 manager, no JDK tooling. It runs as uid 65532 and writes to one path, `/tmp`,

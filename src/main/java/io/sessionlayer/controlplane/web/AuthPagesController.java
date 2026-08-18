@@ -72,7 +72,7 @@ public class AuthPagesController {
 			if ("device".equals(result.purpose()) && result.deviceFlowId() != null) {
 				return deviceFlowService.approve(result.deviceFlowId(), result.identity(), browserIp)
 						.thenReturn(html(200, page("Approved", "You are signed in as " + escape(result.identity())
-								+ ". Return to your terminal — it will continue automatically.")));
+								+ ". Return to your terminal - it will continue automatically.")));
 			}
 			return Mono.just(html(200, page("Signed in", "You are signed in as " + escape(result.identity()) + ".")));
 		}).onErrorResume(IdTokenValidator.InvalidIdToken.class,

@@ -48,7 +48,7 @@ public class CaRotationService {
 	 * No {@link CaKeyProvisioner} is registered for the requested backend in this
 	 * build. Distinct from {@link CaBackendCapabilities.BackendNotImplemented}: a
 	 * backend can be a capable signer while this build's bean wiring has no
-	 * provisioner for it, and rotation must refuse just as hard either way —
+	 * provisioner for it, and rotation must refuse just as hard either way -
 	 * rotation refuses rather than provisioning anywhere else, because a CA the
 	 * operator believes is in a key service must never get a database key by
 	 * fallback.
@@ -63,9 +63,9 @@ public class CaRotationService {
 	/**
 	 * A {@link CaKeyProvisioner} did not complete within {@link #provisionTimeout}
 	 * ({@code sessionlayer.ca.provision-timeout}). The HTTP client's own
-	 * connect/response timeouts are not sufficient alone — a stalled connection
+	 * connect/response timeouts are not sufficient alone - a stalled connection
 	 * between response headers and body can outlive them, and a provisioner need
-	 * not be an HTTP client at all — so this is an independent wall-clock bound
+	 * not be an HTTP client at all - so this is an independent wall-clock bound
 	 * across every backend. Fails closed, naming the key reference rather than
 	 * surfacing a bare {@link TimeoutException}.
 	 */
@@ -85,9 +85,9 @@ public class CaRotationService {
 	}
 
 	/**
-	 * Runs the {@link CaKeyProvisioner} registered for {@code backend} — selected
+	 * Runs the {@link CaKeyProvisioner} registered for {@code backend} - selected
 	 * by backend id rather than branched on, so a key-service backend is a new
-	 * implementation rather than a new case here — off the event loop and bounded
+	 * implementation rather than a new case here - off the event loop and bounded
 	 * by {@link #provisionTimeout}. Deliberately has <b>no transaction</b>:
 	 * provisioning does real network I/O for a key-service backend (the one vault
 	 * read at adoption) or CPU-bound keygen for local, but it writes nothing, so it
@@ -105,7 +105,7 @@ public class CaRotationService {
 						.provision(new CaKeyProvisioner.Request(kind, newName, "incoming", keyReference, algorithm)))
 				.subscribeOn(Schedulers.boundedElastic()).timeout(provisionTimeout)
 				// The kind, not the key reference: nothing maps this exception, so it reaches
-				// the framework's default handler and is logged there — and for a key service
+				// the framework's default handler and is logged there - and for a key service
 				// the reference carries an account identifier. The kind is what an operator
 				// needs to know which rotation stalled.
 				.onErrorMap(TimeoutException.class, e -> new ProvisionTimedOut(backend, kind));

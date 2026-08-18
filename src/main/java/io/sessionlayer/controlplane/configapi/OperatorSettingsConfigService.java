@@ -73,7 +73,7 @@ public class OperatorSettingsConfigService {
 
 	/**
 	 * Which session-limit defaults a deployment property pins right now. Computed
-	 * per request from this Control Plane's configuration, never stored — the same
+	 * per request from this Control Plane's configuration, never stored - the same
 	 * database serves nodes whose properties differ.
 	 */
 	public List<String> deploymentManagedFields() {
@@ -192,7 +192,7 @@ public class OperatorSettingsConfigService {
 
 	private static String privateKeySubmitted(String what) {
 		return "publicKey carries " + what + ": private key material was submitted. Only the PUBLIC half is ever "
-				+ "stored — the platform must not be able to decrypt its own recordings. Submit the base64 DER "
+				+ "stored - the platform must not be able to decrypt its own recordings. Submit the base64 DER "
 				+ "SubjectPublicKeyInfo of the public key and keep the private half offline.";
 	}
 
@@ -230,7 +230,7 @@ public class OperatorSettingsConfigService {
 
 	/**
 	 * A century. The ratchet makes retention one-way, so an absurd value is not
-	 * merely wrong, it is unreversible through this API — and a retention far
+	 * merely wrong, it is unreversible through this API - and a retention far
 	 * enough out overflows the timestamp when it is stamped onto a lock, which
 	 * fails every recording and so refuses every session. The ceiling is the
 	 * matching guard: without it the ratchet turns a typo into an outage only the

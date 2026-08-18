@@ -2,7 +2,7 @@
 -- rules carry real values (some as small as 1) because the column demanded one, and
 -- a migration that failed on them would break startup on exactly the deployments
 -- that have the problem. So the CHECK permits a deny row to carry a positive value
--- OR no value, and only constrains an allow — which must still carry a positive one,
+-- OR no value, and only constrains an allow - which must still carry a positive one,
 -- exactly as before.
 ALTER TABLE config.dp_rule ALTER COLUMN ttl_seconds DROP NOT NULL;
 

@@ -9,7 +9,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 /**
  * A misconfigured {@code sessionlayer.ca.azure.*} fails the application context
- * at startup, naming the property — never a listener that reaches the database
+ * at startup, naming the property - never a listener that reaches the database
  * or network, which is how a blocking readiness check crash-loops a whole fleet
  * instead of refusing one bad config value.
  */

@@ -27,7 +27,7 @@ public final class AuditScopeMatcher {
 
 	// A users facet matches the event if EITHER actor or subject is in the set, so
 	// covers() is tested for each (the node-label/time facets are identical either
-	// way) — the same actor-OR-subject the SQL predicate applies.
+	// way) - the same actor-OR-subject the SQL predicate applies.
 	private static boolean coversUser(JsonNode scope, Map<String, String> labels, Instant at, String user) {
 		try {
 			return PlatformScopes.covers(scope, new PlatformScope(labels, user, at));

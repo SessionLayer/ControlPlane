@@ -148,8 +148,8 @@ public class AgentRenewalService {
 	/**
 	 * A stale generation is either a replay of a call the CP already completed (the
 	 * Agent's response was lost/late and it retried with the same CSR) or a genuine
-	 * clone racing the old generation. A clone cannot reproduce the CSR key — it
-	 * holds its own keypair — so a matching, unexpired receipt for this exact
+	 * clone racing the old generation. A clone cannot reproduce the CSR key - it
+	 * holds its own keypair - so a matching, unexpired receipt for this exact
 	 * (agent, prior generation, CSR key) is proof of the former: replay it instead
 	 * of locking.
 	 */

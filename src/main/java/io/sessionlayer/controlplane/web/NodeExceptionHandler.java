@@ -20,12 +20,12 @@ class NodeExceptionHandler {
 			case CONFLICT -> HttpStatus.CONFLICT;
 			// UNPROCESSABLE_CONTENT, not the deprecated UNPROCESSABLE_ENTITY alias: both
 			// are 422, but they are distinct enum constants and HttpStatusCode.valueOf(422)
-			// resolves to this one — anything comparing status objects rather than codes
+			// resolves to this one - anything comparing status objects rather than codes
 			// reads the alias as a different status.
 			case UNPROCESSABLE -> HttpStatus.UNPROCESSABLE_CONTENT;
 		};
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, failure.getMessage());
-		// The title stays as published — the vocabulary is shared, the wording is this
+		// The title stays as published - the vocabulary is shared, the wording is this
 		// controller's, and changing a response body the contract did not change would
 		// be a breaking change for a cosmetic gain.
 		problem.setType(URI.create(problemType(failure.reason()).typeUri()));

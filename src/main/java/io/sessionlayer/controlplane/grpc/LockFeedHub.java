@@ -64,14 +64,14 @@ public class LockFeedHub {
 	// is diagnostic only: a zero-subscriber drop is covered by the connect-time
 	// snapshot, and a genuine terminal failure breaks each per-connection stream
 	// (LockFeedService fails the buffer on hub onError/onComplete) so the Gateway
-	// reconnects and RESYNCs — this WARN does not by itself trigger a resync.
+	// reconnects and RESYNCs - this WARN does not by itself trigger a resync.
 	private void emit(LockEvent event) {
 		Sinks.EmitResult result;
 		synchronized (sink) {
 			result = sink.tryEmitNext(event);
 		}
 		if (result.isFailure()) {
-			LOG.warn("lock feed hub emit returned {} — delta not fanned out to currently-connected streams", result);
+			LOG.warn("lock feed hub emit returned {} - delta not fanned out to currently-connected streams", result);
 		}
 	}
 }

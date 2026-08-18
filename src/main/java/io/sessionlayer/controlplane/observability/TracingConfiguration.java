@@ -45,7 +45,7 @@ public class TracingConfiguration {
 			OtlpTraceExporter.forEndpoint(otlpEndpoint).ifPresentOrElse(
 					exporter -> tracerProvider.addSpanProcessor(BatchSpanProcessor.builder(exporter).build()),
 					() -> LOG.warn(
-							"OTLP trace export enabled but no management.otlp.tracing.endpoint set — exporter off"));
+							"OTLP trace export enabled but no management.otlp.tracing.endpoint set - exporter off"));
 		} else {
 			LOG.info("OTLP trace exporter disabled (management.otlp.tracing.export.enabled=false); "
 					+ "spans are created but not exported off-box");

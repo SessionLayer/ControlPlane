@@ -36,7 +36,7 @@ public class HostCertSigningService extends HostCertSigningGrpc.HostCertSigningI
 			StreamObserver<SignGatewayHostCertificateResponse> observer) {
 		MtlsPeer peer = MtlsContext.peer();
 		io.opentelemetry.context.Context traceParent = CpTracing.OTEL_PARENT.get();
-		// gatewayId() is null for an Agent peer (cross-namespace) — the service treats
+		// gatewayId() is null for an Agent peer (cross-namespace) - the service treats
 		// that as unauthenticated (a host cert is a Gateway-only credential).
 		Mono<IssuedHostCertificate> signed = signing.sign(peer.gatewayId(), request.getHostPublicKey().toByteArray(),
 				request.getHostPrincipalsList());

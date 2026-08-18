@@ -101,7 +101,7 @@ public class SessionLimitPolicyConfigService {
 
 	// Stricter than the dp_rule surface on purpose: a selector shape the
 	// evaluator quietly ignores (non-array/empty identities/groups, no all:true)
-	// would select NO ONE — a silently-dead limit policy, and no dead config is
+	// would select NO ONE - a silently-dead limit policy, and no dead config is
 	// allowed. The evaluator-parse check still runs first so the accepted shapes
 	// are exactly the ones Authorize resolves.
 	private static void validateSelector(JsonNode selector) {

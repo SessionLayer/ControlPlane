@@ -10,9 +10,9 @@ import java.math.BigInteger;
  * {@code (r, s)} pair the OpenSSH format needs:
  *
  * <ul>
- * <li><b>DER</b> — {@code SEQUENCE { INTEGER r, INTEGER s }} (Java's
+ * <li><b>DER</b> - {@code SEQUENCE { INTEGER r, INTEGER s }} (Java's
  * {@code SHA256withECDSA}, AWS KMS {@code ECDSA_SHA_256}).</li>
- * <li><b>P1363 / raw</b> — {@code r || s} fixed-width big-endian (Azure Key
+ * <li><b>P1363 / raw</b> - {@code r || s} fixed-width big-endian (Azure Key
  * Vault {@code ES256}).</li>
  * </ul>
  *
@@ -65,7 +65,7 @@ public final class EcdsaSignatures {
 	}
 
 	/**
-	 * DER-encode {@code (r, s)} as {@code SEQUENCE { INTEGER r, INTEGER s }} — the
+	 * DER-encode {@code (r, s)} as {@code SEQUENCE { INTEGER r, INTEGER s }} - the
 	 * inverse of {@link #fromDer}, for feeding a JCA {@code Signature.verify} when
 	 * verifying an OpenSSH-format ECDSA signature (whose {@code (r, s)} arrive as
 	 * mpints, not DER). {@link BigInteger#toByteArray()} already yields the minimal

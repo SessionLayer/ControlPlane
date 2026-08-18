@@ -189,7 +189,7 @@ public class ConnectAuthorizationService {
 		}
 		// The outer-leg credential's own login scope, applied FIRST and deny-only: it
 		// can never widen a decision, so it costs nothing to evaluate before grants,
-		// JIT and break-glass — and a scoped credential stays scoped even on a
+		// JIT and break-glass - and a scoped credential stays scoped even on a
 		// break-glass connect. The Gateway applies the same reduction locally before
 		// it ever calls here; sending the scope is what makes the refusal reach the
 		// decision log, which is the whole point. The caller still sees only the
@@ -205,7 +205,7 @@ public class ConnectAuthorizationService {
 
 		// Read grants first, THEN locks, so the lock set is observed at a snapshot no
 		// earlier than the grant set: a concurrently-added deny/lock is never missed
-		// while an allow from the same edit is honored — deny stays dominant.
+		// while an allow from the same edit is honored - deny stays dominant.
 		return dpRules.findAll().collectList().flatMap(grants -> accessLocks.findAll().collectList()
 				.flatMap(locks -> Mono.zip(epochMono, gwNameMono).flatMap(meta -> {
 					long epoch = meta.getT1();
@@ -234,7 +234,7 @@ public class ConnectAuthorizationService {
 		// THE security decision: one evaluate() over standing ∪ JIT (or over
 		// standing alone when no usable grant exists). Lock-wins/deny-overrides are
 		// checked before the principal/allow logic inside the engine, so they are
-		// terminal regardless of whether the JIT rule is present — deny/Lock beat JIT
+		// terminal regardless of whether the JIT rule is present - deny/Lock beat JIT
 		// unconditionally, by construction, not by a guard here.
 		DataPlaneDecision union = engine.evaluate(request, augmented, locks, now);
 		if (!union.allowed()) {
@@ -250,13 +250,13 @@ public class ConnectAuthorizationService {
 					null, union.grantTtlSeconds(), epoch, now);
 		}
 
-		// Attribution ONLY — this never gates the security decision above,
+		// Attribution ONLY - this never gates the security decision above,
 		// which is already final. A second, pure, in-memory evaluate() over standing
-		// alone (cheap — no I/O) tells us whether the grant actually changed THIS
+		// alone (cheap - no I/O) tells us whether the grant actually changed THIS
 		// connect's outcome. allowedLogins can't differ between the two calls here:
 		// union.allowed() already proved the requested login is in scope, and the
 		// synthetic rule's principal is always exactly the requested one
-		// (findUsableGrant filters on it) — so if standing alone also allows it,
+		// (findUsableGrant filters on it) - so if standing alone also allows it,
 		// standing's own allowedLogins already contained it. Only the capability set
 		// (gated per grant, per the engine's own algebra) can differ.
 		DataPlaneDecision standingAlone = engine.evaluate(request, grants, locks, now);
@@ -269,7 +269,7 @@ public class ConnectAuthorizationService {
 		}
 		// The grant was load-bearing: consume it (APPROVED → ACTIVE, idempotent) and
 		// audit the real union outcome. matchedRuleId snapshots a REAL config.dp_rule
-		// row only (runtime.ssh_session carries no FK there) — the synthetic rule is
+		// row only (runtime.ssh_session carries no FK there) - the synthetic rule is
 		// in-memory-only and never persisted, so when it IS the representative (no
 		// standing rule also contributed), record null rather than a dangling id; the
 		// jitRequestId column already carries the provenance.
@@ -401,7 +401,7 @@ public class ConnectAuthorizationService {
 			NodeConnectionInfo nodeConnection = signedAndConn.getT2();
 			// The ssh_session read-then-upsert, the lease probe/acquire, the cap gate, the
 			// tokens, and the allow audit are ALL one transaction (mirrors
-			// SessionLifecycleService.endSession's read-inside-the-tx shape) — a lost
+			// SessionLifecycleService.endSession's read-inside-the-tx shape) - a lost
 			// @Version race on a genuinely concurrent re-Authorize of the SAME session_id
 			// surfaces as an OptimisticLockingFailureException, which the outer
 			// onErrorResume in authorize() already fails closed on.
@@ -423,14 +423,14 @@ public class ConnectAuthorizationService {
 								session.correlationId());
 						boolean leased = !MODEL_BREAKGLASS.equals(accessModel);
 						// Try to refresh THIS session_id's own live lease in
-						// place FIRST — a plain UPDATE, a harmless no-op for a fresh session or a
+						// place FIRST - a plain UPDATE, a harmless no-op for a fresh session or a
 						// break-glass one (which never holds a lease). A hit means this is a
 						// mid-session re-Authorize of an already-counted session: skip the cap gate
 						// entirely (a re-auth at cap must never deny itself) and go straight to
 						// mint. A miss (first Authorize, break-glass, or a self-heal after a reaped
 						// lease) falls through to the ordinary count-then-acquire cap gate,
 						// unchanged. Both outcomes resolve from the SAME statement's row count, all
-						// inside one tx — no separate check-then-act race.
+						// inside one tx - no separate check-then-act race.
 						Mono<Integer> reauthorizeProbe = leased
 								? sessionLeases.reauthorizeBySessionId(sessionId, grantExpiry)
 								: Mono.just(0);
@@ -492,7 +492,7 @@ public class ConnectAuthorizationService {
 	// commit/rollback). Consistent lock order everywhere: per-identity BEFORE the
 	// audit
 	// chain lock, so it cannot deadlock with the audit-append lock. A hashtext()
-	// collision between two DIFFERENT identities only makes them share this lock —
+	// collision between two DIFFERENT identities only makes them share this lock -
 	// harmless extra serialization; the count itself filters by exact identity
 	// text.
 	private Mono<Void> lockIdentity(String identity) {
@@ -607,7 +607,7 @@ public class ConnectAuthorizationService {
 			return caRotation.trustedCaKeys("host").map(caLines -> {
 				List<byte[]> caKeys = caLines.stream().map(ConnectAuthorizationService::wireBlob)
 						.filter(Objects::nonNull).toList();
-				// Advertise the host-CA path only as a complete triple — trusted CA key(s) to
+				// Advertise the host-CA path only as a complete triple - trusted CA key(s) to
 				// check the signature, the cert, and the expected principal. Missing any leg
 				// the Gateway can't verify (no TOFU), so emit none and let pinned / the
 				// empty-warn handle it (upholds the proto invariant: host_certificates
@@ -627,7 +627,7 @@ public class ConnectAuthorizationService {
 		if (!info.hasHostVerification()) {
 			LOG.warn(
 					"{} node {} ({}) has no host-verification material (no host_ca keys, no pinned host keys); "
-							+ "the Gateway will abort the session (no TOFU) — enroll a host cert or pin a host key",
+							+ "the Gateway will abort the session (no TOFU) - enroll a host cert or pin a host key",
 					node.connectorKind(), node.id(), node.name());
 		}
 		return info;
@@ -733,7 +733,7 @@ public class ConnectAuthorizationService {
 
 	// source_ip carries a DB CHECK (is_ip_or_cidr == ::inet); a value that ::inet
 	// would reject is dropped from the COLUMN (kept in detail for forensics) so a
-	// malformed source can never fail the audit insert — which on the allow path
+	// malformed source can never fail the audit insert - which on the allow path
 	// would roll the connect back to a fail-closed deny, and on the deny path would
 	// lose the decision-log row. AuditSourceIp is strict AND non-resolving (no DNS
 	// on the event loop).
@@ -746,7 +746,7 @@ public class ConnectAuthorizationService {
 	}
 
 	// An EMPTY scope means the credential is unscoped, not that it permits
-	// nothing — the wire cannot distinguish "no scope" from "an empty scope", and
+	// nothing - the wire cannot distinguish "no scope" from "an empty scope", and
 	// reading absence as a total refusal would deny every unscoped connect.
 	private static boolean outsideCredentialScope(List<String> credentialPrincipals, String requestedPrincipal) {
 		return credentialPrincipals != null && !credentialPrincipals.isEmpty()

@@ -69,7 +69,7 @@ public final class OpenSshCertificateAssembler {
 		return w.toByteArray();
 	}
 
-	// extensions: sorted (name, empty) — a flag's data is a zero-length string
+	// extensions: sorted (name, empty) - a flag's data is a zero-length string
 	// (still
 	// its 4-byte length prefix). Distinguishing this from a value option is THE
 	// bug.

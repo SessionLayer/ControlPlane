@@ -35,7 +35,7 @@ import reactor.util.concurrent.Queues;
  * {@link io.sessionlayer.controlplane.grpc.AuthInterceptor} has already
  * authenticated the caller from its client certificate; the peer is resolved
  * here for diagnostics only (the whole fleet-wide lock set goes to every
- * Gateway, which matches locally against its signed decision contexts — the CP
+ * Gateway, which matches locally against its signed decision contexts - the CP
  * does no per-Gateway filtering).
  */
 @Service
@@ -65,9 +65,9 @@ public class LockFeedService extends LockFeedGrpc.LockFeedImplBase {
 
 		// The whole-fleet deny-list is sensitive recon
 		// (which identities/nodes/principals are currently locked). Gate the stream on
-		// the caller Gateway being ACTIVE with a pinned fingerprint — the same check
+		// the caller Gateway being ACTIVE with a pinned fingerprint - the same check
 		// the
-		// sign paths enforce — so a locked/superseded-cert Gateway (or any agent)
+		// sign paths enforce - so a locked/superseded-cert Gateway (or any agent)
 		// cannot
 		// read it. Rejection surfaces as a generic PERMISSION_DENIED before any
 		// snapshot.
@@ -98,12 +98,12 @@ public class LockFeedService extends LockFeedGrpc.LockFeedImplBase {
 			// Subscribe to the live multicast BEFORE reading the snapshot: a lock created
 			// during the snapshot read lands in this per-connection buffer and is emitted
 			// right after the snapshot, so no add is ever lost (the Gateway dedups by
-			// lock_id). The buffer is BOUNDED — an overflow (a stalled Gateway) fails the
+			// lock_id). The buffer is BOUNDED - an overflow (a stalled Gateway) fails the
 			// stream, forcing a reconnect + full resync rather than a silently-dropped
 			// deny.
 			Sinks.Many<LockEvent> buffer = Sinks.many().unicast()
 					.onBackpressureBuffer(Queues.<LockEvent>get(properties.getStreamBufferCapacity()).get());
-			// Fail the client stream if the shared hub ever terminates — on error OR on
+			// Fail the client stream if the shared hub ever terminates - on error OR on
 			// an unexpected onComplete. Coasting on heartbeats after the delta source died
 			// would look healthy while silently missing every new lock (fail OPEN); instead
 			// we break the stream so the Gateway reconnects and does a full snapshot RESYNC

@@ -61,7 +61,7 @@ public class BootstrapService {
 				return Mono.empty();
 			}
 			if (adminExists) {
-				LOG.info("first-admin bootstrap: a platform admin already exists — self-disabling");
+				LOG.info("first-admin bootstrap: a platform admin already exists - self-disabling");
 				return completeBootstrap().then();
 			}
 			if (properties.getAdminSubject() != null && !properties.getAdminSubject().isBlank()) {
@@ -73,7 +73,7 @@ public class BootstrapService {
 	}
 
 	/**
-	 * Detects — never mutates — the upgrade defect V29 back-filled.
+	 * Detects - never mutates - the upgrade defect V29 back-filled.
 	 * {@link #ensureAdminRole()} is create-only and this method's caller returns
 	 * early once bootstrap has completed, so a vocabulary-extending migration that
 	 * forgets to back-fill leaves the seeded admin role silently short of the new
@@ -113,7 +113,7 @@ public class BootstrapService {
 				return audit.record(subject, subject, "bootstrap.claim", "denied", null, null,
 						Map.of("reason", "invalid_credential")).thenReturn(ClaimOutcome.INVALID_CREDENTIAL);
 			}
-			// Flip first (single winner), then provision — a lost race never
+			// Flip first (single winner), then provision - a lost race never
 			// double-provisions.
 			return db.sql(CLAIM_COMPLETION).map(row -> row.get("id")).one()
 					.flatMap(won -> provisionAdminRole(subject, "user", "printed_credential")
@@ -157,7 +157,7 @@ public class BootstrapService {
 		String credential = Secrets.randomToken(24);
 		OperatorSettings armed = withCredentialHash(current, Secrets.sha256Hex(credential));
 		return settings.save(armed).doOnSuccess(s -> LOG
-				.warn("FIRST-ADMIN BOOTSTRAP CREDENTIAL (shown once): {}  — claim it via POST /v1/bootstrap/claim "
+				.warn("FIRST-ADMIN BOOTSTRAP CREDENTIAL (shown once): {} - claim it via POST /v1/bootstrap/claim "
 						+ "{{\"credential\":\"...\",\"subject\":\"<subject>\"}}; it self-disables after use. "
 						+ "The subject MUST be exactly the identity you will authenticate as: your OIDC subject "
 						+ "when an IdP is configured, or the value of sessionlayer.rest-security.basic-auth.username "
@@ -165,7 +165,7 @@ public class BootstrapService {
 						+ "successfully and then refuses every authenticated call.", credential))
 				// Stand down, deliberately NOT the retry its neighbour above uses. Losing
 				// this race means a sibling replica armed first and has ALREADY printed
-				// its credential, which is the only copy in existence — only the hash is
+				// its credential, which is the only copy in existence - only the hash is
 				// stored. Re-arming would invalidate a value the operator may already
 				// have copied and leave two printed credentials in aggregated logs with
 				// nothing to say which is dead. A race whose loser can safely repeat its
@@ -206,7 +206,7 @@ public class BootstrapService {
 	// both save with the version they read; the loser's exception propagates out of
 	// this runner and aborts the context, so the pod fails to start over a race
 	// nobody caused. The manifest already reasoned about concurrent pod boot and
-	// solved it for Flyway, which takes a database-level lock — this path has
+	// solved it for Flyway, which takes a database-level lock - this path has
 	// optimistic locking instead and the same exposure. On the retry the row
 	// already matches, so no save is attempted.
 	private Mono<OperatorSettings> reconcileSessionLimitDefaults(OperatorSettings current) {

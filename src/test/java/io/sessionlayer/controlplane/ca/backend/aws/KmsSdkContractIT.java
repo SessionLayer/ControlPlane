@@ -56,7 +56,7 @@ class KmsSdkContractIT {
 	/**
 	 * Adoption's one KMS read, against a real response. {@code validateSigningKey}
 	 * compares the echoed {@code KeyId} to the requested ARN, so a service that
-	 * answered with a bare key id would fail every adoption — a check worth making
+	 * answered with a bare key id would fail every adoption - a check worth making
 	 * against bytes KMS produced rather than against a builder someone filled in.
 	 */
 	@Test
@@ -99,7 +99,7 @@ class KmsSdkContractIT {
 		byte[] p1363 = toP1363(rs);
 
 		// Same (r, s) as the DER form, so nothing below can be passing because the
-		// signature itself is broken — only the encoding differs.
+		// signature itself is broken - only the encoding differs.
 		assertThat(EcdsaSignatures.fromP1363(p1363, CaKeyType.ECDSA_NISTP256)).isEqualTo(rs);
 		assertThat(p1363).hasSize(64).isNotEqualTo(der);
 		assertThatThrownBy(() -> EcdsaSignatures.fromDer(p1363)).isInstanceOf(IllegalArgumentException.class);
@@ -142,8 +142,8 @@ class KmsSdkContractIT {
 	}
 
 	/**
-	 * LocalStack's community edition evaluates no IAM policy — a request carrying
-	 * an invalid credential is served exactly as a valid one is — so the rejection
+	 * LocalStack's community edition evaluates no IAM policy - a request carrying
+	 * an invalid credential is served exactly as a valid one is - so the rejection
 	 * is the one response here that a local KMS cannot produce. The SDK's own error
 	 * unmarshaller turns the wire form into the {@link KmsException} the guard sees
 	 * in production.
@@ -199,7 +199,7 @@ class KmsSdkContractIT {
 	 * The signer always asks for {@code ECDSA_SHA_256} and this key offers only
 	 * {@code ECDSA_SHA_384}. Reaching this at all means the key behind an adopted
 	 * ARN changed shape after adoption refused that shape, so what is under test is
-	 * that no signature comes back — which holds whether the service refuses the
+	 * that no signature comes back - which holds whether the service refuses the
 	 * algorithm or answers with one the pinned key cannot verify. Against
 	 * LocalStack it is the second: it signs and reports {@code ECDSA_SHA_256}
 	 * regardless, so here the pinned-key verification is the guard that fires.
@@ -324,8 +324,8 @@ class KmsSdkContractIT {
 
 	/**
 	 * A KMS endpoint that answers with bytes no real KMS would send. Only the
-	 * response body is crafted; everything that reads it — the SDK's protocol and
-	 * error unmarshallers, then {@link AwsKmsSigner}'s guards — is the production
+	 * response body is crafted; everything that reads it - the SDK's protocol and
+	 * error unmarshallers, then {@link AwsKmsSigner}'s guards - is the production
 	 * path.
 	 */
 	private static final class KmsEndpoint implements AutoCloseable {

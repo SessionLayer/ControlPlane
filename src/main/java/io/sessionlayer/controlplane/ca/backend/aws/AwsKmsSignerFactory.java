@@ -27,13 +27,13 @@ import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 
 /**
  * Builds {@link KmsSigner}s and resolves adoption-time public keys. Present
- * only when {@code sessionlayer.ca.aws.enabled=true} — its absence as a bean IS
+ * only when {@code sessionlayer.ca.aws.enabled=true} - its absence as a bean IS
  * the "AWS KMS support not configured" branch {@code CaSignerService} refuses
  * on, so there is nothing here that quietly degrades.
  *
  * <p>
  * The credential chain, the HTTP client and the {@link KmsClient} are all built
- * once, at bean construction, and building them does no I/O — the SDK resolves
+ * once, at bean construction, and building them does no I/O - the SDK resolves
  * credentials and opens no connection until a request is made (proven by
  * {@code AwsKmsCredentialsSmokeTest}). Signer construction ({@link #signerFor})
  * is likewise I/O-free: only {@link #fetchPublicKey}, used solely at CA
@@ -41,7 +41,7 @@ import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
  *
  * <p>
  * One client serves every key, because KMS takes the key id as a per-request
- * parameter rather than binding it into the client — there is nothing per-key
+ * parameter rather than binding it into the client - there is nothing per-key
  * to cache, and a pool per CA would be pure overhead. That pool is a real
  * resource, so this bean owns the whole chain's lifecycle: the SDK does not
  * close an HTTP client or a credentials provider it did not itself create.
@@ -72,7 +72,7 @@ public class AwsKmsSignerFactory implements AutoCloseable {
 		if (endpoint == null || endpoint.isBlank()) {
 			return;
 		}
-		LOG.warn("AWS KMS calls are redirected to {} by sessionlayer.ca.aws.endpoint-override — this endpoint"
+		LOG.warn("AWS KMS calls are redirected to {} by sessionlayer.ca.aws.endpoint-override - this endpoint"
 				+ " establishes the CA's pinned public key and receives the credentials SigV4 signs each request"
 				+ " with. Intended for a local KMS in development and test; do not run production this way.{}",
 				endpoint, properties.isAllowInsecureEndpoint() ? " Plaintext HTTP is permitted on it." : "");

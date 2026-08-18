@@ -70,7 +70,7 @@ class SessionLimitPolicyCrudIT extends AbstractConfigApiIT {
 		String admin = "svc-slp-invalid-" + UUID.randomUUID();
 		String token = tokenWith(admin, PlatformPermissions.SETTINGS_WRITE);
 
-		// A malformed identitySelector (identities not a string array — a shape the
+		// A malformed identitySelector (identities not a string array - a shape the
 		// evaluator would quietly ignore, i.e. a policy limiting NO ONE) -> 422.
 		Map<String, Object> badSelector = new HashMap<>(policyBody("slp-" + UUID.randomUUID(), 2, null, null));
 		badSelector.put("identitySelector", Map.of("identities", "alice"));

@@ -32,7 +32,7 @@ import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
  * built with BouncyCastle the same way {@code ca.mtls.X509Certificates} does.
  * Distinct from that helper: this is a leaf (not a CA), EKU {@code serverAuth},
  * and carries both a {@code dNSName=localhost} and an
- * {@code iPAddress=127.0.0.1} SAN — JSSE's HTTPS endpoint-identification
+ * {@code iPAddress=127.0.0.1} SAN - JSSE's HTTPS endpoint-identification
  * algorithm matches an IP-literal hostname only against an iPAddress SAN, so a
  * dNSName SAN alone would fail the exact "127.0.0.1" URL the double is
  * addressed by.

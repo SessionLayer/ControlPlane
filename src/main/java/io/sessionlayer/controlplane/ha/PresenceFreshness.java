@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 /**
  * The one "is this presence claim still live?" rule. Routing (the authorizer's
  * fresh-owner fold), the Gateway directory and the node API all answer from
- * {@code runtime.presence}, so they must agree on when a claim goes stale — a
+ * {@code runtime.presence}, so they must agree on when a claim goes stale - a
  * second copy of the window would let the API call a node healthy that the
  * authorizer has already given up routing to.
  */

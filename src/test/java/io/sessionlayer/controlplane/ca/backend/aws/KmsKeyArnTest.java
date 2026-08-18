@@ -108,7 +108,7 @@ class KmsKeyArnTest {
 	/**
 	 * A URL-authority shape is what has fooled naive prefix checks elsewhere: the
 	 * part before {@code @} looks like the real value to a careless reader. Both
-	 * halves are pinned — junk ahead of the ARN and junk appended to the key id.
+	 * halves are pinned - junk ahead of the ARN and junk appended to the key id.
 	 */
 	@Test
 	void rejectsUserinfoStyleJunkAroundTheArn() {

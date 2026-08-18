@@ -24,7 +24,7 @@ CREATE INDEX idx_ca_key_material_config ON runtime.ca_key_material (ca_config_id
 -- Crown-jewel hardening: the restricted runtime role gets only
 -- INSERT/SELECT (V11's ALTER DEFAULT PRIVILEGES gave it CRUD; revoke the destructive
 -- verbs). Rotation writes a NEW row, so UPDATE/DELETE is never legitimately needed by
--- the app — a compromised app credential cannot delete/corrupt a wrapped CA key.
+-- the app - a compromised app credential cannot delete/corrupt a wrapped CA key.
 DO $grant$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'cp_runtime') THEN

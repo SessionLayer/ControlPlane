@@ -83,7 +83,7 @@ class NodeHealthDerivationIT extends AbstractAuthIT {
 		String token = tokenWith("svc-node-anchorless-" + unique(), PlatformPermissions.NODE_ENROLL);
 		// Exactly what an Agent join auto-creates for a name nobody registered: an
 		// active node with no host anchor. The Gateway never TOFUs, so every session to
-		// it aborts — enrolled, but unusable.
+		// it aborts - enrolled, but unusable.
 		Node node = nodes.save(Node.create("agent-" + unique(), null, JSON.objectNode(), "agent", "active", null))
 				.block();
 
@@ -93,7 +93,7 @@ class NodeHealthDerivationIT extends AbstractAuthIT {
 		// Unusable outranks unreachable: a fresh owner does not make an anchorless node
 		// connectable. But the owner is still REPORTED, because the two fields answer
 		// different questions and routing attaches that same owner with no anchor
-		// precondition — an API that said nobody owned the node would contradict the
+		// precondition - an API that said nobody owned the node would contradict the
 		// Gateway the session is actually routed to. `unhealthy` with an owner is also
 		// the most useful thing an operator can be told here: the Agent is connected,
 		// and nobody ever anchored the node.
@@ -115,7 +115,7 @@ class NodeHealthDerivationIT extends AbstractAuthIT {
 		// Deliberate, and the documentation says so: the CP dials an agentless node on
 		// demand and runs no probe, so it holds no continuous liveness signal. Even a
 		// presence row (which nothing writes for this connector) must not be read as
-		// one — ownership is an agent-model concept and any Gateway can dial.
+		// one - ownership is an agent-model concept and any Gateway can dial.
 		getNode(token, id).jsonPath("$.health").isEqualTo("unknown").jsonPath("$.owningGateway").doesNotExist();
 		claim(id, "gw-agentless-" + unique(), Instant.now());
 		getNode(token, id).jsonPath("$.health").isEqualTo("unknown").jsonPath("$.owningGateway").doesNotExist();

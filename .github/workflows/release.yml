@@ -90,7 +90,7 @@ jobs:
       # signing identity is this workflow's GitHub OIDC (Fulcio-issued short-lived
       # cert). Current cosign defaults to the new bundle format, which folds the
       # signature + certificate into the bundle and silently ignores
-      # --output-signature/--output-certificate (warns, doesn't fail) — so those
+      # --output-signature/--output-certificate (warns, doesn't fail) - so those
       # per-file outputs never actually existed, and v0.1.0's "Publish release"
       # failed on a glob match for a .sig file cosign never wrote. The bundle is
       # the one artifact this actually produces; verify against it.
@@ -132,7 +132,7 @@ jobs:
       # during verification.
       # Registering binfmt lets the arm64 child manifest be executed on this
       # amd64 runner. Without it the arm64 half of every published index would be
-      # a platform nobody has ever run — a manifest that claims more than was
+      # a platform nobody has ever run - a manifest that claims more than was
       # checked.
       - name: Set up QEMU
         uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
@@ -249,7 +249,7 @@ jobs:
 
           # 7. And an operator holding no credential can obtain it. A GHCR package
           #    created by a workflow is private until its visibility is set, and nothing
-          #    in this pipeline sets it — so without this check the whole release goes
+          #    in this pipeline sets it - so without this check the whole release goes
           #    green over an image no one can pull, while the installation guides open
           #    with `docker pull`. Use the registry's own anonymous token endpoint rather
           #    than `docker logout`, which does not account for credentials buildx may
@@ -265,12 +265,12 @@ jobs:
           	"https://ghcr.io/token?scope=repository:${NAME}:pull&service=ghcr.io" || echo 000)
           case "$TOKEN_HTTP" in
           	200) ;;
-          	000) echo "::error::could not reach ghcr.io's token endpoint — this check is INCONCLUSIVE, not a pass"; exit 1 ;;
-          	*) echo "::error::ghcr.io refused an anonymous pull token for ${NAME} (HTTP $TOKEN_HTTP) — the package is private, so no operator can pull what this release published"; exit 1 ;;
+          	000) echo "::error::could not reach ghcr.io's token endpoint - this check is INCONCLUSIVE, not a pass"; exit 1 ;;
+          	*) echo "::error::ghcr.io refused an anonymous pull token for ${NAME} (HTTP $TOKEN_HTTP) - the package is private, so no operator can pull what this release published"; exit 1 ;;
           esac
           TOKEN=$(jq -r '.token // empty' /tmp/ghcr-token.json)
           [ -n "$TOKEN" ] \
-          	|| { echo "::error::ghcr.io returned 200 with no token for ${NAME} — INCONCLUSIVE"; exit 1; }
+          	|| { echo "::error::ghcr.io returned 200 with no token for ${NAME} - INCONCLUSIVE"; exit 1; }
 
           CODE=$(curl -sSL --retry 3 --retry-connrefused --max-time 30 -o /dev/null -w '%{http_code}' \
           	-H "Authorization: Bearer $TOKEN" \
@@ -278,7 +278,7 @@ jobs:
           	"https://ghcr.io/v2/${NAME}/manifests/${DIGEST}" || echo 000)
           case "$CODE" in
           	200) echo "anonymous pull: 200" ;;
-          	000) echo "::error::could not reach ghcr.io to resolve ${IMAGE}@${DIGEST} — INCONCLUSIVE, not a pass"; exit 1 ;;
-          	401|403) echo "::error::${IMAGE} is not anonymously pullable (HTTP $CODE) — the GHCR package is private"; exit 1 ;;
+          	000) echo "::error::could not reach ghcr.io to resolve ${IMAGE}@${DIGEST} - INCONCLUSIVE, not a pass"; exit 1 ;;
+          	401|403) echo "::error::${IMAGE} is not anonymously pullable (HTTP $CODE) - the GHCR package is private"; exit 1 ;;
           	*) echo "::error::anonymous resolve of ${IMAGE}@${DIGEST} returned HTTP $CODE"; exit 1 ;;
           esac

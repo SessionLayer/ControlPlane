@@ -51,7 +51,7 @@ final class GrpcErrors {
 		}
 		if (error instanceof InternalMtlsCaService.NoMtlsCaAvailable
 				|| error instanceof CaSignerService.NoSignerAvailable) {
-			LOG.warn("gRPC {} refused — CA unavailable: {}", operation, error.getMessage());
+			LOG.warn("gRPC {} refused - CA unavailable: {}", operation, error.getMessage());
 			return Status.UNAVAILABLE.withDescription("certificate authority unavailable").asRuntimeException();
 		}
 		if (error instanceof CaSigningFailedException) {
@@ -59,7 +59,7 @@ final class GrpcErrors {
 			// INTERNAL: the first tells a Gateway to retry elsewhere, the second reads
 			// as an outage, and a vault returning a signature that fails verification is
 			// neither. The description carries no key-service response content.
-			LOG.warn("gRPC {} refused — CA signing failed: {}", operation, error.getMessage());
+			LOG.warn("gRPC {} refused - CA signing failed: {}", operation, error.getMessage());
 			return Status.FAILED_PRECONDITION.withDescription("certificate authority refused to sign")
 					.asRuntimeException();
 		}

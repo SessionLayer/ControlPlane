@@ -1,4 +1,4 @@
-# ControlPlane CI — the branch-protection required check is the single job
+# ControlPlane CI - the branch-protection required check is the single job
 # `gate`. Do not rename it, add a `name:`, or introduce a matrix: the required
 # status check is literally "gate" and a mismatch hangs auto-merge.
 #
@@ -52,7 +52,7 @@ jobs:
 
       # No system protoc step: the ascopes protobuf-maven-plugin resolves the exact
       # protoc (4.34.2) + protoc-gen-grpc-java (1.80.0) from Maven Central during the
-      # build — more reproducible than a system protoc, and buf lint has its own parser.
+      # build - more reproducible than a system protoc, and buf lint has its own parser.
 
       - name: mvnw verify
         run: ./mvnw -B -ntp verify
@@ -112,7 +112,7 @@ jobs:
 
           # The positive control: the runtime must actually run. Without it, a
           # container runtime broken for any unrelated reason would make the
-          # no-shell assertion below pass for the wrong reason — and this is the
+          # no-shell assertion below pass for the wrong reason - and this is the
           # component whose runtime layer was rebuilt, so nothing else proves the
           # copied JRE and the jar landed in a working combination.
           docker run --rm --entrypoint /opt/java/bin/java "$IMG" -version

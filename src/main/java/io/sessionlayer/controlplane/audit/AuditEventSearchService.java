@@ -36,7 +36,7 @@ public class AuditEventSearchService {
 	 * Audit the access up front, then apply the caller's grant to the loaded event.
 	 * Auditing first records the attempt even when the id is absent or out of the
 	 * caller's scope (both resolve to an empty result, which the controller renders
-	 * as an indistinguishable 404) — an out-of-scope probe is exactly what an audit
+	 * as an indistinguishable 404) - an out-of-scope probe is exactly what an audit
 	 * trail should capture. The grant is a parameter rather than a downstream check
 	 * so no caller can obtain an event this service has not already filtered.
 	 */

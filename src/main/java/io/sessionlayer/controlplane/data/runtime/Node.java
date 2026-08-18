@@ -14,8 +14,8 @@ import tools.jackson.databind.JsonNode;
  * RUNTIME · {@code runtime.node}. The columns {@code health} and
  * {@code owning_gateway} are deliberately unmapped: nothing ever updated them,
  * so they answered "unknown"/absent for the life of every node. Both are now
- * derived at read time from their real sources — {@code runtime.presence} and
- * {@code runtime.node_host_key} — and the columns survive only for the
+ * derived at read time from their real sources - {@code runtime.presence} and
+ * {@code runtime.node_host_key} - and the columns survive only for the
  * expand/contract window (see {@code V32}).
  */
 @Table(schema = "runtime", name = "node")

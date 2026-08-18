@@ -203,7 +203,7 @@ class CaSignerServiceTest {
 
 	/**
 	 * An alias is refused by {@link KmsKeyArn} at sign time as well as at the write
-	 * path — a row that predates the rule, or one written around it, still cannot
+	 * path - a row that predates the rule, or one written around it, still cannot
 	 * produce a signer.
 	 */
 	@Test
@@ -248,7 +248,7 @@ class CaSignerServiceTest {
 	/**
 	 * This message is logged at WARN on every certificate request the CA takes, and
 	 * the reference it describes comes out of {@code ca_config} rather than from a
-	 * caller — so unlike the write path's {@code 422}, echoing it would write the
+	 * caller - so unlike the write path's {@code 422}, echoing it would write the
 	 * AWS account id into the Control Plane's log at request volume. The failure
 	 * still has to say which rule broke, or an operator cannot act on it.
 	 */

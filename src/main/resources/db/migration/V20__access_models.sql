@@ -1,4 +1,4 @@
--- Mirrors runtime.pin, but source-agnostic — a hardware token travels, so this
+-- Mirrors runtime.pin, but source-agnostic - a hardware token travels, so this
 -- credential is deliberately not source-bound.
 CREATE TABLE runtime.breakglass_credential (
     id                 uuid        PRIMARY KEY,
@@ -38,7 +38,7 @@ COMMENT ON TABLE runtime.breakglass_offline_code IS 'FR-ACC-6: pre-issued single
 CREATE INDEX idx_breakglass_offline_code_identity ON runtime.breakglass_offline_code (identity);
 
 -- Ties a break-glass Authorize to a genuine credential resolution performed by THIS
--- gateway — a Gateway can never assert break-glass without one.
+-- gateway - a Gateway can never assert break-glass without one.
 CREATE TABLE runtime.breakglass_token (
     id                 uuid        PRIMARY KEY,
     token_hash         text        NOT NULL UNIQUE,

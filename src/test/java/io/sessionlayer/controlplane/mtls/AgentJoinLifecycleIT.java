@@ -171,7 +171,7 @@ class AgentJoinLifecycleIT extends AbstractMtlsIT {
 
 		// The clone lock must reach the cloned agent as a PEER, not only as a node. An
 		// agent's cert carries its node NAME (dNSName SAN) and its agent id (URI SAN),
-		// never the node UUID — so a node_ids-only selector cannot match an agent
+		// never the node UUID - so a node_ids-only selector cannot match an agent
 		// control channel and the Gateway would not refuse the clone at registration or
 		// dial-back.
 		assertThat(selectorValues(cloneLock, "node_ids")).containsExactly(agent.nodeId().toString());

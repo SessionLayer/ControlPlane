@@ -62,7 +62,7 @@ class AzureKeyVaultRotationIT extends AbstractAuthIT {
 	@AfterEach
 	void resetCas() {
 		// runtime.ca_key_material has NO FK to config.ca_config (V12: a snapshot ref
-		// across the runtime/config boundary), so its rows do not cascade — they are
+		// across the runtime/config boundary), so its rows do not cascade - they are
 		// left behind and each test seeds its own ids.
 		caConfigs.deleteAll().block();
 		Mockito.reset(azureFactory);
@@ -115,7 +115,7 @@ class AzureKeyVaultRotationIT extends AbstractAuthIT {
 	 * reached), so this surfaces as {@link ApiProblemException} at the service
 	 * boundary rather than the raw {@code InvalidKeyReference}
 	 * {@link AzureKeyVaultCaProvisioner} would throw if it were ever reached
-	 * directly — belt and suspenders: the provisioner's own parse is defense in
+	 * directly - belt and suspenders: the provisioner's own parse is defense in
 	 * depth for any caller that does not pre-validate.
 	 */
 	@Test

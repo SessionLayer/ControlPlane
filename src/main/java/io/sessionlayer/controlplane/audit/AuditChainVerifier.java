@@ -7,7 +7,7 @@ import java.util.List;
  * Verifies the audit_event hash chain: record_hash = SHA-256(prev_hash ||
  * canonical(event)). Proves no row inside the supplied range was altered,
  * removed, or reordered. It cannot prove the newest rows were not dropped
- * wholesale — a truncated tail still verifies — so durability of the tail rests
+ * wholesale - a truncated tail still verifies - so durability of the tail rests
  * on the WORM store, not on this check.
  */
 public final class AuditChainVerifier {

@@ -99,7 +99,7 @@ class UserCertificateVerifierTest {
 	@Test
 	void ed25519CertifiedKeyIsParsedAndVerified() {
 		// A cert whose certified key is ed25519 (one type-specific field) but signed by
-		// our ECDSA user CA — the skip map must land on `serial`, and the ECDSA CA
+		// our ECDSA user CA - the skip map must land on `serial`, and the ECDSA CA
 		// signature is what is verified.
 		byte[] tbs = ed25519UserCertTbs("bob@corp", List.of("deploy"));
 		byte[] cert = new SshWriter().writeBytes(tbs).writeString(sign(tbs)).toByteArray();

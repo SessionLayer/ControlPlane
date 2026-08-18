@@ -43,8 +43,8 @@ CREATE OR REPLACE TRIGGER gateway_identity_generation_monotonic
     FOR EACH ROW EXECUTE FUNCTION runtime.enforce_generation_monotonic();
 
 -- The presence nonce is the anti-stale-ownership fencing token: routing fails closed on
--- a stale nonce, so a write that LOWERS it — a stale or duplicated Gateway re-claiming a
--- node it no longer owns — is a split-brain hazard.
+-- a stale nonce, so a write that LOWERS it - a stale or duplicated Gateway re-claiming a
+-- node it no longer owns - is a split-brain hazard.
 CREATE OR REPLACE FUNCTION runtime.enforce_presence_nonce_monotonic()
     RETURNS trigger
     LANGUAGE plpgsql AS $$

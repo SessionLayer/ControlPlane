@@ -50,7 +50,7 @@ class SessionSigningIT extends AbstractMtlsIT {
 	}
 
 	// Even when the session token carries a source-address, the node-facing inner
-	// cert MUST omit it — the node validates source-address against the Gateway's
+	// cert MUST omit it - the node validates source-address against the Gateway's
 	// peer IP, not the client's, so a client-IP pin breaks any multi-host / NAT
 	// deployment.
 	@Test

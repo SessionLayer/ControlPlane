@@ -22,7 +22,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 
 /**
  * The metrics endpoints were authenticated but not authorized: a token minted
- * for a service account with no role binding at all read the whole meter set —
+ * for a service account with no role binding at all read the whole meter set -
  * fleet-wide live-session counts, authorization error rates, CA-signer
  * activity, session-limit denials. Every machine identity the platform had ever
  * issued could read it.
@@ -68,7 +68,7 @@ class MetricsAuthorizationIT extends AbstractAuthIT {
 		client.get().uri("/actuator/metrics").header("Authorization", "Bearer " + unbound).exchange().expectStatus()
 				.isForbidden();
 
-		// A different permission is not a substitute — reusing audit:read here would
+		// A different permission is not a substitute - reusing audit:read here would
 		// have handed a scraper the whole audit trail to read a gauge.
 		String auditor = tokenWith("svc-metrics-auditor-" + unique(), PlatformPermissions.AUDIT_READ);
 		client.get().uri("/actuator/prometheus").header("Authorization", "Bearer " + auditor).exchange().expectStatus()
@@ -80,7 +80,7 @@ class MetricsAuthorizationIT extends AbstractAuthIT {
 		// Kubernetes liveness/readiness carry no token; gating metrics must not reach
 		// them. The assertion is REACHABILITY, not the health verdict: a probe that is
 		// answered 503 because a contributor is down has still passed the security
-		// chain, which is what this test is about — 401 or 403 would mean the gate
+		// chain, which is what this test is about - 401 or 403 would mean the gate
 		// swallowed the probe.
 		client.get().uri("/actuator/health").exchange().expectStatus()
 				.value(status -> assertThat(status).isNotIn(401, 403));

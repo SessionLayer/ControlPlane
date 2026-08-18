@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# SessionLayer Control Plane — production image, built from source.
+# SessionLayer Control Plane - production image, built from source.
 #
 # This is the from-source counterpart to
 # Documentation/examples/quickstart/cp.Dockerfile, which installs the signed
@@ -12,7 +12,7 @@
 # Three stages: Maven compiles the jar on the build platform, since the jar is
 # architecture-neutral and cross-building it needs no emulation; jlink assembles
 # a Java 25 runtime on the *target* platform, because it emits native launchers
-# and shared libraries; the final image is distroless — no shell, no package
+# and shared libraries; the final image is distroless - no shell, no package
 # manager, no compiler, and no JDK tooling.
 #
 # Bases are pinned by digest; the tag alongside is for readability, the same
@@ -42,7 +42,7 @@ RUN --mount=type=cache,target=/root/.m2,sharing=locked \
 # this JRE, the Maven stage above, and the JDK the released jar is compiled
 # with are the same vendor and the same build.
 #
-# The module set is Adoptium's general-purpose one — not derived from static
+# The module set is Adoptium's general-purpose one - not derived from static
 # analysis of this application's bytecode, which is what matters, because Spring
 # resolves modules reflectively and a jdeps-derived set can omit one an uncommon
 # runtime path needs.
@@ -63,7 +63,7 @@ COPY --from=eclipse-temurin:25-jre-noble@sha256:fbcf915c585659b30eb766ada4d6d7cf
 COPY --from=jar /controlplane.jar /app/controlplane.jar
 
 # The JVM needs a writable java.io.tmpdir whatever the root filesystem is
-# (HotSpot's hsperfdata mappings, Netty unpacking its epoll .so) — mount a tmpfs
+# (HotSpot's hsperfdata mappings, Netty unpacking its epoll .so) - mount a tmpfs
 # here. Nothing else is written locally: CA keys and all other state live in
 # Postgres, KEK-wrapped, and logging is stdout only.
 VOLUME ["/tmp"]

@@ -56,7 +56,7 @@ class AuditSearchWindowIT extends AbstractConfigApiIT {
 		OffsetDateTime to = OffsetDateTime.ofInstant(Instant.now(), ZoneOffset.UTC);
 		// Span 3h > max (2h) -> rejected before any DB access. 422 (VALIDATION), not
 		// 400:
-		// the request is well-formed but violates a semantic bound — matching the
+		// the request is well-formed but violates a semantic bound - matching the
 		// repo's
 		// convention (malformed=400, semantic pre-commit rejection=422; see
 		// ApiProblemType).

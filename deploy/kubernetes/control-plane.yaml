@@ -1,11 +1,11 @@
-# SessionLayer Control Plane — Kubernetes deployment.
+# SessionLayer Control Plane - Kubernetes deployment.
 #
 # Migration ordering (Flyway-vs-traffic): this deliberately does NOT use an
 # initContainer or a separate migration Job. Flyway already runs synchronously
-# during Spring context refresh — before the web server's Lifecycle starts and
-# well before ApplicationRunner beans run — and Boot does not flip the
+# during Spring context refresh - before the web server's Lifecycle starts and
+# well before ApplicationRunner beans run - and Boot does not flip the
 # readiness state to ACCEPTING_TRAFFIC until every ApplicationRunner
-# (caColdStartRunner, firstAdminBootstrapRunner — both in this app, both
+# (caColdStartRunner, firstAdminBootstrapRunner - both in this app, both
 # bounded blocks) has returned, which is itself after Flyway. So "migrate on
 # boot, gate traffic on /actuator/health/readiness" falls out of Spring Boot's
 # own startup sequencing with no extra plumbing; the readinessProbe below is
@@ -17,7 +17,7 @@
 # second pod blocks until the first finishes, then finds nothing pending and
 # no-ops (MigrationIntegrityIT's `secondMigrateIsANoOp` covers this same
 # property for a single instance). The generous startupProbe below exists so
-# that lock wait — plus the two bounded ApplicationRunners — never trips a
+# that lock wait - plus the two bounded ApplicationRunners - never trips a
 # restart mid-lock-wait. What this does NOT solve: forward-compatibility of
 # the schema across the two image versions coexisting during the rollout is
 # an application-level (expand/contract migration) concern, not a deploy-
@@ -52,7 +52,7 @@ data:
   #
   # These names assume the `sessionlayer` namespace. A manifest cannot template
   # its own namespace, so applied anywhere else this mints a certificate whose
-  # SANs nothing dials — and the failure surfaces as a TLS error at connect
+  # SANs nothing dials - and the failure surfaces as a TLS error at connect
   # time, far from the line that caused it. Edit them to match, or use the Helm
   # chart, which derives them from the release namespace.
   SESSIONLAYER_MTLS_SERVER_PORT: "9443"

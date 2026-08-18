@@ -55,7 +55,7 @@ public class AuthorizationService extends AuthorizationGrpc.AuthorizationImplBas
 		UUID caller = peer == null ? null : peer.gatewayId();
 		// The presented client-cert fingerprint gates the caller Gateway's
 		// active/pinned
-		// status in the handler — a locked or superseded-cert Gateway is refused on
+		// status in the handler - a locked or superseded-cert Gateway is refused on
 		// Authorize too, not only at Sign (same pin the sign path enforces).
 		String callerFingerprint = (peer == null || peer.certificate() == null)
 				? null
@@ -71,7 +71,7 @@ public class AuthorizationService extends AuthorizationGrpc.AuthorizationImplBas
 		// credential_principals (field 10) is the outer-leg credential's login scope,
 		// applied by the CP as a deny-only reducer. The Gateway already refuses an
 		// out-of-scope login locally, so this can never be the only thing standing
-		// between a caller and an allow — carrying it is what puts the refusal in the
+		// between a caller and an allow - carrying it is what puts the refusal in the
 		// decision log.
 		Mono<ConnectDecision> decision = authorization.authorize(caller, callerFingerprint, request.getIdentity(),
 				request.getIdentityGroupsList(), parseUuid(request.getNodeId()), blankToNull(request.getNodeName()),

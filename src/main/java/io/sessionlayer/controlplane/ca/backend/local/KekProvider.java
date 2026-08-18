@@ -19,7 +19,7 @@ import java.util.Base64;
  * so wrapping a CA key under it is a no-op against a DB-only compromise. The
  * provider therefore <b>refuses to start</b> when the dev default is in effect
  * unless {@code allowDevDefault} is explicitly set
- * ({@code sessionlayer.ca.local.allow-dev-kek=true}) — a dev/test-only opt-in
+ * ({@code sessionlayer.ca.local.allow-dev-kek=true}) - a dev/test-only opt-in
  * that production must never set. The dev-default check compares the <b>decoded
  * bytes</b> (a re-encoding cannot smuggle the insecure key past it).
  */

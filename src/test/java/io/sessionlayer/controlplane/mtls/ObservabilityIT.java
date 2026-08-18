@@ -103,10 +103,10 @@ class ObservabilityIT extends AbstractMtlsIT {
 		assertThat(attr(certSpan, "sessionlayer.cert_kind")).isEqualTo("session");
 		assertThat(attr(certSpan, "sessionlayer.outcome")).isEqualTo("success");
 
-		// No-content gate: NO telemetry string — a span name / attribute / EVENT
-		// (name + attrs) / status description, or a metric TAG — carries a token,
+		// No-content gate: NO telemetry string - a span name / attribute / EVENT
+		// (name + attrs) / status description, or a metric TAG - carries a token,
 		// key, source IP, or the cert. Scanning EVENTS is the point: recordException
-		// would write exception.message as an event (not an attribute) — the exact
+		// would write exception.message as an event (not an attribute) - the exact
 		// future regression this gate must catch. (Guard blanks: an empty secret
 		// would make doesNotContain("") vacuously fail.)
 		List<String> secrets = java.util.stream.Stream
@@ -158,7 +158,7 @@ class ObservabilityIT extends AbstractMtlsIT {
 				.tag("outcome", "available").counter().count()).isGreaterThan(0);
 
 		// The establishment + cert-sign timers publish Prometheus histogram BUCKETS
-		// (the _bucket series) so histogram_quantile() can compute p95 — a plain Timer
+		// (the _bucket series) so histogram_quantile() can compute p95 - a plain Timer
 		// exports only _count/_sum/_max and the primary p95 SLO would be
 		// unqueryable.
 		assertThat(meters.get("sessionlayer.session.establishment").tag("outcome", "allow").timer().takeSnapshot()

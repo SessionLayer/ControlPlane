@@ -125,7 +125,7 @@ class RecordingCustomerKeyIT extends AbstractConfigApiIT {
 	@Test
 	void aSec1EcPrivateKeyIsNamedAsPrivateKeyMaterial() throws Exception {
 		String bearer = tokenWith("svc-rk-sec1-" + UUID.randomUUID(), PlatformPermissions.RECORDING_KEY_MANAGE);
-		// The bare SEC1 ECPrivateKey (RFC 5915) that lives inside the PKCS#8 wrapper —
+		// The bare SEC1 ECPrivateKey (RFC 5915) that lives inside the PKCS#8 wrapper -
 		// what `openssl ecparam -genkey` writes under `BEGIN EC PRIVATE KEY`, and a
 		// shape CustomerPublicKeys alone would only call "not a public key".
 		byte[] sec1 = org.bouncycastle.asn1.pkcs.PrivateKeyInfo.getInstance(ec("secp256r1").getPrivate().getEncoded())
@@ -170,7 +170,7 @@ class RecordingCustomerKeyIT extends AbstractConfigApiIT {
 	 * <p>
 	 * The refusal rests on a single {@code else} branch, and
 	 * {@code CustomerPublicKeys.isValid(rsa2048, "rsa_oaep_sha256")} returns
-	 * {@code true} — so nothing beneath this assertion would object if that branch
+	 * {@code true} - so nothing beneath this assertion would object if that branch
 	 * were removed. A valid RSA key is used deliberately: a malformed one would
 	 * pass this test against a guard that had stopped checking the algorithm at
 	 * all.
@@ -276,7 +276,7 @@ class RecordingCustomerKeyIT extends AbstractConfigApiIT {
 	/**
 	 * {@code keyRef} points at where the customer's recording PRIVATE key is held,
 	 * which is the same shape of value {@code kek_reference} is excluded outright
-	 * to avoid disclosing — and this one names a key held outside the platform,
+	 * to avoid disclosing - and this one names a key held outside the platform,
 	 * where our controls do not reach. So it is projected only to the permission
 	 * that manages the key. Everything an operator needs to confirm a provisioning
 	 * stays at {@code rbac:read}.

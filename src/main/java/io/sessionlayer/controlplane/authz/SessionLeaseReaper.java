@@ -54,7 +54,7 @@ public class SessionLeaseReaper {
 		Duration configured = properties.getReaper().getGrace();
 		if (configured == null || configured.compareTo(MIN_GRACE) < 0) {
 			LOG.warn(
-					"sessionlayer.session-limits.reaper.grace={} is below the {} floor — clamping (a near-zero "
+					"sessionlayer.session-limits.reaper.grace={} is below the {} floor - clamping (a near-zero "
 							+ "grace could reap a live RunToTtl lease between extensions and under-count)",
 					configured, MIN_GRACE);
 			return MIN_GRACE;

@@ -35,7 +35,7 @@ class GatewayRemovalReenrollmentIT extends AbstractMtlsIT {
 	/**
 	 * The reserved-name rule is evaluated from the Control Plane's configured
 	 * hostnames, not from what the identity table happens to contain, at BOTH mint
-	 * and enroll. Removing rows therefore cannot widen what may be enrolled — but
+	 * and enroll. Removing rows therefore cannot widen what may be enrolled - but
 	 * that is an argument, so exercise it: free a name, then try the reserved one.
 	 */
 	@Test
@@ -57,7 +57,7 @@ class GatewayRemovalReenrollmentIT extends AbstractMtlsIT {
 	 * The removed identity's session is orphaned, never inherited: the FK nulls
 	 * {@code gateway_id}, and the lifecycle RPCs compare the caller's identity id,
 	 * which a re-enrollment never reuses. Both the new Gateway and the removed one
-	 * are refused, so the session can be torn down by neither — fail-closed, and
+	 * are refused, so the session can be torn down by neither - fail-closed, and
 	 * with no path for the new holder of the name to end or extend it.
 	 *
 	 * <p>
@@ -119,7 +119,7 @@ class GatewayRemovalReenrollmentIT extends AbstractMtlsIT {
 
 		assertThat(gatewayIdentities.findById(enrolled.gatewayId()).blockOptional()).isEmpty();
 		// The certificate is still valid and still chains to the internal CA, so the
-		// refusal has to come from the identity lookup — which is exactly what makes
+		// refusal has to come from the identity lookup - which is exactly what makes
 		// removal effective without a revocation list.
 		StatusRuntimeException heartbeat = catchThrowableOfType(StatusRuntimeException.class,
 				() -> presenceHeartbeat(enrolled, "any-node", "10.0.0.9:9443"));

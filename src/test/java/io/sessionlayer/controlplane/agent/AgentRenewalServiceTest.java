@@ -160,7 +160,7 @@ class AgentRenewalServiceTest {
 
 	// Clone detection must stay intact: a stale generation presented with a
 	// DIFFERENT CSR key never matches the receipt (a clone holds its own keypair,
-	// even when it authenticates with a stolen — still validly pinned —
+	// even when it authenticates with a stolen - still validly pinned -
 	// certificate).
 	@Test
 	void staleGenerationWithDifferentCsrKeyStillLocksDespiteExistingReceipt() {

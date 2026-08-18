@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono;
 class AuditPartitionMaintenanceTest {
 
 	// ensureOnStartup() runs off ApplicationReadyEvent, where a throw crash-loops
-	// the whole process — so blocking on a wedged partition-create query (two
+	// the whole process - so blocking on a wedged partition-create query (two
 	// rolling-upgrade instances racing for the same DDL) would take CP boot down
 	// for an audit-housekeeping problem. The listener must return immediately
 	// regardless of how long ensureAhead() takes.
