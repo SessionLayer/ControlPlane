@@ -51,7 +51,7 @@ class AwsKmsPropertiesTest {
 	/**
 	 * An account id is exactly twelve digits. A shorter or non-numeric one cannot
 	 * be the account any real key ARN names, so accepting it would leave the
-	 * allow-list anchor comparing against a value that matches nothing — a CA that
+	 * allow-list anchor comparing against a value that matches nothing - a CA that
 	 * can never be adopted, discovered at rotation rather than at boot.
 	 */
 	@Test
@@ -91,8 +91,8 @@ class AwsKmsPropertiesTest {
 	/**
 	 * The gated decision is whether an override is set at all, not which scheme it
 	 * uses. Whoever answers the endpoint supplies the public key the CA is pinned
-	 * to — so the pinning verification cannot bound a redirect, having been
-	 * bootstrapped through it — and receives the credentials SigV4 signs each
+	 * to - so the pinning verification cannot bound a redirect, having been
+	 * bootstrapped through it - and receives the credentials SigV4 signs each
 	 * request with. An `https` URL to an arbitrary host is exactly the case a
 	 * scheme check waves through, so it is the one asserted here.
 	 */

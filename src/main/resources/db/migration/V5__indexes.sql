@@ -24,7 +24,7 @@ CREATE INDEX idx_session_live         ON runtime.ssh_session (node_id) WHERE end
 CREATE INDEX idx_lock_expires_at ON runtime.access_lock (expires_at);
 
 -- Postgres does not auto-index foreign-key columns. NB: config.role_binding needs no
--- separate role_id index — the composite UNIQUE (role_id, subject_kind, subject) is
+-- separate role_id index - the composite UNIQUE (role_id, subject_kind, subject) is
 -- role_id-leading and already serves both findByRoleId and the ON DELETE CASCADE lookup.
 CREATE INDEX idx_agent_identity_node   ON runtime.agent_identity (node_id);
 CREATE INDEX idx_join_token_node       ON runtime.join_token (node_id);

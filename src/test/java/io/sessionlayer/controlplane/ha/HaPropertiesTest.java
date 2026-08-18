@@ -13,7 +13,7 @@ import org.springframework.mock.env.MockEnvironment;
  * {@link HaProperties} binding. The default staleness is the load-bearing value
  * (both the Presence claim/standby decision and the Authorize routing gate key
  * off it), and the relaxed-binding path
- * {@code sessionlayer.ha.presence-staleness} must resolve — a wrong prefix/name
+ * {@code sessionlayer.ha.presence-staleness} must resolve - a wrong prefix/name
  * would silently fall back to the default.
  */
 class HaPropertiesTest {

@@ -52,7 +52,7 @@ class ControlPlaneSmokeIT {
 
 	// Filtered from the Maven project version at package time. Asserting the
 	// endpoint against it, rather than against a literal, means a release bumps
-	// one number instead of two — and the release job is what checks that number
+	// one number instead of two - and the release job is what checks that number
 	// against the tag being published.
 	@Value("${application.version}")
 	private String applicationVersion;

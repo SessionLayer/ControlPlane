@@ -7,8 +7,8 @@ import java.util.regex.Pattern;
 /**
  * A parsed, validated {@code ca_config.key_reference} for the
  * {@code azure_keyvault} backend:
- * {@code https://<vault>/keys/<name>/<version>}. Parsing is pure — no network
- * access — so the two security properties it enforces are testable without a
+ * {@code https://<vault>/keys/<name>/<version>}. Parsing is pure - no network
+ * access - so the two security properties it enforces are testable without a
  * vault:
  *
  * <ul>
@@ -17,17 +17,17 @@ import java.util.regex.Pattern;
  * node trusts, since the CA's public half is already distributed to every
  * node's trusted set at the pinned version. The version segment is also
  * allow-listed to Key Vault's real grammar (32 lowercase hex characters), not
- * merely required to be present — a present-but-fake value like {@code v1} used
+ * merely required to be present - a present-but-fake value like {@code v1} used
  * to satisfy the "is there a fourth segment" check without ever being a real
  * Key Vault version.</li>
  * <li><b>Allow-listed authority.</b> The reference's authority (scheme, host,
  * and port, with default-port normalization) must equal the configured
  * {@code sessionlayer.ca.azure.vault-uri}; a {@code ca_config} row cannot
- * redirect signing to a vault the operator did not configure — the anchor lives
+ * redirect signing to a vault the operator did not configure - the anchor lives
  * in process configuration, which a compromised database row cannot reach.</li>
  * <li><b>Allow-listed name/version characters.</b> Both segments are matched
  * against Key Vault's own naming grammar rather than merely excluded from a few
- * known-bad shapes (blank, {@code .}/{@code ..}) — a control character
+ * known-bad shapes (blank, {@code .}/{@code ..}) - a control character
  * surviving {@code java.net.URI}'s percent-decoding has nowhere to hide in a
  * value nothing downstream re-escapes.</li>
  * </ul>
@@ -66,7 +66,7 @@ public final class KeyVaultKeyReference {
 			// authority is exactly the pattern that has fooled naive host checks
 			// elsewhere (the part before '@' looks like a host to a careless
 			// reader/parser even though java.net.URI resolves the real one
-			// correctly) — refused outright rather than trusted to parse the same
+			// correctly) - refused outright rather than trusted to parse the same
 			// way everywhere this string travels.
 			throw new InvalidKeyReference("CA key_reference '" + keyReference + "' must not contain userinfo");
 		}
@@ -74,7 +74,7 @@ public final class KeyVaultKeyReference {
 		if (!sameAuthority(allowed, uri)) {
 			throw new InvalidKeyReference("CA key_reference authority '" + uri.getAuthority()
 					+ "' is not the configured Key Vault (sessionlayer.ca.azure.vault-uri '" + allowed.getAuthority()
-					+ "') — only the configured vault is permitted");
+					+ "') - only the configured vault is permitted");
 		}
 		String[] segments = splitPath(uri, keyReference);
 		if (!"keys".equals(segments[1])) {
@@ -87,12 +87,12 @@ public final class KeyVaultKeyReference {
 		}
 		if (segments.length < 4) {
 			throw new InvalidKeyReference("CA key_reference '" + keyReference
-					+ "' has no key version — Key Vault CA keys must be version-pinned, so a floating reference is"
+					+ "' has no key version - Key Vault CA keys must be version-pinned, so a floating reference is"
 					+ " refused rather than resolved to whatever it would normalize to");
 		}
 		if (!KEY_VERSION.matcher(segments[3]).matches()) {
 			throw new InvalidKeyReference("CA key_reference '" + keyReference
-					+ "' has an invalid key version — a real Key Vault version is 32 lowercase hex characters, and a"
+					+ "' has an invalid key version - a real Key Vault version is 32 lowercase hex characters, and a"
 					+ " value that merely occupies the version position (present but not a real version) is refused"
 					+ " the same as one that is absent");
 		}
@@ -158,7 +158,7 @@ public final class KeyVaultKeyReference {
 		// normalized: a ".."-bearing path either grows past 4 segments (caught
 		// below) or survives as a literal ".."/"." name or version, which the
 		// KEY_NAME/KEY_VERSION allow-list below rejects (neither character is in
-		// either pattern) — it is never silently resolved into a different key.
+		// either pattern) - it is never silently resolved into a different key.
 		String[] segments = (path == null ? "" : path).split("/");
 		if (segments.length < 3) {
 			throw new InvalidKeyReference(

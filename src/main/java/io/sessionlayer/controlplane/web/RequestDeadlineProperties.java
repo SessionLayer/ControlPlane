@@ -9,7 +9,7 @@ public class RequestDeadlineProperties {
 	/**
 	 * Audit search is cursor-paginated (<=200 rows, {@code CursorPages.MAX_LIMIT})
 	 * and export/replay only issue a presigned URL, so neither legitimately needs a
-	 * long budget — the default matches {@code sessionlayer.mtls.rpc-timeout} for
+	 * long budget - the default matches {@code sessionlayer.mtls.rpc-timeout} for
 	 * one consistent number, overridable per deployment.
 	 */
 	private Duration requestTimeout = Duration.ofSeconds(15);

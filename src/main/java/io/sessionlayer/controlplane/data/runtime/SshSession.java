@@ -40,7 +40,7 @@ public record SshSession(@Id UUID id, String identity, UUID nodeId, String nodeN
 	}
 
 	/**
-	 * A mid-session re-Authorize re-decides the SAME session_id — this refreshes
+	 * A mid-session re-Authorize re-decides the SAME session_id - this refreshes
 	 * the decision snapshot in place (an UPDATE, since {@code version} and
 	 * {@code id} are preserved) rather than colliding with the original INSERT.
 	 * {@code startedAt}/{@code endedAt}/{@code endReason} are the connection's own

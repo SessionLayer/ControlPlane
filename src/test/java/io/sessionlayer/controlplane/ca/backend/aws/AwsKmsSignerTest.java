@@ -148,7 +148,7 @@ class AwsKmsSignerTest {
 	}
 
 	/**
-	 * A P1363 {@code r||s} signature in the DER position must fail — a test that
+	 * A P1363 {@code r||s} signature in the DER position must fail - a test that
 	 * passes on either encoding proves {@code EcdsaSignatures.fromDer} is not
 	 * load-bearing, which is the specific bug it exists to prevent.
 	 */
@@ -195,7 +195,7 @@ class AwsKmsSignerTest {
 
 	/**
 	 * The SDK models the signature as optional, so an absent one arrives as a null
-	 * — a signing refusal naming the key, not a {@link NullPointerException} from
+	 * - a signing refusal naming the key, not a {@link NullPointerException} from
 	 * somewhere in the middle of the guard chain.
 	 */
 	@Test

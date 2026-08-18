@@ -74,8 +74,8 @@ class CaPublicKeyExportIT extends AbstractConfigApiIT {
 				.doesNotContain("kekReference").doesNotContain("privateKey").doesNotContain("keyReference");
 	}
 
-	// The internal mTLS CA is not a member of this collection — it has its own
-	// trust-anchor sibling — so `mtls` is refused by the closed CaKind enum at
+	// The internal mTLS CA is not a member of this collection - it has its own
+	// trust-anchor sibling - so `mtls` is refused by the closed CaKind enum at
 	// parameter binding, before any handler runs.
 	@Test
 	void theInternalMtlsCaIsNotAddressableHere() {
@@ -90,7 +90,7 @@ class CaPublicKeyExportIT extends AbstractConfigApiIT {
 	 * sits alongside the write-once bytes it describes, and never from
 	 * {@code ca_config.algorithm}, which {@code PUT /v1/cas/{id}} rewrites in place
 	 * without re-keying. So the two CAN diverge, and when they do the export must
-	 * follow the key rather than the label — labelling P-256 bytes with a later
+	 * follow the key rather than the label - labelling P-256 bytes with a later
 	 * {@code nistp521} emits a well-formed authorized-key line for a key that does
 	 * not exist, which every node then rejects at session time with nothing
 	 * pointing back here.

@@ -12,7 +12,7 @@ import reactor.test.StepVerifier;
 /**
  * V30: {@code key_location} ties {@code wrapped_key}/{@code iv}/
  * {@code kek_reference} together as one shape instead of three independent
- * CHECKs. Proves both shapes at the database itself — the app-level factories
+ * CHECKs. Proves both shapes at the database itself - the app-level factories
  * ({@code CaKeyMaterial.create}/{@code .createExternal}) can only ever build a
  * valid one, so they cannot demonstrate that an invalid one is refused.
  */

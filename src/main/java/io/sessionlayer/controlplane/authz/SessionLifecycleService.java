@@ -83,7 +83,7 @@ public class SessionLifecycleService {
 				if (rows > 0) {
 					return Mono.just(expiry);
 				}
-				LOG.warn("ExtendSessionLease refused for live session {}: lease already released/absent — if the "
+				LOG.warn("ExtendSessionLease refused for live session {}: lease already released/absent - if the "
 						+ "reaper released it mid-run, concurrency under-counts until the session ends (check "
 						+ "sessionlayer.session-limits.reaper.grace vs the Gateway extend cadence)", sessionId);
 				return Mono.error(new GatewayRequestException(Reason.FAILED_PRECONDITION, "lease not extendable"));

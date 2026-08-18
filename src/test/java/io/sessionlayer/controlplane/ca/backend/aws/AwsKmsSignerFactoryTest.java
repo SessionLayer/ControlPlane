@@ -69,7 +69,7 @@ class AwsKmsSignerFactoryTest {
 	/**
 	 * Constructing with an override used to be asserted only to "not throw", which
 	 * passes just as well if the override branch is deleted. What has to hold is
-	 * that the client is actually pointed at it — checked by attempting a call and
+	 * that the client is actually pointed at it - checked by attempting a call and
 	 * reading back where it went, since the SDK exposes no accessor for the
 	 * configured endpoint.
 	 */
@@ -84,7 +84,7 @@ class AwsKmsSignerFactoryTest {
 
 			try (AwsKmsSignerFactory factory = new AwsKmsSignerFactory(properties)) {
 				// The socket accepts and never answers, so the call can only end in this
-				// client's own timeout — and only if the request went to the override
+				// client's own timeout - and only if the request went to the override
 				// rather than to the region's real KMS endpoint, which would have
 				// resolved and failed differently.
 				assertThatThrownBy(() -> factory
@@ -104,7 +104,7 @@ class AwsKmsSignerFactoryTest {
 	 * The response's key id is the one hop nothing else verifies: what comes back
 	 * here becomes the pinned public key, so an endpoint, proxy or redirect
 	 * answering for a different key would pin the CA to a key the operator never
-	 * chose — and every later signature would verify against it perfectly.
+	 * chose - and every later signature would verify against it perfectly.
 	 */
 	@Test
 	void rejectsAResponseForADifferentKeyThanTheOneRequested() {
@@ -126,7 +126,7 @@ class AwsKmsSignerFactoryTest {
 	/**
 	 * An encryption key cannot sign at all. Refused at adoption rather than left to
 	 * the first certificate, because {@code kms:DescribeKey} is deliberately not in
-	 * this seam's required IAM surface — this response is the only look it gets.
+	 * this seam's required IAM surface - this response is the only look it gets.
 	 */
 	@Test
 	void rejectsAKeyThatIsNotForSigning() {

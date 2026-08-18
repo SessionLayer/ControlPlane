@@ -13,8 +13,8 @@ import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
  * operator pasting the PRIVATE half of the customer recording key.
  *
  * <p>
- * {@link CustomerPublicKeys#isValid} would already refuse it — a PKCS#8
- * {@code PrivateKeyInfo} is not an SPKI — but only as "not a valid public key",
+ * {@link CustomerPublicKeys#isValid} would already refuse it - a PKCS#8
+ * {@code PrivateKeyInfo} is not an SPKI - but only as "not a valid public key",
  * which does not tell an operator that they have just put private key material
  * on the wire. These checks run first so the error can name it.
  */
@@ -27,7 +27,7 @@ public final class SubmittedRecordingKey {
 	}
 
 	/**
-	 * True if the text carries a PEM marker — checked on the raw submission and
+	 * True if the text carries a PEM marker - checked on the raw submission and
 	 * again on the decoded bytes, since base64 of a PEM block decodes to the PEM
 	 * text itself.
 	 */
@@ -66,8 +66,8 @@ public final class SubmittedRecordingKey {
 	 * SEC1 {@code ECPrivateKey} is
 	 * {@code SEQUENCE { INTEGER 1, OCTET STRING, ... }} and is matched structurally
 	 * rather than by handing the sequence to a parser.
-	 * {@code ECPrivateKey.getInstance} accepts a well-formed SubjectPublicKeyInfo —
-	 * it reads the members positionally without checking their types — so using it
+	 * {@code ECPrivateKey.getInstance} accepts a well-formed SubjectPublicKeyInfo -
+	 * it reads the members positionally without checking their types - so using it
 	 * here refused every legitimate public key with the message reserved for the
 	 * one mistake this guard exists to name.
 	 */

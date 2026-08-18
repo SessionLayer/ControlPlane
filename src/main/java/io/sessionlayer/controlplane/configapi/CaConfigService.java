@@ -65,8 +65,8 @@ public class CaConfigService {
 	/**
 	 * Only ever a genuinely new CA kind: cold start provisions the three SSH kinds,
 	 * so on any booted Control Plane this is otherwise a guaranteed conflict.
-	 * Diagnosed ahead of the write so the 409 names the way out — rotating
-	 * {@code backend} onto a different key service — instead of the generic
+	 * Diagnosed ahead of the write so the 409 names the way out - rotating
+	 * {@code backend} onto a different key service - instead of the generic
 	 * unique-index message.
 	 */
 	public Mono<CaConfig> create(String actor, String name, String caKind, String backend, String keyReference,
@@ -75,7 +75,7 @@ public class CaConfigService {
 		return caConfigs.findByCaKindAndRotationState(caKind, ACTIVE).hasElement().flatMap(hasActive -> {
 			if (hasActive) {
 				return Mono.<CaConfig>error(ApiProblemException.conflict("the '" + caKind
-						+ "' kind already has an active CA — POST /v1/cas/{caId}/rotate is how it moves onto a "
+						+ "' kind already has an active CA - POST /v1/cas/{caId}/rotate is how it moves onto a "
 						+ "different backend, not another create"));
 			}
 			CaConfig ca = CaConfig.create(name, caKind, backend, keyReference, algorithm, ACTIVE, ORIGIN_API);
@@ -88,9 +88,9 @@ public class CaConfigService {
 	 * <b>key</b>, and a key cannot be changed by editing a row: {@code update}
 	 * bypasses {@link CaRotationService} entirely, so changing any of the three on
 	 * an active CA would leave {@code ca_key_material} untouched while the
-	 * persisted public key goes stale relative to the new reference — every
+	 * persisted public key goes stale relative to the new reference - every
 	 * certificate this CA kind issues would then fail to sign until someone
-	 * rotates. Refused outright for an active CA — {@code UpdateCaRequest} carries
+	 * rotates. Refused outright for an active CA - {@code UpdateCaRequest} carries
 	 * only these three fields plus {@code version}, so there is nothing else a
 	 * {@code PUT} on an active CA could legitimately change, and a {@code 200}
 	 * would claim it did something it did not.
@@ -111,7 +111,7 @@ public class CaConfigService {
 			if (ACTIVE.equals(existing.rotationState())) {
 				return Mono.<CaConfig>error(ApiProblemException.conflict(
 						"the active CA's backend/keyReference/algorithm describe its key and cannot be changed by "
-								+ "update — POST /v1/cas/{caId}/rotate is how a CA's key changes"));
+								+ "update - POST /v1/cas/{caId}/rotate is how a CA's key changes"));
 			}
 			validate(backend, keyReference, algorithm);
 			CaConfig updated = new CaConfig(existing.id(), existing.name(), existing.caKind(), backend, keyReference,
@@ -128,7 +128,7 @@ public class CaConfigService {
 			}
 			if (ACTIVE.equals(existing.rotationState())) {
 				return Mono.<Void>error(ApiProblemException
-						.conflict("cannot delete the active CA of kind '" + existing.caKind() + "' — rotate first"));
+						.conflict("cannot delete the active CA of kind '" + existing.caKind() + "' - rotate first"));
 			}
 			return deleteAndAudit(id, actor, existing);
 		}).switchIfEmpty(Mono.defer(() -> deleteAndAudit(id, actor, null)));

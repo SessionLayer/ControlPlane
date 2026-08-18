@@ -45,7 +45,7 @@ class PinAndRuleDiagnosabilityIT extends AbstractAuthIT {
 		// The unfiltered form is what offboarding and incident review need: a pin
 		// authenticates on its own and outlives its session, so one nobody has
 		// accounted for is standing access. Asserting it spans MORE THAN ONE identity
-		// is the assertion — a single-identity result would also pass a weaker check.
+		// is the assertion - a single-identity result would also pass a weaker check.
 		List<String> everyone = pinIdentities(token, "/v1/pins");
 		assertThat(everyone).contains(alice, bob);
 
@@ -63,7 +63,7 @@ class PinAndRuleDiagnosabilityIT extends AbstractAuthIT {
 				.isNotEmpty();
 
 		// A value sent on a deny is stored and echoed back unchanged: "ignored" is what
-		// the evaluator does with it, not a licence to rewrite a caller's field — and
+		// the evaluator does with it, not a licence to rewrite a caller's field - and
 		// nulling it would silently drop the value on the next update of every deny
 		// rule that carries one today, because the column used to demand one.
 		client.post().uri("/v1/rules").header("Authorization", "Bearer " + token)

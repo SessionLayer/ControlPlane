@@ -79,7 +79,7 @@ public class SessionLeaseAdminService {
 	}
 
 	/**
-	 * Whether the cap counts this lease right now — the exact predicate
+	 * Whether the cap counts this lease right now - the exact predicate
 	 * {@code SessionLeaseRepository.countLiveByIdentity} applies, evaluated against
 	 * the same clock, so the flag can never disagree with enforcement.
 	 */

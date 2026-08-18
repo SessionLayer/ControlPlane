@@ -42,7 +42,7 @@ public final class CertificateProfiles {
 	 * {@code key_id = gateway-host:<gatewayName>} for the node-local audit trail.
 	 *
 	 * <p>
-	 * A host cert carries NO {@code permit-*} extensions and no critical options —
+	 * A host cert carries NO {@code permit-*} extensions and no critical options -
 	 * it authenticates the Gateway <b>as the host</b>, not a user's capabilities.
 	 * The caller (the CP signing service) is responsible for validating the
 	 * principals (non-empty; a HOST cert with empty principals is legal on the wire

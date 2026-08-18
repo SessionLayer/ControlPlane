@@ -1,7 +1,7 @@
 -- 1. ------------------------------------------------------------------------
 -- Customer encryption key + recording policy on the operator_settings singleton.
 --   * recording_customer_public_key: DER SubjectPublicKeyInfo of the customer EC
---     P-256 (ECIES) or RSA (RSA-OAEP) PUBLIC key. NULLABLE — when NULL, recording
+--     P-256 (ECIES) or RSA (RSA-OAEP) PUBLIC key. NULLABLE - when NULL, recording
 --     is un-provisioned and BeginRecording fails closed (never stores keystrokes in
 --     the clear). PUBLIC material only, so no reference/PEM content guard is needed
 --     (it is DER bytes, not a pasted private key).

@@ -5,17 +5,17 @@ import java.util.regex.Pattern;
 /**
  * A parsed, validated {@code ca_config.key_reference} for the {@code aws_kms}
  * backend: {@code arn:<partition>:kms:<region>:<account-id>:key/<key-id>}.
- * Parsing is pure — no network access — so the security properties it enforces
+ * Parsing is pure - no network access - so the security properties it enforces
  * are testable without KMS:
  *
  * <ul>
- * <li><b>Pinned.</b> Only a key ARN is accepted. An <b>alias</b> — in ARN form
- * or bare — is refused: {@code kms:UpdateAlias} repoints an alias to a
+ * <li><b>Pinned.</b> Only a key ARN is accepted. An <b>alias</b> - in ARN form
+ * or bare - is refused: {@code kms:UpdateAlias} repoints an alias to a
  * different key without touching anything SessionLayer can see, so a CA
  * referencing one would silently start signing with a key whose public half is
  * in no node's {@code TrustedUserCAKeys}. KMS asymmetric key material never
  * rotates (key rotation is symmetric-only), so a key ARN is itself the pinned
- * version — there is no version segment to require.</li>
+ * version - there is no version segment to require.</li>
  * <li><b>Full ARN required.</b> A bare key id carries no partition, region or
  * account, so the anchor below could not be applied and the reference would
  * resolve against whatever the process happens to be pointed at.</li>
@@ -25,7 +25,7 @@ import java.util.regex.Pattern;
  * signing to another account, region or partition, because the anchor lives in
  * process configuration.</li>
  * <li><b>Allow-listed key-id characters.</b> The key id is matched against the
- * two shapes KMS actually issues rather than merely required to be non-empty —
+ * two shapes KMS actually issues rather than merely required to be non-empty -
  * a value that occupies the position without being a real key id has nowhere to
  * hide in a string that is persisted and later rendered in audit diffs.</li>
  * </ul>
@@ -67,7 +67,7 @@ public final class KmsKeyArn {
 
 		/**
 		 * A record's generated {@code toString()} prints every component, and this one
-		 * holds the account id — so an anchor reaching a log line, a span or a debugger
+		 * holds the account id - so an anchor reaching a log line, a span or a debugger
 		 * would undo the redaction the rest of this class enforces. The masking lives
 		 * on the value rather than at each site that renders it, for the same reason
 		 * {@link KmsKeyArn#redacted()} does.
@@ -92,7 +92,7 @@ public final class KmsKeyArn {
 	 * safety properties. At the write path the reference is the caller's own
 	 * submitted string and echoing it is what makes a {@code 422} useful. At sign
 	 * time and at rotation the same string comes out of {@code ca_config}, and
-	 * those messages reach the Control Plane's log — so a caller there must have
+	 * those messages reach the Control Plane's log - so a caller there must have
 	 * something to say that names the rule without the value. Both exist so that
 	 * neither caller has to remember which case it is in.
 	 */
@@ -120,7 +120,7 @@ public final class KmsKeyArn {
 		String[] fields = keyReference.split(":", -1);
 		if (fields.length != ARN_FIELDS || !"arn".equals(fields[0])) {
 			throw new InvalidKeyReference("CA key_reference '" + keyReference
-					+ "' is not a KMS key ARN — a bare key id or a partial reference carries no account, region or"
+					+ "' is not a KMS key ARN - a bare key id or a partial reference carries no account, region or"
 					+ " partition to check, so the full arn:<partition>:kms:<region>:<account-id>:key/<key-id> is"
 					+ " required", "it is not a full KMS key ARN");
 		}
@@ -141,7 +141,7 @@ public final class KmsKeyArn {
 		String keyId = resource.substring(KEY_RESOURCE_PREFIX.length());
 		if (!KEY_ID.matcher(keyId).matches()) {
 			throw new InvalidKeyReference("CA key_reference '" + keyReference
-					+ "' has an invalid key id — a KMS key id is a UUID or a multi-Region 'mrk-' id, and a value that"
+					+ "' has an invalid key id - a KMS key id is a UUID or a multi-Region 'mrk-' id, and a value that"
 					+ " merely occupies the key-id position is refused the same as one that is absent",
 					"its key id is not a KMS key id");
 		}
@@ -160,7 +160,7 @@ public final class KmsKeyArn {
 			throw new InvalidKeyReference(
 					"CA key_reference '" + keyReference + "' names " + property + " '" + referenced
 							+ "', which is not the " + property
-							+ " this Control Plane is configured to sign in — only the configured account, region and"
+							+ " this Control Plane is configured to sign in - only the configured account, region and"
 							+ " partition are permitted",
 					"it names a " + property + " this Control Plane is not configured for");
 		}
@@ -168,7 +168,7 @@ public final class KmsKeyArn {
 
 	private static InvalidKeyReference aliasRefused(String keyReference) {
 		return new InvalidKeyReference("CA key_reference '" + keyReference
-				+ "' is a KMS alias — an alias can be repointed at a different key with no change visible here, which"
+				+ "' is a KMS alias - an alias can be repointed at a different key with no change visible here, which"
 				+ " would silently swap the CA's signing key while every node still trusts the old public half. Use"
 				+ " the key ARN.", "it is a KMS alias rather than a key ARN");
 	}
@@ -183,7 +183,7 @@ public final class KmsKeyArn {
 	}
 
 	/**
-	 * The ARN with the account id masked — the only form that may appear in a log
+	 * The ARN with the account id masked - the only form that may appear in a log
 	 * line, a span attribute, a metric tag or an exception message. A KMS ARN
 	 * carries the AWS account id, and a CA signing failure is exactly the moment a
 	 * Control Plane writes its key reference somewhere an operator will read it, so

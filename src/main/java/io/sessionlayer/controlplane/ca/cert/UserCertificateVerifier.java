@@ -18,7 +18,7 @@ import java.util.List;
 /**
  * Validates a presented OpenSSH <b>user</b> certificate against the user-facing
  * CA (the outer-leg Vault-user-cert path). A pure function over the certificate
- * bytes and the currently-trusted user-CA keys — no I/O, no reactive context.
+ * bytes and the currently-trusted user-CA keys - no I/O, no reactive context.
  * The outcome is a single generic {@link Verdict#fail} for ANY reason
  * (untrusted CA / expired / wrong type / malformed / wrong source), so the
  * outer-leg auth surface leaks no existence; the reason is for the server-side
@@ -30,7 +30,7 @@ import java.util.List;
  * ({@code TrustedUserCAKeys} from
  * {@link io.sessionlayer.controlplane.ca.CaRotationService#trustedCaKeys}), and
  * the CA signature must verify over the certificate's to-be-signed bytes. The
- * certified user key itself is not re-verified here — the SSH transport proved
+ * certified user key itself is not re-verified here - the SSH transport proved
  * possession of its private key on the Gateway; this answers only "is this a
  * valid, trusted, in-window user cert, and who is it?". SessionLayer's user CA
  * is ECDSA (P-256/384/521), so only an ECDSA CA signature is verifiable; any

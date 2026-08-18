@@ -50,7 +50,7 @@ class AuditEventSearchServiceTest {
 	/**
 	 * The chain columns are stripped inside the service, so a controller cannot
 	 * assemble a response carrying them from a scope-filtered read even if it
-	 * copies every field unconditionally — which is what it does.
+	 * copies every field unconditionally - which is what it does.
 	 */
 	@Test
 	void aScopedReadNeverCarriesTheChainColumns() {
@@ -61,7 +61,7 @@ class AuditEventSearchServiceTest {
 		assertThat(seeded.recordHash()).isNotBlank();
 
 		// A scope the event IS inside, so the row comes back and only the chain is
-		// withheld — not a row that was filtered out anyway.
+		// withheld - not a row that was filtered out anyway.
 		ObjectNode scope = JsonNodeFactory.instance.objectNode();
 		scope.set("users", JsonNodeFactory.instance.arrayNode().add("carol"));
 		AuditEvent scoped = service.get(seeded.id(), "admin", ScopeGrant.scoped(List.of(scope))).block();

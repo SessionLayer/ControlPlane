@@ -73,7 +73,7 @@ public class GatewayServerCertificateService {
 	/**
 	 * The CSR is a public-key envelope, nothing more: only the certified key (and
 	 * its proof of possession) is taken from it. Its subject and any requested SAN
-	 * extensions are DISCARDED rather than validated — the CP stamps the name from
+	 * extensions are DISCARDED rather than validated - the CP stamps the name from
 	 * the gateway_identity row, so what the caller asked for cannot influence the
 	 * issued certificate at all.
 	 */

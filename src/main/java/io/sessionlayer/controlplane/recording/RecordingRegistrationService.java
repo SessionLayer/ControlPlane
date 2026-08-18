@@ -90,7 +90,7 @@ public class RecordingRegistrationService {
 					// Clamped at both ends. The floor stops a mis-set 0 yielding a lock that
 					// expires immediately; the ceiling stops a value large enough to overflow
 					// the retain-until timestamp, which would fail every recording and so
-					// refuse every session — and retention only ratchets upward, so the API
+					// refuse every session - and retention only ratchets upward, so the API
 					// could not undo it.
 					int retentionDays = Math.clamp(settings.recordingRetentionDays(), 1,
 							OperatorSettingsConfigService.MAX_RETENTION_DAYS);
@@ -111,7 +111,7 @@ public class RecordingRegistrationService {
 					// a break-glass session so a future best-effort/downgrade recording path can
 					// never apply to break-glass. Today it is redundant with the fail-closed key
 					// check in beginRecording (every recording is sealed to the key or the session
-					// never starts) — by design; the Gateway also forces strict from the signed
+					// never starts) - by design; the Gateway also forces strict from the signed
 					// access model.
 					if ("breakglass".equals(session.accessModel()) && (publicKey == null || publicKey.length == 0
 							|| !CustomerPublicKeys.isValid(publicKey, algorithm))) {
@@ -139,7 +139,7 @@ public class RecordingRegistrationService {
 					if (!callerGatewayId.equals(session.gatewayId())) {
 						return Mono.error(refused());
 					}
-					// A terminal recording gets NO fresh presigned PUT — else a
+					// A terminal recording gets NO fresh presigned PUT - else a
 					// compromised/buggy Gateway could shadow the finalized,
 					// WORM-locked object with a later version to the same key. Uploads
 					// are only issued while the recording is still open.
@@ -204,7 +204,7 @@ public class RecordingRegistrationService {
 							.thenReturn(status));
 				}));
 		// The Gateway fires NotifySessionEnd and FinalizeRecording concurrently
-		// at teardown and both stamp ssh_session.ended_at — a lost @Version race here
+		// at teardown and both stamp ssh_session.ended_at - a lost @Version race here
 		// would roll back the WHOLE finalize (terminal status + SFTP audit) with no
 		// Gateway-side retry, leaving the recording permanently non-terminal. Retry
 		// once: the re-read sees the session already ended and no-ops the stamp.
@@ -215,7 +215,7 @@ public class RecordingRegistrationService {
 	// The first terminal finalize closes the owning session: it stamps
 	// ended_at/end_reason AND releases the session_lease, freeing the identity's
 	// concurrency slot (Authorize counts unreleased leases). end_reason is derived
-	// from the recording's terminal status — it marks HOW the recording completed,
+	// from the recording's terminal status - it marks HOW the recording completed,
 	// not the authoritative teardown cause (a Lock teardown's "why" lives in the
 	// lock/audit trail).
 	private Mono<Void> endSession(SshSession session, String status) {
@@ -236,7 +236,7 @@ public class RecordingRegistrationService {
 
 	// One audit_event per decoded SFTP/SCP operation, metadata only,
 	// normalized/validated at the boundary, correlated by session_id.
-	// Sequential (concatMap) — one tx connection.
+	// Sequential (concatMap) - one tx connection.
 	private Mono<Void> writeTransferAudit(SshSession session, Map<String, String> nodeLabels,
 			List<FileTransferAuditEntry> sftpAudit) {
 		if (sftpAudit == null || sftpAudit.isEmpty()) {
@@ -280,7 +280,7 @@ public class RecordingRegistrationService {
 	// Every in-session recording event inherits the session's access model, its
 	// node-label snapshot and the correlation key, so one correlation_id
 	// search returns the recording (run/replay) alongside the connect + JIT
-	// approval that authorized it — for a node-label-scoped auditor too.
+	// approval that authorized it - for a node-label-scoped auditor too.
 	private static AuditRecord.Builder sessionEvent(SshSession session, Map<String, String> nodeLabels, String actor,
 			String subject, String action, String outcome) {
 		return AuditRecord.builder(actor, subject, action, outcome).session(session.id()).node(session.nodeId())

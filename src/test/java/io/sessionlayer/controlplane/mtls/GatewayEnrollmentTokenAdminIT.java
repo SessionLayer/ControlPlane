@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The admin-issued token must authorise exactly the enrollment the gRPC path
- * already performs — once, for that name, before it expires — and revocation
+ * already performs - once, for that name, before it expires - and revocation
  * must close it without deleting the row (V15: cp_runtime holds no DELETE).
  */
 class GatewayEnrollmentTokenAdminIT extends AbstractMtlsIT {

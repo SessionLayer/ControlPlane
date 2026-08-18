@@ -4,9 +4,9 @@ COMMENT ON COLUMN runtime.agent_identity.prev_fingerprint IS
 
 -- Grants. V11 already granted cp_runtime SELECT/INSERT/UPDATE/DELETE on ALL
 -- runtime tables (incl. agent_identity, join_token, node) plus default privileges
--- for future tables, so the agent-join write paths — agent_identity status flip
+-- for future tables, so the agent-join write paths - agent_identity status flip
 -- (UPDATE), node registration (INSERT/UPDATE), join_token issue/consume/revoke
--- (INSERT/UPDATE/DELETE), access_lock insert (SELECT/INSERT) — are already
+-- (INSERT/UPDATE/DELETE), access_lock insert (SELECT/INSERT) - are already
 -- covered, and the new prev_fingerprint column inherits the table-level grant.
 -- V15 revoked DELETE only from the V14 token tables (gateway_enrollment_token /
 -- session_signing_token), NOT from join_token, so join-token revoke (DELETE) is

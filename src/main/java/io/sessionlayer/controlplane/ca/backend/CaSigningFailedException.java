@@ -13,7 +13,7 @@ package io.sessionlayer.controlplane.ca.backend;
  * send an operator to different places.
  *
  * <p>
- * Subclasses MUST keep their message free of anything a key service returned —
+ * Subclasses MUST keep their message free of anything a key service returned -
  * the message reaches error surfaces, the cause does not.
  */
 public class CaSigningFailedException extends RuntimeException {

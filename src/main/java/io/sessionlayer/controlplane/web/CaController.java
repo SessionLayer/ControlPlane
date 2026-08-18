@@ -125,7 +125,7 @@ public class CaController implements CasApi {
 	/**
 	 * Gated {@code node:enroll}, not {@code ca:manage}: installing a node already
 	 * requires that permission and the CA's public key is the material the install
-	 * needs. Public verification material only — the projection never touches the
+	 * needs. Public verification material only - the projection never touches the
 	 * wrapped private key.
 	 */
 	@Override

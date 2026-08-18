@@ -78,7 +78,7 @@ class BasicEscapeHatchBootstrapIT extends AbstractAuthIT {
 		assertThat(admin).isNotNull();
 		assertThat(admin.permissions()).containsExactlyInAnyOrderElementsOf(PlatformPermissions.ALL);
 
-		// rbac:read and ca:manage are distinct permissions on the admin role — both
+		// rbac:read and ca:manage are distinct permissions on the admin role - both
 		// resolving proves the whole grant, not one lucky verb.
 		http.get().uri("/v1/session-limit-policies").header(HttpHeaders.AUTHORIZATION, basic(INSTALLER, PASSWORD))
 				.exchange().expectStatus().isOk();

@@ -132,7 +132,7 @@ class AuthorizeIT extends AbstractMtlsIT {
 	}
 
 	// The Gateway refuses an out-of-scope login locally before it ever calls
-	// Authorize, so this refusal was invisible to the decision log — the client
+	// Authorize, so this refusal was invisible to the decision log - the client
 	// could not tell the denials apart (intended) and neither could the auditor
 	// (not intended).
 	@Test
@@ -161,7 +161,7 @@ class AuthorizeIT extends AbstractMtlsIT {
 	}
 
 	// The reducer runs BEFORE the break-glass path: a scoped credential stays
-	// scoped even on a break-glass connect. Proven by the note — an unusable token
+	// scoped even on a break-glass connect. Proven by the note - an unusable token
 	// reaching the break-glass branch would have recorded breakglass_token_invalid
 	// instead, so this pins the ORDER, not just the outcome.
 	@Test
@@ -353,7 +353,7 @@ class AuthorizeIT extends AbstractMtlsIT {
 	// caller was used only for the audit name, so a locked Gateway stayed a full
 	// RBAC oracle and could consume break-glass tokens / flip JIT grants / write
 	// session rows with its un-expired cert (there is no CRL on the internal mTLS
-	// CA — the status lock IS the revocation).
+	// CA - the status lock IS the revocation).
 	@Test
 	void aLockedCallerGatewayIsRefusedOnAuthorizeWithNoStateChange() {
 		String identity = "alice-" + unique();
@@ -464,7 +464,7 @@ class AuthorizeIT extends AbstractMtlsIT {
 	private void assertUnavailableNodeDenies(String status) {
 		String identity = "alice-" + unique();
 		UUID nodeId = seedNodeWithStatus(status);
-		// A standing allow exists — only the node's status suppresses it (the status
+		// A standing allow exists - only the node's status suppresses it (the status
 		// gate precedes rule evaluation), so this proves the exclusion, not a missing
 		// rule.
 		seedAllow(identity, nodeId, List.of("deploy"), List.of("shell"));
@@ -550,7 +550,7 @@ class AuthorizeIT extends AbstractMtlsIT {
 					request(identity, nodeId, "deploy", "10.0.0.7", UUID.randomUUID()));
 
 			// A misconfigured node still ALLOWs (the Gateway fails closed on empty
-			// verification, no TOFU) — the CP never synthesizes trust.
+			// verification, no TOFU) - the CP never synthesizes trust.
 			assertThat(response.getDecision()).isEqualTo(Decision.DECISION_ALLOW);
 			NodeConnection connection = response.getNodeConnection();
 			assertThat(connection.getConnectorKind()).isEqualTo(ConnectorKind.CONNECTOR_KIND_AGENTLESS);
@@ -588,8 +588,8 @@ class AuthorizeIT extends AbstractMtlsIT {
 		assertThat(connection.getConnectorKind()).isEqualTo(ConnectorKind.CONNECTOR_KIND_OUTBOUND_AGENT);
 
 		// The join key between the session and the agent that owns the node. The
-		// Gateway matches it against the dNSName SAN of the agent's mTLS certificate —
-		// which the CP itself stamped from node.name — to find the agent's control
+		// Gateway matches it against the dNSName SAN of the agent's mTLS certificate -
+		// which the CP itself stamped from node.name - to find the agent's control
 		// channel. Empty here would make the Gateway fail closed to "node offline".
 		assertThat(connection.getNodeName()).isNotBlank().isEqualTo(node.name());
 

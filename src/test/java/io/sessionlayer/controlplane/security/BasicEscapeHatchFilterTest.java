@@ -30,7 +30,7 @@ import org.springframework.web.server.adapter.ForwardedHeaderTransformer;
  * The Basic escape hatch is <b>deny-only</b>: every refusal continues the chain
  * <em>unauthenticated</em> rather than answering 401, so the only honest
  * assertion for a refusal is that no {@link RestAuthenticationToken} reached
- * the security context — a status assertion here would pass without proving
+ * the security context - a status assertion here would pass without proving
  * anything.
  *
  * <p>
@@ -49,7 +49,7 @@ class BasicEscapeHatchFilterTest {
 	private static final String PASSWORD = "install-time-secret";
 	private static final String LOOPBACK = "127.0.0.1/32";
 
-	// Cost 4 (bcrypt's minimum) only to keep the matrix cheap — the property under
+	// Cost 4 (bcrypt's minimum) only to keep the matrix cheap - the property under
 	// test is which comparisons run, never the work factor.
 	private static final PasswordEncoder ENCODER = new BCryptPasswordEncoder(4);
 	private static final String PASSWORD_HASH = ENCODER.encode(PASSWORD);
@@ -67,7 +67,7 @@ class BasicEscapeHatchFilterTest {
 		AuthenticatedPrincipal principal = (AuthenticatedPrincipal) outcome.authentication().getPrincipal();
 		assertThat(principal.method()).isEqualTo(AuthMethod.BASIC);
 		// The escape hatch conveys no group membership, so it can never satisfy a
-		// group-scoped grant on its own — its subject is authorised only by whatever
+		// group-scoped grant on its own - its subject is authorised only by whatever
 		// the bootstrap claim bound to that name.
 		assertThat(principal.groups()).isEmpty();
 		assertThat(outcome.authentication().getAuthorities()).isEmpty();
@@ -238,7 +238,7 @@ class BasicEscapeHatchFilterTest {
 	/**
 	 * The flip side of the same mechanism, pinned because it is an operational
 	 * constraint rather than a bug: the rewritten address is unresolved, so behind
-	 * an ingress that adds a forwarded header the hatch cannot be used at all —
+	 * an ingress that adds a forwarded header the hatch cannot be used at all -
 	 * even by the genuine peer the CIDRs name. Comparing on the forwarded value
 	 * instead would be the bypass above.
 	 */

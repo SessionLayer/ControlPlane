@@ -15,7 +15,7 @@ import reactor.core.publisher.Mono;
 
 /**
  * Spans carry <b>correlation, never content</b>: only IDs, enums, outcomes, and
- * — on failure — the error <i>type</i>. No SSH plaintext, key, OTP, token, or
+ * - on failure - the error <i>type</i>. No SSH plaintext, key, OTP, token, or
  * recording byte ever enters a span. The parent is passed <b>explicitly</b> to
  * each span builder (never via a thread-local), so the parent→child link is
  * correct across the reactive/Reactor thread hops without any
@@ -65,7 +65,7 @@ public final class CpTracing {
 
 	public Mono<ConnectDecision> traceAuthorize(Context parent, String sessionId, String requestNodeId,
 			Mono<ConnectDecision> source) {
-		// Deferred so the span is started at SUBSCRIBE, not at assembly — a
+		// Deferred so the span is started at SUBSCRIBE, not at assembly - a
 		// re-subscribe
 		// gets a fresh span instead of reusing an already-ended one (parity with
 		// SloMetrics.timeEstablishment).

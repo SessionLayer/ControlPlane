@@ -40,7 +40,7 @@ class ColdStartIT {
 		// with another cached test context on :9090 (cold start now also provisions the
 		// internal mTLS CA, which this IT's assertions tolerate via >= counts).
 		registry.add("sessionlayer.mtls.server.port", () -> "0");
-		// cold start left at its default (enabled) — this IT proves it.
+		// cold start left at its default (enabled) - this IT proves it.
 	}
 
 	@Autowired

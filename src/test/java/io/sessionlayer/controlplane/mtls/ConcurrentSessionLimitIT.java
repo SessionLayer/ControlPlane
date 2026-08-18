@@ -99,7 +99,7 @@ class ConcurrentSessionLimitIT extends AbstractMtlsIT {
 	}
 
 	// The cap is HARD, not soft. A concurrent BURST of Authorizes for ONE identity
-	// at cap L admits EXACTLY L — never more — because the per-identity advisory
+	// at cap L admits EXACTLY L - never more - because the per-identity advisory
 	// xact lock serializes count-then-acquire, so a shared/stolen credential can't
 	// overshoot the concurrent blast radius. This is the race the sequential tests
 	// cannot exercise; without serialization the burst would overshoot.
@@ -251,7 +251,7 @@ class ConcurrentSessionLimitIT extends AbstractMtlsIT {
 	// The Gateway re-Authorizes a live connection with the SAME session_id once
 	// decision_ttl elapses. Before the fix, the ssh_session write was a blind
 	// INSERT, so the second call's duplicate-key violation rolled back the whole
-	// allow tx and surfaced as a policy DENY — breaking every multiplexed channel
+	// allow tx and surfaced as a policy DENY - breaking every multiplexed channel
 	// (second shell, scp/sftp, ControlMaster reuse) past the TTL window. The
 	// re-auth must be ALLOWed, its decision must land in the ssh_session row (an
 	// UPDATE, not a second row), and its lease must refresh the SAME slot rather

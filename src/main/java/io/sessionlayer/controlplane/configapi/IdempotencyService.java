@@ -69,7 +69,7 @@ public class IdempotencyService {
 						() -> action.flatMap(response -> store(key, principal, method, path, fingerprint, response, now)
 								.onErrorResume(recordFailure -> {
 									// The mutation already ran; a failed idempotency record is best-effort
-									// (a retry re-executes rather than replays) — never fail the request.
+									// (a retry re-executes rather than replays) - never fail the request.
 									LOG.warn("idempotency record store failed (best-effort); returning the response",
 											recordFailure);
 									return Mono.empty();

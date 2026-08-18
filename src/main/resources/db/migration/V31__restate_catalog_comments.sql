@@ -8,14 +8,14 @@
 -- see that. V2 states the rule this file follows: "Forward-only: never edit this
 -- file after merge; change = a new versioned migration."
 --
--- Catalog comments that were already clean are deliberately absent — a no-op
+-- Catalog comments that were already clean are deliberately absent - a no-op
 -- restatement is noise.
 --
 -- Grouped by the migration that last set each comment (only the last one for a
 -- given object is live in the catalog).
 
 COMMENT ON TABLE config.node_policy IS
-    'CONFIG: NodePolicy — desired node labels + connector + host trust refs.';
+    'CONFIG: NodePolicy - desired node labels + connector + host trust refs.';
 COMMENT ON TABLE config.dp_rule IS
     'Data-plane RBAC grant (typed policy-as-data). Evaluated by the application.';
 COMMENT ON TABLE config.platform_role IS
@@ -29,7 +29,7 @@ COMMENT ON TABLE config.capability_def IS
 COMMENT ON TABLE config.jit_policy IS
     'JIT-requestable targets + 0-3 level approval chain (email/OIDC-group).';
 COMMENT ON TABLE config.breakglass_policy IS
-    'Break-glass — recording-strict, alert, review, IdP-independent auth path.';
+    'Break-glass - recording-strict, alert, review, IdP-independent auth path.';
 COMMENT ON TABLE config.service_account IS
     'Machine-consumer definition. Issued credentials live in RUNTIME.';
 
@@ -80,7 +80,7 @@ COMMENT ON COLUMN runtime.recording_ref.retention_until IS
 COMMENT ON COLUMN runtime.recording_ref.legal_hold IS
     'When true the recording is exempt from retention pruning regardless of retention_until.';
 COMMENT ON COLUMN runtime.recording_ref.status IS
-    'Recording lifecycle — recording -> finalized|truncated|failed.';
+    'Recording lifecycle - recording -> finalized|truncated|failed.';
 COMMENT ON COLUMN runtime.recording_ref.content_digest IS
     'Integrity digest (sha256:<hex>); write-once once set (V8 trigger).';
 
@@ -149,7 +149,7 @@ COMMENT ON FUNCTION runtime.recording_prunable(timestamptz) IS
 COMMENT ON COLUMN runtime.recording_ref.pruned_at IS
     'When the encrypted object was deleted (retention prune or governance delete). The metadata row is retained (crown-jewels provenance).';
 COMMENT ON COLUMN runtime.recording_ref.delete_mode IS
-    'How the object was deleted — retention (automated, past retention_until) or governance (privileged, audited erasure).';
+    'How the object was deleted - retention (automated, past retention_until) or governance (privileged, audited erasure).';
 COMMENT ON COLUMN runtime.recording_ref.deleted_by IS
     'The recording:delete-privileged actor for a governance delete (NULL for automated retention prune).';
 COMMENT ON COLUMN runtime.recording_ref.legal_hold_reason IS

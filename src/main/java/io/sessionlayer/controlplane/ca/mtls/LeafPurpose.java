@@ -13,7 +13,7 @@ public enum LeafPurpose {
 	 * A TLS server certificate (EKU serverAuth): the CP's own gRPC server
 	 * certificate, and a Gateway's agent-facing listener certificate. A Gateway's
 	 * {@link #CLIENT} identity leaf cannot serve TLS (one EKU per leaf), so it gets
-	 * a separate serverAuth leaf, over a separate keypair, from this same CA — the
+	 * a separate serverAuth leaf, over a separate keypair, from this same CA - the
 	 * anchor Agents already hold, so they never trust it on first use.
 	 */
 	SERVER,

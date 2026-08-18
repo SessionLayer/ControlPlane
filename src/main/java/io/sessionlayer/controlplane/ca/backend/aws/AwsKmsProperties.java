@@ -112,7 +112,7 @@ public class AwsKmsProperties {
 	 * Fails the application context when enabled with a configuration that cannot
 	 * anchor a key ARN: a missing or malformed region, account or partition would
 	 * otherwise surface only at the first sign attempt, mid-certificate-issuance.
-	 * Pure string validation — no network or database access, so this cannot become
+	 * Pure string validation - no network or database access, so this cannot become
 	 * a blocking {@code ApplicationReadyEvent} listener that crash-loops startup.
 	 */
 	@PostConstruct
@@ -139,14 +139,14 @@ public class AwsKmsProperties {
 	/**
 	 * An endpoint override sends every KMS call this Control Plane makes to a host
 	 * of the operator's choosing, so the gated decision is whether one is set at
-	 * all — not which scheme it uses. Both halves of that matter, and only the
+	 * all - not which scheme it uses. Both halves of that matter, and only the
 	 * second is obvious:
 	 *
 	 * <ul>
 	 * <li>The <b>host</b> becomes the CA's trust root. The public key pinned at
 	 * adoption is read through the override, and every later signature is verified
 	 * against that pin, so an endpoint that answers {@code GetPublicKey} and
-	 * {@code Sign} consistently satisfies every check in {@link AwsKmsSigner} — the
+	 * {@code Sign} consistently satisfies every check in {@link AwsKmsSigner} - the
 	 * pinning bounds a compromised KMS <i>response</i>, never a redirected
 	 * <i>endpoint</i>.</li>
 	 * <li>The <b>credentials</b> go with it. SigV4 sends the signed
@@ -157,7 +157,7 @@ public class AwsKmsProperties {
 	 * </ul>
 	 *
 	 * So an override requires {@code allow-endpoint-override=true}, and a plaintext
-	 * one additionally requires {@code allow-insecure-endpoint=true} — the same
+	 * one additionally requires {@code allow-insecure-endpoint=true} - the same
 	 * shape as the dev KEK, where the shortcut has to be asked for rather than
 	 * arrived at by omission.
 	 */

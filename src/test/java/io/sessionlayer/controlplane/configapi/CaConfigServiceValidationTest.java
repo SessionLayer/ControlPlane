@@ -100,7 +100,7 @@ class CaConfigServiceValidationTest {
 	}
 
 	/**
-	 * update()'s algorithm gate applies to non-active rows too — an active CA is
+	 * update()'s algorithm gate applies to non-active rows too - an active CA is
 	 * refused for a different reason before this rule is even reached, so this is
 	 * exercised on a non-active row, the only shape update() can still write.
 	 */
@@ -145,7 +145,7 @@ class CaConfigServiceValidationTest {
 
 	/**
 	 * Asserted on {@code local}, because a key-service backend is now refused for
-	 * having no signer before the algorithm is considered at all — so this rule can
+	 * having no signer before the algorithm is considered at all - so this rule can
 	 * only be observed on the backend that does sign.
 	 */
 	@Test
@@ -160,7 +160,7 @@ class CaConfigServiceValidationTest {
 	/**
 	 * The curve axis, which the algorithm axis alone leaves open: a cloud backend
 	 * signs P-256 only, so a P-384/P-521 row on one is stored and then throws in
-	 * the signer — the same store-then-500 the assemblability rule closes for
+	 * the signer - the same store-then-500 the assemblability rule closes for
 	 * ed25519 and RSA.
 	 */
 	/**
@@ -217,7 +217,7 @@ class CaConfigServiceValidationTest {
 	/**
 	 * Cold start provisions the three SSH kinds, so on any booted Control Plane a
 	 * second create for the same kind is a guaranteed conflict. The pre-commit
-	 * check names the way out — rotate — instead of the generic unique-index
+	 * check names the way out - rotate - instead of the generic unique-index
 	 * message, and never reaches the write.
 	 */
 	@Test
@@ -359,13 +359,13 @@ class CaConfigServiceValidationTest {
 	/**
 	 * {@code update} bypasses {@link CaRotationService} entirely, so changing an
 	 * active CA's backend/keyReference/algorithm through it leaves
-	 * {@code ca_key_material} untouched — the persisted public key goes stale
+	 * {@code ca_key_material} untouched - the persisted public key goes stale
 	 * relative to the new key_reference, and every certificate this CA kind issues
 	 * fails to sign until someone rotates. Those three fields describe the CA's
 	 * key, and a key cannot be changed by editing a row: only rotation (which
 	 * provisions/adopts a real key and re-publishes trust) may change them. The
 	 * practical effect is that {@code PUT} on an active CA is a no-op, since those
-	 * three are the only fields it can ever change — that is the correct shape, not
+	 * three are the only fields it can ever change - that is the correct shape, not
 	 * an oversight.
 	 */
 	@Test
@@ -406,7 +406,7 @@ class CaConfigServiceValidationTest {
 	/**
 	 * Refuses even a byte-identical resubmission: the rule is "an active CA's key
 	 * fields are not update()'s to touch", not "only a different value is refused"
-	 * — a client cannot tell which case it is in without a prior read, and the
+	 * - a client cannot tell which case it is in without a prior read, and the
 	 * correct move either way is rotate (or no call at all).
 	 */
 	@Test

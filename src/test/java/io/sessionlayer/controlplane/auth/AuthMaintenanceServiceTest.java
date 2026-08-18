@@ -15,7 +15,7 @@ import reactor.core.publisher.Mono;
 class AuthMaintenanceServiceTest {
 
 	// pruneOnStartup() runs off ApplicationReadyEvent, where a throw crash-loops
-	// the whole process — so blocking on a wedged query (lock contention, a
+	// the whole process - so blocking on a wedged query (lock contention, a
 	// rolling-upgrade instance racing another for the same rows) would take CP boot
 	// down for an auth-maintenance problem. The listener must return immediately
 	// regardless of how long the prune takes.

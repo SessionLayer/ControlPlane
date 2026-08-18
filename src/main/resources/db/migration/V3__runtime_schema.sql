@@ -1,4 +1,4 @@
--- V3 — RUNTIME schema (live operational state). SessionLayer Control Plane.
+-- V3 - RUNTIME schema (live operational state). SessionLayer Control Plane.
 --
 -- The live operational state: registrations, presence, issued identities,
 -- sessions, recordings, locks, JIT/break-glass state, pins/OTPs, audit. RUNTIME is
@@ -8,7 +8,7 @@
 -- Referential rules:
 --   * runtime->runtime: real FKs (ON DELETE SET NULL where history must outlive the
 --     referenced row; CASCADE only for the 1:1 recording_ref).
---   * runtime->config: NEVER a hard FK — decision *snapshots* (plain uuid + copied
+--   * runtime->config: NEVER a hard FK - decision *snapshots* (plain uuid + copied
 --     principal/capabilities/access_model/policy_epoch) so history survives config GC.
 --   * audit_event: zero FKs (immortal; correlation by id value).
 --
@@ -19,7 +19,7 @@ CREATE SCHEMA IF NOT EXISTS runtime;
 -- Source restrictions are stored as text, not inet/cidr: r2dbc-postgresql 1.1.1 has no
 -- codec that preserves a mask. The parse is deliberately lenient (::inet, not ::cidr)
 -- because operators commonly write a restriction with host bits set (192.168.1.5/24),
--- which ::cidr rejects — pushing them to drop the restriction entirely. Network
+-- which ::cidr rejects - pushing them to drop the restriction entirely. Network
 -- containment is computed at query time.
 CREATE OR REPLACE FUNCTION runtime.is_ip_or_cidr(value text)
     RETURNS boolean

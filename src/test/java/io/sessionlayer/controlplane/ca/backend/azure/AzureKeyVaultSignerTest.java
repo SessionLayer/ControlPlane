@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Mockito 5's default inline mock maker mocks {@code CryptographyClient}
- * directly (a final SDK class with package-private constructors) — verified
+ * directly (a final SDK class with package-private constructors) - verified
  * here rather than introducing a second seam interface duplicating
  * {@link KeyVaultSigner}.
  */
@@ -113,7 +113,7 @@ class AzureKeyVaultSignerTest {
 	}
 
 	/**
-	 * A DER-shaped signature in the P1363 position must fail — a test that passes
+	 * A DER-shaped signature in the P1363 position must fail - a test that passes
 	 * on either shape proves the normalization is not load-bearing.
 	 */
 	@Test

@@ -102,7 +102,7 @@ class GatewayDirectoryIT extends AbstractConfigApiIT {
 
 	/**
 	 * A generation-0 identity has no previous digest, and the field must be ABSENT
-	 * rather than empty — an empty string reads as a real digest matching nothing,
+	 * rather than empty - an empty string reads as a real digest matching nothing,
 	 * which is the ambiguity the field exists to remove, inverted.
 	 */
 	@Test
@@ -238,7 +238,7 @@ class GatewayDirectoryIT extends AbstractConfigApiIT {
 	 * The removal guard must look at open sessions, not only at presence. A Gateway
 	 * whose heartbeat has merely lapsed is still bridging traffic, and the FK's ON
 	 * DELETE SET NULL is what {@code RecordingRegistrationService} authorises
-	 * upload and finalize on — so a presence-only guard would let an ordinary
+	 * upload and finalize on - so a presence-only guard would let an ordinary
 	 * removal strand every in-flight recording at status 'recording' for ever.
 	 */
 	@Test

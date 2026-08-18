@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
  * {@code msal4j-persistence-extension} and JNA are excluded on the argument
  * that only the persistent token cache uses them, and
  * {@code azure-core-http-netty} on the argument that the JDK provider replaces
- * it — arguments about code that is not executed until a credential is first
+ * it - arguments about code that is not executed until a credential is first
  * used, which is when a {@code NoClassDefFoundError} would otherwise surface,
  * in production, mid-signature.
  */

@@ -62,7 +62,7 @@ public class NodeViewService {
 	private NodeView derive(Node node, boolean anchored, Presence owner, Instant now) {
 		// Resolved independently of the anchor: owningGateway answers "which Gateway
 		// holds this node's agent control channel", which is true or false whether or
-		// not anyone ever anchored the node — and routing attaches the same fresh owner
+		// not anyone ever anchored the node - and routing attaches the same fresh owner
 		// with no anchor precondition. `unhealthy` WITH an owner reads "the Agent is
 		// connected and you never anchored it", which names the repair.
 		String freshOwner = isAgent(node) && freshness.isFresh(owner, now) ? owner.owningGateway() : null;

@@ -14,7 +14,7 @@ public class AzureKeyVaultProperties {
 	 * {@code TokenCredential}. {@code CLIENT_SECRET} is deliberately absent: the
 	 * SDK's {@code ClientSecretCredentialBuilder} takes the secret as a builder
 	 * argument with no environment-sourced variant, so offering it here would mean
-	 * either a secret in this configuration (refused — no credential, token, or key
+	 * either a secret in this configuration (refused - no credential, token, or key
 	 * material belongs in config) or silently duplicating what {@code DEFAULT}
 	 * already does via {@code EnvironmentCredential}
 	 * (AZURE_CLIENT_ID/AZURE_CLIENT_SECRET/AZURE_TENANT_ID).
@@ -76,7 +76,7 @@ public class AzureKeyVaultProperties {
 	/**
 	 * Fails the application context when enabled with an unusable vault-uri: a
 	 * missing, unparseable, or non-HTTPS URI would otherwise surface only at the
-	 * first sign attempt, mid-certificate-issuance. Pure string validation — no
+	 * first sign attempt, mid-certificate-issuance. Pure string validation - no
 	 * network or database access, so this cannot become a blocking
 	 * {@code ApplicationReadyEvent} listener that crash-loops startup.
 	 */

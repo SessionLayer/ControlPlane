@@ -27,7 +27,7 @@ import reactor.core.publisher.Mono;
  * The HA ownership WRITE path. A Gateway that holds a node's live agent control
  * channel heartbeats here to claim/refresh ownership, and releases it on drain
  * so a standby claims immediately. This is the mTLS-required tier: the OWNER is
- * the authenticated mTLS peer — never a request field — so a Gateway can only
+ * the authenticated mTLS peer - never a request field - so a Gateway can only
  * claim, refresh, or release ownership for itself. Auto-binds via the
  * {@code List<BindableService>} injection in {@code GrpcMtlsServer}.
  *
@@ -36,12 +36,12 @@ import reactor.core.publisher.Mono;
  * id: the Gateway has no database and knows its owned nodes only by the name it
  * reads from each agent certificate's dNSName SAN. The CP resolves the name to
  * the {@code runtime.node} id that keys {@code runtime.presence} (the FK is
- * intact — presence stays UUID-keyed); an unknown name fails closed.
+ * intact - presence stays UUID-keyed); an unknown name fails closed.
  *
  * <p>
  * Ownership is recorded and returned as the owner's
  * {@code gateway_identity.name}, resolved from the authenticated
- * {@code gatewayId}. The name — not the id — is the routing/relay key the rest
+ * {@code gatewayId}. The name - not the id - is the routing/relay key the rest
  * of the HA plane speaks: the read path ({@code Authorize}
  * {@code owning_gateway_id}) hands it back so the ingress can compare it to its
  * own name, the owner subscribes to {@code sl.dialback.<name>}, and its
@@ -53,7 +53,7 @@ import reactor.core.publisher.Mono;
  * service never writes a lower nonce: a takeover is always {@code current + 1},
  * and a concurrent claim that trips the {@code @Version} optimistic lock (or
  * the {@code presence_nonce_monotonic} DB trigger backstop) is <b>rejected as a
- * failed RPC</b> — the caller fails closed to "not owner" rather than
+ * failed RPC</b> - the caller fails closed to "not owner" rather than
  * clobbering a higher nonce (per the {@code Presence} contract).
  */
 @Service
@@ -144,7 +144,7 @@ public class PresenceService extends PresenceGrpc.PresenceImplBase {
 					return Mono.just(false); // idempotent no-op: caller is not the recorded owner
 				}
 				// Relinquish by ageing last_seen far into the past: owning_gateway is NOT NULL
-				// so it cannot be cleared, and the nonce must not decrease — a stale last_seen
+				// so it cannot be cleared, and the nonce must not decrease - a stale last_seen
 				// is the release signal, so the next heartbeat from any standby claims
 				// (nonce+1)
 				// immediately, closing the planned-drain failover window while preserving the

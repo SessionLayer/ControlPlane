@@ -107,7 +107,7 @@ public class WormObjectStore implements RecordingStore {
 		}
 		// Object-lock ⇒ VERSIONED bucket: a key-only delete just writes a delete marker
 		// and the governance-locked VERSION survives (GetObjectVersion still returns
-		// the data) — GDPR erasure would be illusory + storage never reclaimed. Real
+		// the data) - GDPR erasure would be illusory + storage never reclaimed. Real
 		// erasure removes EVERY version + delete marker of the key, bypassing
 		// governance retention (the caller's credential carries
 		// s3:BypassGovernanceRetention).
@@ -154,7 +154,7 @@ public class WormObjectStore implements RecordingStore {
 		PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
 				.signatureDuration(properties.getCredentialTtl()).putObjectRequest(put).build();
 		PresignedPutObjectRequest presigned = presigner.presignPutObject(presignRequest);
-		// The signed headers are part of the signature — the Gateway MUST replay them
+		// The signed headers are part of the signature - the Gateway MUST replay them
 		// verbatim (they include x-amz-object-lock-* + host), so a value change breaks
 		// the signature and the store refuses the PUT (the lock cannot be stripped).
 		return new PresignedAccess(presigned.url().toString(), presigned.httpRequest().method().name(),
@@ -239,7 +239,7 @@ public class WormObjectStore implements RecordingStore {
 
 	private static IllegalStateException notImmutable(String bucket, Throwable cause) {
 		return new IllegalStateException("WORM recording bucket " + bucket
-				+ " is not object-lock enabled: recordings would not be immutable — enable object-lock "
+				+ " is not object-lock enabled: recordings would not be immutable - enable object-lock "
 				+ "on the bucket before starting.", cause);
 	}
 

@@ -72,7 +72,7 @@ public class SessionManagementService {
 
 	// The reason becomes a Lock reason pushed to every Gateway in the deny-list
 	// snapshot, so bound it like LockIngestValidation does (defense-in-depth behind
-	// the contract's maxLength) — an oversized reason can't inflate that channel.
+	// the contract's maxLength) - an oversized reason can't inflate that channel.
 	private static final int MAX_REASON_LENGTH = 4096;
 
 	public Mono<SshSession> terminate(UUID id, String actor, String reason) {

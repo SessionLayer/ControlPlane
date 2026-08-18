@@ -24,7 +24,7 @@ public class GatewayDirectoryService {
 	public static final String ACTION_REMOVE = "gateway.remove";
 
 	/**
-	 * A removal that overrode a live Gateway — presence, open sessions, or both —
+	 * A removal that overrode a live Gateway - presence, open sessions, or both -
 	 * is a separate action, never folded into the ordinary one: a search for "who
 	 * took a live Gateway down" must not have to reconstruct that from detail
 	 * fields.
@@ -131,7 +131,7 @@ public class GatewayDirectoryService {
 	 * fronting nodes, which a removal strands. Open sessions mean the FK's
 	 * {@code ON DELETE SET NULL} is about to rewrite {@code gateway_id} out from
 	 * under them, and {@code RecordingRegistrationService} authorises both
-	 * {@code RequestUpload} and {@code FinalizeRecording} on that exact column — so
+	 * {@code RequestUpload} and {@code FinalizeRecording} on that exact column - so
 	 * a Gateway whose heartbeat has merely lapsed while it is still bridging live
 	 * traffic would pass a presence-only guard, and every in-flight recording would
 	 * become unuploadable, unfinalizable, and stuck at {@code 'recording'} for
@@ -163,7 +163,7 @@ public class GatewayDirectoryService {
 							// Close the sessions BEFORE the delete, while gateway_id still
 							// identifies them; afterwards the FK has nulled it and nothing can
 							// find them. Delete + audit share the transaction so a removal that
-							// cannot be audited never stands — the freed name is what a later
+							// cannot be audited never stands - the freed name is what a later
 							// enrollment is judged by.
 							return tx.transactional(closeStrandedSessions(id, openSessions)
 									.then(gatewayIdentities.deleteById(id))

@@ -76,7 +76,7 @@ class OperatorSettingsPinnedFieldIT extends AbstractConfigApiIT {
 	}
 
 	// Omission clears a nullable field, so leaving a pinned field out is a change
-	// too — the failure this refusal exists to prevent, since it would look like a
+	// too - the failure this refusal exists to prevent, since it would look like a
 	// successful write and revert at the next boot.
 	@Test
 	void omittingThePinnedFieldIsAlsoRefused() {

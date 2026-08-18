@@ -25,7 +25,7 @@ public class GatewayController implements GatewaysApi {
 
 	// Gateway names, certificate digests and which Gateway fronts which nodes are
 	// fleet-targeting metadata, so the read sits behind the Gateway-admin verb
-	// rather than the wider rbac:read — the same reasoning that gates listNodes on
+	// rather than the wider rbac:read - the same reasoning that gates listNodes on
 	// node:enroll.
 	@Override
 	public Mono<ResponseEntity<GatewayPage>> listGateways(String cursor, Integer limit, String name, String status,
@@ -45,7 +45,7 @@ public class GatewayController implements GatewaysApi {
 
 	@Override
 	public Mono<ResponseEntity<Void>> removeGateway(UUID gatewayId, Boolean force, ServerWebExchange exchange) {
-		// Deliberately NOT gateway:enroll — a credential trusted to bring a Gateway up
+		// Deliberately NOT gateway:enroll - a credential trusted to bring a Gateway up
 		// is not thereby trusted to take one down (mirrors node:enroll vs node:remove).
 		return access.withPermission(PlatformPermissions.GATEWAY_REMOVE,
 				subject -> gateways.remove(gatewayId, Boolean.TRUE.equals(force), subject.identity())
@@ -59,7 +59,7 @@ public class GatewayController implements GatewaysApi {
 		resource.setFingerprintSha256(gateway.fingerprint());
 		// Null at generation 0, and the setter must be handed that null rather than an
 		// empty string: the model omits null, and "" would read as a real digest that
-		// matches nothing — reintroducing the ambiguity this field removes.
+		// matches nothing - reintroducing the ambiguity this field removes.
 		resource.setPrevFingerprintSha256(gateway.prevFingerprint());
 		resource.setIssuedAt(ApiConversions.toOffset(gateway.issuedAt()));
 		resource.setNotAfter(ApiConversions.toOffset(gateway.notAfter()));

@@ -90,7 +90,7 @@ class CaRotationServiceProvisionerTest {
 		assertThat(error).isNotNull();
 		// The kind and the backend, never the key reference. Nothing maps this
 		// exception, so it reaches the framework's default handler and is logged
-		// there — and a key service's reference carries an account identifier.
+		// there - and a key service's reference carries an account identifier.
 		assertThat(error.getMessage()).contains("slow-backend").contains(KIND).doesNotContain("slow:handle");
 		verifyNoInteractions(caConfigs, caKeyMaterials);
 	}

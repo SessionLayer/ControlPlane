@@ -10,7 +10,7 @@ ALTER TABLE runtime.recording_ref
 
 COMMENT ON COLUMN runtime.recording_ref.retention_until IS 'FR-AUD-6: earliest time this recording may be pruned (governance mode only; compliance is never prunable; legal_hold overrides).';
 COMMENT ON COLUMN runtime.recording_ref.legal_hold IS 'FR-AUD-6: when true the recording is exempt from retention pruning regardless of retention_until.';
-COMMENT ON COLUMN runtime.recording_ref.status IS 'NFR-6: recording lifecycle — recording -> finalized|truncated|failed.';
+COMMENT ON COLUMN runtime.recording_ref.status IS 'NFR-6: recording lifecycle - recording -> finalized|truncated|failed.';
 COMMENT ON COLUMN runtime.recording_ref.content_digest IS 'NFR-6 integrity digest (sha256:<hex>); write-once once set (V8 trigger).';
 
 -- Extends the write-once provenance guard to content_digest. CREATE OR REPLACE and no

@@ -16,7 +16,7 @@ public final class CaBackendCapabilities {
 		public BackendNotImplemented(String backend) {
 			super("CA backend '" + backend + "' has no signer in this build: it is a key-service integration seam"
 					+ " whose implementation is supplied by the deployment, so a CA configured this way would accept"
-					+ " the write and then fail every signature — no session or host certificate could be issued."
+					+ " the write and then fail every signature - no session or host certificate could be issued."
 					+ " 'local', 'azure_keyvault' and 'aws_kms' are the backends that sign as shipped; protect"
 					+ " 'local' with a real KEK, 'azure_keyvault' with sessionlayer.ca.azure.* configured, and"
 					+ " 'aws_kms' with sessionlayer.ca.aws.* configured.");
@@ -33,7 +33,7 @@ public final class CaBackendCapabilities {
 	}
 
 	/**
-	 * Whether a backend can actually produce a signer in THIS build — the question
+	 * Whether a backend can actually produce a signer in THIS build - the question
 	 * {@code CaSignerService.signerFor} asks, asked once so the two cannot diverge.
 	 *
 	 * <p>
@@ -43,11 +43,11 @@ public final class CaBackendCapabilities {
 	 * per-backend dispatch is reached. {@code azure_keyvault} and {@code aws_kms}
 	 * are the key-service seams with real, bean-backed implementations
 	 * ({@code AzureKeyVaultSignerFactory}, {@code AwsKmsSignerFactory}, each gated
-	 * on its own {@code enabled} property) — a build that has them on the classpath
+	 * on its own {@code enabled} property) - a build that has them on the classpath
 	 * can sign, a deployment that has configured neither key service still fails
 	 * closed at {@code signerFor}, which is a deployment question, not a build one.
 	 * A first pass at this method answered the class-existence question and
-	 * reported an unusable backend as usable — the same mistake as
+	 * reported an unusable backend as usable - the same mistake as
 	 * {@link #forBackend}, which is truthful about algorithms and silent about
 	 * signers.
 	 */

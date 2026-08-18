@@ -72,7 +72,7 @@ final class BasicEscapeHatchFilter implements WebFilter {
 				// Deny, never raise: this filter's contract is that it answers for no
 				// one. A link-local peer arrives as fe80::1%2 and a mis-typed CIDR has
 				// no prefix; both make Cidrs throw, which would surface as a 500.
-				// Do NOT "fix" this by stripping the %scope — a scope id is
+				// Do NOT "fix" this by stripping the %scope - a scope id is
 				// interface-relative and comparing it against a configured CIDR would
 				// match a link-local peer against a global rule.
 			}

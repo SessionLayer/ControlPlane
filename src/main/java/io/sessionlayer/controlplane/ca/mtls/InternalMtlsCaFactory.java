@@ -118,7 +118,7 @@ public class InternalMtlsCaFactory {
 
 	/**
 	 * The AAD binding a wrapped CA key to its row ({@code caConfigId | keyType |
-	 * kekReference}) — identical on wrap and unwrap (same scheme as the SSH local
+	 * kekReference}) - identical on wrap and unwrap (same scheme as the SSH local
 	 * CA), so a wrapped blob cannot be substituted across rows.
 	 */
 	private static byte[] aad(UUID caConfigId, String keyTypeName, String kekReference) {
@@ -127,7 +127,7 @@ public class InternalMtlsCaFactory {
 
 	private void warn() {
 		if (kekProvider.isDevDefault()) {
-			LOG.warn("SECURITY: the local CA KEK is the built-in DEV default (public constant) — set a real KEK "
+			LOG.warn("SECURITY: the local CA KEK is the built-in DEV default (public constant) - set a real KEK "
 					+ "(sessionlayer.ca.local.kek-base64 / env). This is dev/test ONLY.");
 		}
 		LOG.warn("local X.509 backend in use for the internal mTLS CA; production SHOULD use a cloud X.509 CA so the "

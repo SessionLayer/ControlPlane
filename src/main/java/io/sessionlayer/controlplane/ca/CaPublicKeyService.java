@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 /**
- * Exports the active SSH CA's PUBLIC key — the material a node installs into
+ * Exports the active SSH CA's PUBLIC key - the material a node installs into
  * {@code TrustedUserCAKeys}. Public material only.
  *
  * <p>
@@ -20,7 +20,7 @@ import reactor.core.publisher.Mono;
  * CA backend: loading one unwraps the KEK-wrapped private key, which an export
  * of public material has no business doing. The projection below selects
  * {@code public_key} and three config columns and nothing else, so "no private
- * material is read" is provable from the SQL — {@code wrapped_key}, {@code iv}
+ * material is read" is provable from the SQL - {@code wrapped_key}, {@code iv}
  * and {@code kek_reference} are never in the result set.
  */
 @Service
@@ -67,7 +67,7 @@ public class CaPublicKeyService {
 	}
 
 	// A mislabelled authorized-key line fails at every node, at session time, with
-	// no obvious cause — so a key type this Control Plane cannot assemble is
+	// no obvious cause - so a key type this Control Plane cannot assemble is
 	// refused here rather than emitted under an ECDSA key-type name. Reachable on
 	// an upgraded deployment: the CHECK admits algorithms CaKeyType does not
 	// implement and is deliberately never narrowed.

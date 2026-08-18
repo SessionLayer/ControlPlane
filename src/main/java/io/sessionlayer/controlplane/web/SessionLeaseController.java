@@ -17,7 +17,7 @@ import reactor.core.publisher.Mono;
 
 /**
  * Concurrency leases: diagnosis (`audit:read`, as for {@code /v1/sessions}) and
- * single-lease release (`lock:write`, as for a session terminate — both correct
+ * single-lease release (`lock:write`, as for a session terminate - both correct
  * live enforcement state). No bulk or by-identity release exists here or below;
  * that shape is the one this endpoint refuses to make convenient.
  */

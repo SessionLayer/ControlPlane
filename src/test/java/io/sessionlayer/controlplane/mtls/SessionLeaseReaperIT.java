@@ -50,7 +50,7 @@ class SessionLeaseReaperIT extends AbstractMtlsIT {
 	}
 
 	// The live-lease gauge tracks the fleet-wide unreleased+unexpired count after
-	// a scheduled refresh (no per-identity tag — OTEL content rule).
+	// a scheduled refresh (no per-identity tag - OTEL content rule).
 	@Test
 	void theLiveLeaseGaugeTracksTheFleetWideCount() {
 		gaugeRefresher.refresh();

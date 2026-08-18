@@ -72,7 +72,7 @@ class KeyVaultSdkContractTest {
 				// anti-phishing check (KeyVaultCredentialPolicy#isChallengeResourceValid) only
 				// ever
 				// matches a challenge "resource" that is a strict parent-domain suffix of the
-				// request host (e.g. "vault.azure.net" under "my-vault.vault.azure.net") — an
+				// request host (e.g. "vault.azure.net" under "my-vault.vault.azure.net") - an
 				// IP-literal host can never satisfy that, by the check's own design. The SDK
 				// documents this exact flag as the escape hatch for a non-Azure-domain
 				// endpoint;
@@ -118,7 +118,7 @@ class KeyVaultSdkContractTest {
 		// runs it: KeyVaultCredentialPolicy sends the first request to a new
 		// authority with no cached challenge unauthenticated *and with its real
 		// body withheld* (stashed, replaced by Content-Length: 0), learns the
-		// scope from the 401, then replays the original request — now carrying
+		// scope from the 401, then replays the original request - now carrying
 		// both the bearer token and the withheld body. An unconditionally-trusting
 		// double would never exercise any of that and would prove nothing.
 		int firstBearer = indexOfFirst(requests, RecordedRequest::bearerTokenPresent);
@@ -241,7 +241,7 @@ class KeyVaultSdkContractTest {
 		byte[] signature = cryptographyClient.sign(SignatureAlgorithm.ES256, digest).getSignature();
 
 		// Shape alone says nothing: it decodes cleanly (64 bytes) yet was never
-		// produced by the pinned key — only an actual verify catches it.
+		// produced by the pinned key - only an actual verify catches it.
 		EcdsaSignatures.RS rs = EcdsaSignatures.fromP1363(signature, CaKeyType.ECDSA_NISTP256);
 		assertThat(rs).isNotNull();
 

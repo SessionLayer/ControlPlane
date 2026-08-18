@@ -22,7 +22,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA runtime TO cp_runti
 REVOKE UPDATE, DELETE, TRUNCATE ON runtime.audit_event FROM cp_runtime;
 
 -- Lock every existing audit partition (seeded in V7, before this role existed) to
--- INSERT/SELECT — defense in depth so a direct-partition UPDATE/DELETE by a
+-- INSERT/SELECT - defense in depth so a direct-partition UPDATE/DELETE by a
 -- compromised credential is also refused, not just access via the parent.
 DO $lock$
 DECLARE part record;
@@ -44,7 +44,7 @@ $lock$;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA config, runtime TO cp_runtime;
 
 -- Postgres grants EXECUTE to PUBLIC by default, which would make the restricted role
--- able to call EVERY function — including the SECURITY DEFINER audit_prune_before,
+-- able to call EVERY function - including the SECURITY DEFINER audit_prune_before,
 -- which DROPs audit partitions (a DDL erase the append-only trigger cannot stop). So
 -- REVOKE from PUBLIC first, then grant ONLY the safe functions the runtime role needs.
 REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA runtime FROM PUBLIC;

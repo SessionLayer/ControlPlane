@@ -22,7 +22,7 @@ public class AuditLogAgentSecurityAlertSink implements AgentSecurityAlertSink {
 	@Override
 	public Mono<Void> cloneDetected(UUID agentId, UUID nodeId, long expectedGeneration, long presentedGeneration) {
 		LOG.error(
-				"SECURITY: agent credential clone detected — agent_identity={} node={} expected_generation={} "
+				"SECURITY: agent credential clone detected - agent_identity={} node={} expected_generation={} "
 						+ "presented_generation={}; identity LOCKED (no auto-clear), operator re-provision required",
 				agentId, nodeId, expectedGeneration, presentedGeneration);
 		return audit.record("system:clone-detection", agentId.toString(), "agent.identity.clone_detected", "error",

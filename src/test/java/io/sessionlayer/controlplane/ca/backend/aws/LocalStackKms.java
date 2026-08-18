@@ -14,9 +14,9 @@ import software.amazon.awssdk.services.kms.model.KeyUsageType;
 /**
  * The local KMS the {@code aws_kms} integration tests run against. LocalStack's
  * KMS generates real asymmetric keys and produces real ECDSA signatures over
- * the real AWS protocol, so those tests exercise the genuine SDK path — SigV4
+ * the real AWS protocol, so those tests exercise the genuine SDK path - SigV4
  * request signing, endpoint resolution, the credential chain, DER response
- * handling — rather than a double of the {@link KmsSigner} seam.
+ * handling - rather than a double of the {@link KmsSigner} seam.
  *
  * <p>
  * Three fidelity gaps matter when reading a test that works around one. The
@@ -74,8 +74,8 @@ public final class LocalStackKms {
 	}
 
 	/**
-	 * Key administration — {@code CreateKey}, {@code DisableKey},
-	 * {@code CreateAlias} — which is fixture setup, not a path the Control Plane
+	 * Key administration - {@code CreateKey}, {@code DisableKey},
+	 * {@code CreateAlias} - which is fixture setup, not a path the Control Plane
 	 * has or wants: its documented IAM surface is {@code kms:Sign} plus
 	 * {@code kms:GetPublicKey} on one key.
 	 */

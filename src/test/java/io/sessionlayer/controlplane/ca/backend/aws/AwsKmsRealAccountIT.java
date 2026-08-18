@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
  *
  * <p>
  * The key must be {@code ECC_NIST_P256} with {@code SIGN_VERIFY} usage.
- * Credentials come from the SDK's default chain — environment, profile, web
+ * Credentials come from the SDK's default chain - environment, profile, web
  * identity or instance role, whichever the caller already has. The permissions
  * needed are the two actions this seam ever performs, on the one key:
  *

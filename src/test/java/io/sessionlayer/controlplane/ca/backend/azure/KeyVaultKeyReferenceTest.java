@@ -87,7 +87,7 @@ class KeyVaultKeyReferenceTest {
 	/**
 	 * Userinfo is never part of a real Key Vault identifier, and a URL carrying it
 	 * is exactly the shape that has fooled a careless "starts with the trusted
-	 * host" check elsewhere — refused outright rather than trusted to be parsed the
+	 * host" check elsewhere - refused outright rather than trusted to be parsed the
 	 * same way everywhere this string travels, even though {@code java.net.URI}
 	 * itself already resolves the real host correctly.
 	 */
@@ -114,9 +114,9 @@ class KeyVaultKeyReferenceTest {
 	}
 
 	/**
-	 * Pinning is mandatory — a version-less reference (no fourth segment at all) is
+	 * Pinning is mandatory - a version-less reference (no fourth segment at all) is
 	 * refused, not defaulted. Distinct from {@link #rejectsAMalformedKeyVersion}:
-	 * this is "absent", that is "present but fake" — the two rejections carry
+	 * this is "absent", that is "present but fake" - the two rejections carry
 	 * different messages so they stay distinguishable.
 	 */
 	@Test
@@ -129,7 +129,7 @@ class KeyVaultKeyReferenceTest {
 	/**
 	 * A version-shaped-but-fake fourth segment used to satisfy the "is there a
 	 * fourth segment" check without ever being a real Key Vault version (32
-	 * lowercase hex characters) — low severity (a bogus version already fails
+	 * lowercase hex characters) - low severity (a bogus version already fails
 	 * closed at adoption, since {@code fetchPublicKey} gets a real 404 and the
 	 * rotation aborts having written nothing), but it makes the exact-version
 	 * pinning rule actually true at parse time rather than merely documented.

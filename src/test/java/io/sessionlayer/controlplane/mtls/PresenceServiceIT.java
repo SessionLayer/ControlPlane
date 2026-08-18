@@ -69,7 +69,7 @@ class PresenceServiceIT extends AbstractMtlsIT {
 		assertThat(claim.getLastSeenEpochMs()).isPositive();
 
 		// The heartbeat-by-NAME resolved to the node's UUID and wrote the presence row
-		// there (the FK is intact) — this is the regression guard for the name-vs-UUID
+		// there (the FK is intact) - this is the regression guard for the name-vs-UUID
 		// routing bug: a UUID-only parse would have written nothing.
 		Presence row = presences.findById(node.id()).block();
 		assertThat(row).isNotNull();

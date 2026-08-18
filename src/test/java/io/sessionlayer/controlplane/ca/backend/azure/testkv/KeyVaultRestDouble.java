@@ -32,7 +32,7 @@ import java.util.regex.Pattern;
 /**
  * An in-process HTTPS double of the Azure Key Vault key/crypto REST surface,
  * exercised by the genuine {@code CryptographyClient}/{@code KeyClient} rather
- * than by a hand-written double of our own {@code KeyVaultSigner} interface —
+ * than by a hand-written double of our own {@code KeyVaultSigner} interface -
  * that is what proves request shape, the bearer-challenge dance, base64url
  * encoding and P1363 handling, none of which a same-process double of our own
  * seam can touch. Backed by a real P-256 key pair so every signature it returns

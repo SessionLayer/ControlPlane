@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
  * The permission vocabulary is closed and copied. Two copies are
  * machine-readable: {@link PlatformPermissions#ALL}, the source of truth the
  * server enforces against, and the {@code PlatformPermission} enum in the
- * vendored OpenAPI spec — which is what a role-write request may name, so a
+ * vendored OpenAPI spec - which is what a role-write request may name, so a
  * permission missing from it is one an admin cannot grant however correctly the
  * server enforces it. The SQL {@code platform_role_permissions_check} copy is
  * already guarded by {@code MigrationIntegrityIT}; this closes the other.

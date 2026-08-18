@@ -25,7 +25,7 @@ public interface SessionLeaseRepository extends ReactiveCrudRepository<SessionLe
 	Mono<Integer> extendBySessionId(UUID sessionId, Instant expiresAt);
 
 	// Unlike extendBySessionId's GREATEST (a keep-alive floor), a re-Authorize is a
-	// fresh decision and its grant_expiry is authoritative in either direction —
+	// fresh decision and its grant_expiry is authoritative in either direction -
 	// SET,
 	// not GREATEST. Zero rows updated means no live lease exists for the session
 	// (first Authorize, or a self-heal after a reaped one); the caller then

@@ -3,11 +3,11 @@
 --
 -- The kek_reference "never a private key" guard moves into the new table-level
 -- constraint rather than being dropped, so the invariant survives the removal of the
--- three V12 column-level CHECKs. 'local_kek' now enforces the V12 shape JOINTLY —
+-- three V12 column-level CHECKs. 'local_kek' now enforces the V12 shape JOINTLY -
 -- strictly stronger than before, where a row could satisfy each CHECK individually
 -- while carrying only two of the three columns as non-null nonsense.
 --
--- public_key stays NOT NULL for both — an external CA's public key is resolved from
+-- public_key stays NOT NULL for both - an external CA's public key is resolved from
 -- the key service at adoption and persisted, which is what keeps CaPublicKeyService,
 -- CaRotationService.trustedCaKeys and LocalCaFactory.publicAuthorizedKey working
 -- unchanged, and keeps "no private material is read" provable from the same SQL

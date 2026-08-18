@@ -27,7 +27,7 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
  * the bootstrap returns early once completed, so an already-bootstrapped
  * deployment's admin role keeps whatever vocabulary existed when it was seeded.
  * These tests seed exactly that stale row and re-run the shipped script over it
- * — it is written to be idempotent, so re-running is the honest way to exercise
+ * - it is written to be idempotent, so re-running is the honest way to exercise
  * it.
  *
  * <p>
@@ -37,7 +37,7 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
  * verbatim re-added a CHECK listing twenty permissions, which the first
  * twenty-first permission then violated on rows that legitimately carry it. The
  * guarantee under test is not "V29 worked once", it is "the current vocabulary
- * migration reconciles a stale seeded role against the WHOLE vocabulary" — and
+ * migration reconciles a stale seeded role against the WHOLE vocabulary" - and
  * that is the behaviour every future one has to inherit.
  */
 class PlatformAdminBackfillIT extends AbstractAuthIT {

@@ -142,7 +142,7 @@ class RecordingStoreSeamTest {
 	}
 
 	// The replay scope's time facet is evaluated against the SESSION's time (which
-	// recordings), not the wall-clock at request time — matching audit-search's
+	// recordings), not the wall-clock at request time - matching audit-search's
 	// occurred_at, so an incident-window-scoped auditor can't replay an
 	// out-of-window session during the window.
 	@Test
@@ -168,7 +168,7 @@ class RecordingStoreSeamTest {
 		assertThat(scope.getValue().at()).isEqualTo(sessionStart);
 	}
 
-	// A FAILED object delete must NOT report a false erasure — the claim is
+	// A FAILED object delete must NOT report a false erasure - the claim is
 	// rolled back (so the row is re-pruned) and the failure is audited, and the
 	// error surfaces (never a false 204).
 	@Test

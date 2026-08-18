@@ -63,7 +63,7 @@ class AuditChainFieldsIT extends AbstractConfigApiIT {
 
 		String scoped = scopedToken("svc-chain-scoped-" + run, nodeLabelScope("env", "prod"));
 		// The event is IN scope for this binding, so the reader gets the row and is
-		// denied only the chain — the omission is not an artefact of a filtered row.
+		// denied only the chain - the omission is not an artefact of a filtered row.
 		Response response = search(scoped, run);
 		JsonNode narrowed = response.body().get("items").get(0);
 		assertThat(narrowed.get("id").asString()).isEqualTo(stored.id().toString());
@@ -96,7 +96,7 @@ class AuditChainFieldsIT extends AbstractConfigApiIT {
 	 * Anchored on rows this test appended through the store, deliberately, rather
 	 * than on whatever happens to be newest. Sibling suites insert audit rows
 	 * straight through the repository without calling {@code withChain}, so the
-	 * table legitimately contains rows with no {@code record_hash} — the production
+	 * table legitimately contains rows with no {@code record_hash} - the production
 	 * reader allows for that too ({@code findChainOrdered} filters on
 	 * {@code record_hash IS NOT NULL}). A walk that assumed every row in the stream
 	 * is chained would be asserting something the schema does not promise.

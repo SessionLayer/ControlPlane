@@ -23,7 +23,7 @@ public class AuditLogBreakglassSecurityAlertSink implements BreakglassSecurityAl
 	@Override
 	public Mono<Void> authenticated(String identity, UUID nodeId, String sourceIp, String method) {
 		LOG.error(
-				"SECURITY: break-glass credential authenticated — identity={} node={} source_ip={} method={}; a "
+				"SECURITY: break-glass credential authenticated - identity={} node={} source_ip={} method={}; a "
 						+ "mandatory-review activation follows if a session is opened",
 				identity, nodeId, sourceIp, method);
 		Map<String, String> detail = new HashMap<>();

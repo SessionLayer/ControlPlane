@@ -11,19 +11,19 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *
  * <ul>
  * <li><b>default-max-concurrent</b> / <b>default-max-session-seconds</b> /
- * <b>default-idle-timeout-seconds</b> — the cluster-default session-limit knobs
+ * <b>default-idle-timeout-seconds</b> - the cluster-default session-limit knobs
  * as OPT-IN deployment-config values. Unset ⇒ unlimited/none (the stored
  * {@code operator_settings.default_*} column is left untouched, so existing
  * deployments are unaffected); set ⇒ reconciled into that column at bootstrap
  * and authoritative on each boot. Per-identity overrides live in
  * {@code config.session_limit_policy}.</li>
- * <li><b>lease-extension</b> — the SERVER-authoritative window
+ * <li><b>lease-extension</b> - the SERVER-authoritative window
  * {@code ExtendSessionLease} re-stamps a live lease's {@code expires_at} to
  * (exact accounting: a RunToTtl session outliving grant_expiry keeps its slot
  * while the Gateway re-extends ahead of expiry; the request carries no
  * duration, so a client can never park a lease in the far future). Default
  * 15m.</li>
- * <li><b>reaper.grace</b> — how far past a lease's {@code expires_at} the
+ * <li><b>reaper.grace</b> - how far past a lease's {@code expires_at} the
  * leaked- lease sweep waits before releasing it (belt, so a just-expiring
  * still-active lease is never touched; default = the lease-extension
  * window).</li>
@@ -57,14 +57,14 @@ public class SessionLimitProperties {
 	void applyFloors() {
 		if (leaseExtension == null || leaseExtension.compareTo(MIN_LEASE_EXTENSION) < 0) {
 			LOG.warn(
-					"sessionlayer.session-limits.lease-extension={} is below the {} floor — clamping (a tiny "
+					"sessionlayer.session-limits.lease-extension={} is below the {} floor - clamping (a tiny "
 							+ "window collapses under the Gateway extend cadence and the concurrency count flickers)",
 					leaseExtension, MIN_LEASE_EXTENSION);
 			leaseExtension = MIN_LEASE_EXTENSION;
 		}
 		if (reaper.grace == null || reaper.grace.compareTo(leaseExtension) < 0) {
 			if (reaper.grace != null) {
-				LOG.warn("sessionlayer.session-limits.reaper.grace={} is below the lease-extension window {} — "
+				LOG.warn("sessionlayer.session-limits.reaper.grace={} is below the lease-extension window {} - "
 						+ "clamping to the window (reap-safety: the Gateway's extend self-heal must win any CP "
 						+ "partition shorter than window + grace)", reaper.grace, leaseExtension);
 			}

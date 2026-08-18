@@ -17,7 +17,7 @@ import org.junit.jupiter.params.provider.ValueSource;
  * {@code ::1/300} is the case that proves the validator probes both address
  * families: a v4-only probe short-circuits on the family mismatch before the
  * prefix range check, so it would call that entry usable and leave it failing
- * at every request instead — the defect this check exists to remove,
+ * at every request instead - the defect this check exists to remove,
  * reintroduced inside the check itself.
  */
 class BasicEscapeHatchCidrValidationTest {

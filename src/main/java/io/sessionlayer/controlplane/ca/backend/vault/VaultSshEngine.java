@@ -7,7 +7,7 @@ import java.util.Map;
  * The injectable seam for the HashiCorp Vault SSH secrets engine. There is
  * deliberately <b>only a sign operation</b>: production binds it to
  * {@code POST /v1/ssh/sign/:role}, which returns a <b>signed certificate</b>
- * for a presented public key. There is <b>no</b> {@code issue} method — Vault's
+ * for a presented public key. There is <b>no</b> {@code issue} method - Vault's
  * {@code /ssh/issue} (which mints and returns a private key) must never be
  * used, so the interface makes it structurally impossible (the CP never
  * receives an inner-leg private key). CI exercises this with a double; a

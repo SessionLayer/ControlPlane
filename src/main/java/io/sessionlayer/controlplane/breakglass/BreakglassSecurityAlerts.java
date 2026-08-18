@@ -23,7 +23,7 @@ public class BreakglassSecurityAlerts {
 		return Flux.fromIterable(sinks)
 				.flatMap(sink -> sink.authenticated(identity, nodeId, sourceIp, method).onErrorResume(failed -> {
 					LOG.error(
-							"SECURITY: break-glass alert sink {} FAILED for identity {} ({}) — authentication stands "
+							"SECURITY: break-glass alert sink {} FAILED for identity {} ({}) - authentication stands "
 									+ "but this alert was not delivered; investigate immediately",
 							sink.getClass().getSimpleName(), identity, method, failed);
 					return Mono.empty();

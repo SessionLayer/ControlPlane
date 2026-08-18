@@ -47,7 +47,7 @@ class AzureKeyVaultSignerFactoryTest {
 	 * Unlike {@code DEFAULT}/{@code MANAGED_IDENTITY},
 	 * {@code WorkloadIdentityCredentialBuilder.build()} validates its AKS-injected
 	 * properties (tenant id, federated token file path) eagerly and throws if they
-	 * are absent — still I/O-free (no network call), but not silent like the other
+	 * are absent - still I/O-free (no network call), but not silent like the other
 	 * two. Outside a real AKS pod under Workload Identity Federation those
 	 * properties are unset, so this is the credential failing closed at
 	 * construction, which is what a build with this credential SHOULD do
@@ -128,7 +128,7 @@ class AzureKeyVaultSignerFactoryTest {
 	/**
 	 * The public key {@code fetchPublicKey} resolves becomes the pinned trust
 	 * anchor for the whole CA, so a vault (or a redirect, or a proxy) answering
-	 * with a different key id — even a different version of the SAME key name —
+	 * with a different key id - even a different version of the SAME key name -
 	 * must be refused rather than silently pinned.
 	 */
 	@Test
@@ -148,7 +148,7 @@ class AzureKeyVaultSignerFactoryTest {
 	 * must be a parent domain of the request host) is an anti-token-exfiltration
 	 * control. Disabling it is a legitimate thing for a test client pointed at a
 	 * non-Azure-domain double to do, but it must never migrate into the production
-	 * factory — a source scan pins that even though nothing here can unit-test the
+	 * factory - a source scan pins that even though nothing here can unit-test the
 	 * real credential/challenge exchange without a vault. This is a tripwire
 	 * against the obvious mistake (the literal call appearing in this file), not a
 	 * proof: it would not catch the flag being set through a builder reference held

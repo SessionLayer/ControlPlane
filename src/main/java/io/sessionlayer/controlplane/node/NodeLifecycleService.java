@@ -88,11 +88,11 @@ public class NodeLifecycleService {
 								.then(audit.record(actor, saved.id().toString(), "node.register", "success", null,
 										saved.id(), Map.of("name", name, "connector", connector, "status", status)))
 								.thenReturn(saved));
-		// The unique(name) constraint is the race-safe dedup — a concurrent duplicate
+		// The unique(name) constraint is the race-safe dedup - a concurrent duplicate
 		// insert surfaces as a CONFLICT rather than a pre-check TOCTOU. Any OTHER
 		// integrity failure on this path is an anchor the schema will not take (an
 		// unrecognised key type is the reachable one, since badHostLine checks the line
-		// SHAPE, not the type token) — 400 here because that is the status this
+		// SHAPE, not the type token) - 400 here because that is the status this
 		// published endpoint declares. Ordered after the DuplicateKey mapping, which it
 		// subsumes. Without it the failure reaches the client as a 500 carrying the
 		// column and constraint names.
@@ -189,7 +189,7 @@ public class NodeLifecycleService {
 		// Quarantine ALWAYS flips status to 'quarantined', which blocks NEW sessions
 		// via
 		// the non-active-node deny in the Authorize path (decide()). How EXISTING
-		// sessions are handled is the kill/drain difference — and it canNOT ride the
+		// sessions are handled is the kill/drain difference - and it canNOT ride the
 		// pushed Lock's mode, because the wire Lock carries no mode (LockCodec drops
 		// it),
 		// so ANY pushed node Lock tears sessions down (deny wins). Therefore:
@@ -230,7 +230,7 @@ public class NodeLifecycleService {
 			if (!quarantined && !pending) {
 				// active (idempotent) or removed (terminal): no block to clear, and NEVER
 				// delete
-				// a Lock here — a removed node's covering teardown Lock must survive. Audit the
+				// a Lock here - a removed node's covering teardown Lock must survive. Audit the
 				// no-op for forensics.
 				return tx
 						.transactional(audit.record(actor, node.id().toString(), "node.quarantine.release", "success",
@@ -340,7 +340,7 @@ public class NodeLifecycleService {
 		return selector;
 	}
 
-	// A bare node-quarantine lock is exactly {"node_ids":[nodeId]} — node_ids is
+	// A bare node-quarantine lock is exactly {"node_ids":[nodeId]} - node_ids is
 	// the
 	// only facet and names just this node. Requiring "no other facet" is
 	// load-bearing:
@@ -383,7 +383,7 @@ public class NodeLifecycleService {
 		boolean hasCert = !isBlank(certLine);
 		boolean hasPin = !isBlank(pinLine);
 		if (!hasCert && !hasPin) {
-			// Never TOFU — the Gateway verifies the node's host identity on the inner
+			// Never TOFU - the Gateway verifies the node's host identity on the inner
 			// leg whichever connector reached it, so BOTH kinds need an enrollment-anchored
 			// identity (a host-CA cert or an explicitly pinned host key).
 			return invalid("a host certificate or a pinned host key is required (no TOFU)");

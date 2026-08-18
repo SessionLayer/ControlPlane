@@ -41,14 +41,14 @@ public class SecurityConfiguration {
 	// public
 	// (the opaque device code is its authenticator) but `/v1/auth/device` (begin)
 	// is
-	// mTLS-gated (Gateway-only) per the contract — a `/v1/auth/device/**` glob
+	// mTLS-gated (Gateway-only) per the contract - a `/v1/auth/device/**` glob
 	// would
 	// also match the base path and expose begin unauthenticated.
 	static final String[] PUBLIC_PATHS = {"/v1/healthz", "/v1/version", "/actuator/health", "/actuator/health/**",
 			"/actuator/info", "/v1/auth/verify", "/v1/auth/callback"};
 
 	// Both shapes are listed because management.endpoints.web.exposure.include
-	// exposes metrics AND prometheus — the same meters by two routes, so gating one
+	// exposes metrics AND prometheus - the same meters by two routes, so gating one
 	// alone closes nothing. The health and info endpoints stay public above, so
 	// Kubernetes probes are untouched.
 	static final String[] METRICS_PATHS = {"/actuator/prometheus", "/actuator/prometheus/**", "/actuator/metrics",

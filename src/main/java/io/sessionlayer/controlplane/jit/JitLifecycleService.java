@@ -164,7 +164,7 @@ public class JitLifecycleService {
 										"jit request is not pending approval")));
 					}
 					// The approval window is a hard clock: an approval landing after it (before
-					// the sweep) must NOT grant a fresh TTL — lazily flip to EXPIRED + audit and
+					// the sweep) must NOT grant a fresh TTL - lazily flip to EXPIRED + audit and
 					// reject, symmetric with the grant path's read-time expiry.
 					if (elapsed(request.approvalDeadline(), now)) {
 						return lazilyExpire(request, now).then(Mono.error(
@@ -201,7 +201,7 @@ public class JitLifecycleService {
 		boolean complete = level + 1 >= chain.size();
 		if (complete) {
 			// The grant clock starts at final approval, from the SUBMIT-time snapshot of
-			// the policy max_ttl (never re-read live — a mid-flight policy edit/delete
+			// the policy max_ttl (never re-read live - a mid-flight policy edit/delete
 			// cannot widen or fail-open the grant), bounded by the cluster ceiling.
 			Instant grantExpiry = now.plus(grantTtl(request.policyMaxTtlSeconds()));
 			JitRequest approved = request.approved(approvals, grantExpiry, approver, now);
@@ -235,7 +235,7 @@ public class JitLifecycleService {
 		Instant now = Instant.now();
 		// The lock exists ONLY to tear down the LIVE session, so give it a bounded,
 		// self-clearing TTL (the REVOKED state blocks re-auth) and target the grant's
-		// IDENTITY only — a node facet would strict-lock EVERY user on the target node.
+		// IDENTITY only - a node facet would strict-lock EVERY user on the target node.
 		int ttlSeconds = (int) Math.max(1, properties.getRevokeLockTtl().toSeconds());
 		Instant expiresAt = now.plusSeconds(ttlSeconds);
 		Mono<Revocation> committed = tx.transactional(requests.findById(requestId)
@@ -274,7 +274,7 @@ public class JitLifecycleService {
 						requests.findByState(JitRequest.APPROVED), requests.findByState(JitRequest.ACTIVE))
 				.filter(request -> isOverdue(request, now));
 		return overdue.flatMap(request -> lazilyExpire(request, now).thenReturn(1L).onErrorResume(error -> {
-			LOG.warn("jit expiry: could not expire {} — skipped: {}", request.id(), error.toString());
+			LOG.warn("jit expiry: could not expire {} - skipped: {}", request.id(), error.toString());
 			return Mono.just(0L);
 		}), 4).reduce(0L, Long::sum);
 	}
@@ -304,7 +304,7 @@ public class JitLifecycleService {
 			return Mono.empty();
 		}
 		// .timeout(duration, fallback) switches to the fallback on expiry rather than
-		// erroring, so a slow query degrades straight to "no usable grant" — never a
+		// erroring, so a slow query degrades straight to "no usable grant" - never a
 		// fail-closed deny of the whole connect.
 		return metrics.timeJitLookup(requests.findUsableGrant(requester, nodeId, principal, now))
 				.timeout(properties.getLookupTimeout(), Mono.empty());

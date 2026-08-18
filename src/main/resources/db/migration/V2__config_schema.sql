@@ -7,7 +7,7 @@
 --   * PK = uuid, app-generated UUIDv7 (no DB extension needed).
 --   * version bigint = the R2DBC @Version column (solves the is-new problem for a
 --     client-assigned id; also optimistic-concurrency).
---   * Closed enums = text + CHECK (never native ENUM — expand/contract friendly).
+--   * Closed enums = text + CHECK (never native ENUM - expand/contract friendly).
 --   * Selectors = jsonb (shape-validated); capability/permission sets = text[] with
 --     a subset CHECK.
 --   * created_at/updated_at = bookkeeping (auditing-managed); DEFAULT now() is a
@@ -31,7 +31,7 @@ CREATE TABLE config.node_policy (
     created_at      timestamptz NOT NULL DEFAULT now(),
     updated_at      timestamptz NOT NULL DEFAULT now()
 );
-COMMENT ON TABLE config.node_policy IS 'Design §12A CONFIG: NodePolicy — desired node labels + connector + host trust refs.';
+COMMENT ON TABLE config.node_policy IS 'Design §12A CONFIG: NodePolicy - desired node labels + connector + host trust refs.';
 
 CREATE TABLE config.dp_rule (
     id                  uuid    PRIMARY KEY,
@@ -160,7 +160,7 @@ CREATE TABLE config.breakglass_policy (
     created_at        timestamptz NOT NULL DEFAULT now(),
     updated_at        timestamptz NOT NULL DEFAULT now()
 );
-COMMENT ON TABLE config.breakglass_policy IS 'FR-ACC-6: break-glass — recording-strict, alert, review, IdP-independent auth path.';
+COMMENT ON TABLE config.breakglass_policy IS 'FR-ACC-6: break-glass - recording-strict, alert, review, IdP-independent auth path.';
 
 CREATE TABLE config.service_account (
     id                uuid    PRIMARY KEY,

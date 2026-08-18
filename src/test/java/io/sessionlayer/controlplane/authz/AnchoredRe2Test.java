@@ -23,7 +23,7 @@ class AnchoredRe2Test {
 		boolean matched = AnchoredRe2.matches(evil, input);
 		long elapsedMillis = (System.nanoTime() - startNanos) / 1_000_000;
 		assertThat(matched).isFalse();
-		assertThat(elapsedMillis).as("RE2 stays linear — well under a second").isLessThan(1000L);
+		assertThat(elapsedMillis).as("RE2 stays linear - well under a second").isLessThan(1000L);
 	}
 
 	@Test

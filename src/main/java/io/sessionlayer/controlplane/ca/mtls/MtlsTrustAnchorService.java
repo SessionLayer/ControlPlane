@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 /**
- * Exports the active internal mTLS CA certificate — the trust anchor a Gateway
+ * Exports the active internal mTLS CA certificate - the trust anchor a Gateway
  * pins. Public material only.
  *
  * <p>
@@ -20,7 +20,7 @@ import reactor.core.publisher.Mono;
  * a backend unwraps the KEK-wrapped private key, which an export of public
  * material has no business doing. The projection below selects
  * {@code ca_certificate} and nothing else, so "no sibling column is read" is
- * provable from the SQL — {@code wrapped_key}, {@code iv} and
+ * provable from the SQL - {@code wrapped_key}, {@code iv} and
  * {@code kek_reference} are never in the result set.
  */
 @Service

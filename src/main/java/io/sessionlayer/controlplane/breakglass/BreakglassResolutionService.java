@@ -82,7 +82,7 @@ public class BreakglassResolutionService {
 							row.get("node_selector", String.class)))
 					.one().flatMap(consumed -> {
 						// The code is spent (atomic); a wrong node scope now fails closed but the
-						// single-use code is not reusable — an emergency operator targets the node.
+						// single-use code is not reusable - an emergency operator targets the node.
 						if (!BreakglassNodeScope.permits(parse(consumed.nodeSelector()), nodeId)) {
 							return denied("node_scope", ip);
 						}

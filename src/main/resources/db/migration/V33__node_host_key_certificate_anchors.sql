@@ -38,6 +38,6 @@ CREATE UNIQUE INDEX uq_node_host_key_host_ca_cert
 COMMENT ON COLUMN runtime.node_host_key.public_key IS
     'The anchor''s OpenSSH public-key line. Required for a pinned_key row, which IS that key; NULL for a host_ca row recorded from a certificate line, whose material is host_cert_ref. Public material only.';
 COMMENT ON COLUMN runtime.node_host_key.fingerprint IS
-    'SHA256: fingerprint of public_key — what an operator compares against the key the node reports. Required for a pinned_key row; NULL for a host_ca row recorded from a certificate line alone, whose trust comes from the CA signature rather than a fingerprint comparison. Never a computed stand-in.';
+    'SHA256: fingerprint of public_key - what an operator compares against the key the node reports. Required for a pinned_key row; NULL for a host_ca row recorded from a certificate line alone, whose trust comes from the CA signature rather than a fingerprint comparison. Never a computed stand-in.';
 COMMENT ON COLUMN runtime.node_host_key.key_type IS
-    'The anchor''s OpenSSH type token — the first field of the stored line. A host_ca row carries a certificate type (…-cert-v01@openssh.com); a pinned_key row carries a plain key type.';
+    'The anchor''s OpenSSH type token - the first field of the stored line. A host_ca row carries a certificate type (…-cert-v01@openssh.com); a pinned_key row carries a plain key type.';

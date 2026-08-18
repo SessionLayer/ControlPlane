@@ -138,8 +138,8 @@ class NodeHostAnchorsIT extends AbstractAuthIT {
 
 	// sshd generates an RSA host key by default and the admin guide names
 	// /etc/ssh/ssh_host_rsa_key.pub, so this is the line an operator is most likely
-	// to paste. The original key_type CHECK listed rsa-sha2-256/512 — signature
-	// algorithm names — and not ssh-rsa, so pasting it produced the same unhandled
+	// to paste. The original key_type CHECK listed rsa-sha2-256/512 - signature
+	// algorithm names - and not ssh-rsa, so pasting it produced the same unhandled
 	// insert failure as the certificate path.
 	@Test
 	void anRsaHostKeyAndAnRsaCertificateAreBothStorable() {
@@ -248,7 +248,7 @@ class NodeHostAnchorsIT extends AbstractAuthIT {
 				.getResponseBody();
 		assertThat(replay).isEqualTo(first);
 
-		// The replay returned the stored response instead of re-running the replace —
+		// The replay returned the stored response instead of re-running the replace -
 		// which is what the single audit record proves.
 		assertThat(replays(admin)).isEqualTo(1);
 

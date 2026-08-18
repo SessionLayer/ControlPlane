@@ -1,5 +1,5 @@
 -- The recording_ref row is NEVER deleted: the encrypted OBJECT is deleted and the
--- row is MARKED pruned — so the audit trail that a recording existed (and was
+-- row is MARKED pruned - so the audit trail that a recording existed (and was
 -- expired/erased, by whom) is preserved while the personal data (the recorded
 -- bytes) is gone.
 
@@ -12,7 +12,7 @@ ALTER TABLE config.platform_role
         'audit:read', 'user:manage', 'settings:write',
         'lock:read', 'lock:write', 'breakglass:manage']::text[]);
 
--- Retention/governance-delete lifecycle. All nullable + mutable (NOT write-once — the
+-- Retention/governance-delete lifecycle. All nullable + mutable (NOT write-once - the
 -- V8 trigger guards only session_id/object_key/encryption_key_ref/hash_chain_head/
 -- content_digest, so these are freely settable by the pruner / governance-delete).
 ALTER TABLE runtime.recording_ref
@@ -23,7 +23,7 @@ ALTER TABLE runtime.recording_ref
     ADD COLUMN legal_hold_reason text;
 
 COMMENT ON COLUMN runtime.recording_ref.pruned_at IS 'FR-AUD-6: when the encrypted object was deleted (retention prune or governance delete). The metadata row is retained (crown-jewels provenance, §15).';
-COMMENT ON COLUMN runtime.recording_ref.delete_mode IS 'FR-AUD-3/6: how the object was deleted — retention (automated, past retention_until) or governance (privileged, audited erasure).';
+COMMENT ON COLUMN runtime.recording_ref.delete_mode IS 'FR-AUD-3/6: how the object was deleted - retention (automated, past retention_until) or governance (privileged, audited erasure).';
 COMMENT ON COLUMN runtime.recording_ref.deleted_by IS 'FR-PADM-3: the recording:delete-privileged actor for a governance delete (NULL for automated retention prune).';
 COMMENT ON COLUMN runtime.recording_ref.legal_hold_reason IS 'FR-AUD-6: optional reason captured when a legal hold is placed (blocks retention prune + governance delete).';
 

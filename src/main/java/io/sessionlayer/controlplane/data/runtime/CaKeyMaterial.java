@@ -31,7 +31,7 @@ public record CaKeyMaterial(@Id UUID id, UUID caConfigId, String caConfigName, S
 
 	/**
 	 * An external (key-service) CA row (V30): the private key lives in the key
-	 * service, so wrappedKey/iv/kekReference are absent — the schema refuses any
+	 * service, so wrappedKey/iv/kekReference are absent - the schema refuses any
 	 * other shape for {@code key_location = 'external'}.
 	 */
 	public static CaKeyMaterial createExternal(UUID caConfigId, String caConfigName, byte[] publicKey, String keyType,

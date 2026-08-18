@@ -1,6 +1,6 @@
 # MemoryDenyWriteExecute is deliberately OMITTED: HotSpot's JIT (C1/C2) needs
 # to map its code cache both writable and executable, which is exactly what
-# that directive forbids — enabling it prevents the JVM from starting.
+# that directive forbids - enabling it prevents the JVM from starting.
 
 [Unit]
 Description=SessionLayer Control Plane
