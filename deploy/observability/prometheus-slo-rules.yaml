@@ -1,0 +1,76 @@
+# CA-signer availability is computed over source="request" only, so the
+# ~6/min health-probe baseline never masks partial degradation.
+groups:
+  - name: sessionlayer-cp-slo
+    rules:
+      - alert: SessionEstablishmentP95SloBreach
+        expr: >
+          histogram_quantile(0.95,
+            sum by (le) (rate(sessionlayer_session_establishment_seconds_bucket[5m]))
+          ) > 0.25
+        for: 10m
+        labels: { severity: critical, slo: latency }
+        annotations:
+          summary: "CP session-establishment p95 > 250 ms"
+          description: "p95 = {{ $value | humanizeDuration }} over 5m; SLO is 250 ms. The Authorize→session-write→token-mint machine path is slow; check DB pool saturation and CA-signer latency."
+          runbook_url: "https://github.com/SessionLayer/Documentation/blob/main/docs/operations/monitoring.md#the-two-slos"
+
+      - alert: CertSignP95SloBreach
+        expr: >
+          histogram_quantile(0.95,
+            sum by (le) (rate(sessionlayer_cert_sign_seconds_bucket[5m]))
+          ) > 0.1
+        for: 10m
+        labels: { severity: critical, slo: latency }
+        annotations:
+          summary: "CP cert-sign p95 > 100 ms"
+          description: "Inner/host cert signing p95 = {{ $value | humanizeDuration }}; SLO is 100 ms. Check the CA backend (KMS/Vault) latency."
+          runbook_url: "https://github.com/SessionLayer/Documentation/blob/main/docs/operations/monitoring.md#the-two-slos"
+
+      - alert: CaSignerAvailabilitySloBreach
+        expr: >
+          (
+            sum(rate(sessionlayer_ca_signer_total{source="request",outcome="available"}[30m]))
+            /
+            sum(rate(sessionlayer_ca_signer_total{source="request"}[30m]))
+          ) < 0.999
+        for: 15m
+        labels: { severity: critical, slo: availability }
+        annotations:
+          summary: "CP CA-signer availability < 99.9%"
+          description: "Availability = {{ $value | humanizePercentage }} over 30m of REAL sign requests. The session CA gates all NEW sessions - this is an SLO peer of the datastore. Fails CLOSED (no cert ever issued), so this is a hard new-session outage, not a security regression."
+          runbook_url: "https://github.com/SessionLayer/Documentation/blob/main/docs/operations/troubleshooting.md#service-temporarily-unavailable"
+
+      # A fast-burn companion so a total signer outage pages in minutes, not after
+      # the 30m ratio window.
+      - alert: CaSignerFailClosedSpike
+        expr: >
+          sum(rate(sessionlayer_ca_signer_total{source="request",outcome=~"unavailable|error"}[5m])) > 0
+        for: 5m
+        labels: { severity: critical, slo: availability }
+        annotations:
+          summary: "CP CA-signer returning unavailable/error (fail-closed) on real requests"
+          description: "{{ $value | humanize }}/s real sign requests are failing closed. All redundant signer backends may be down. New sessions cannot start until a signer recovers."
+          runbook_url: "https://github.com/SessionLayer/Documentation/blob/main/docs/operations/troubleshooting.md#service-temporarily-unavailable"
+
+      - alert: SessionEstablishmentErrorSpike
+        expr: >
+          sum(rate(sessionlayer_session_establishment_seconds_count{outcome="error"}[5m]))
+          /
+          clamp_min(sum(rate(sessionlayer_session_establishment_seconds_count[5m])), 0.001)
+          > 0.10
+        for: 10m
+        labels: { severity: critical }
+        annotations:
+          summary: "CP Authorize error-rate > 10%"
+          description: "Errored (not deny - {{ $value | humanizePercentage }}) establishment decisions. Errors fail closed; a spike means a degraded dependency (DB/lock-stream) turning legitimate sessions away. Investigate before it becomes an availability incident."
+          runbook_url: "https://github.com/SessionLayer/Documentation/blob/main/docs/operations/troubleshooting.md#access-denied-by-policy-when-the-user-swears-they-should-have-access"
+
+      - alert: NoAuthorizeTraffic
+        expr: sum(rate(sessionlayer_session_establishment_seconds_count[10m])) == 0
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "CP received no Authorize decisions for 15m"
+          description: "Either genuinely idle or the Gateway→CP gRPC path is broken (mTLS/version-negotiation). Correlate with gateway session-attempt spans."
+          runbook_url: "https://github.com/SessionLayer/Documentation/blob/main/docs/operations/troubleshooting.md#connection-dropped-before-any-ssh-banner"

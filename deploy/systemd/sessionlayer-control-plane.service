@@ -1,0 +1,44 @@
+# MemoryDenyWriteExecute is deliberately OMITTED: HotSpot's JIT (C1/C2) needs
+# to map its code cache both writable and executable, which is exactly what
+# that directive forbids - enabling it prevents the JVM from starting.
+
+[Unit]
+Description=SessionLayer Control Plane
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+EnvironmentFile=/etc/sessionlayer/control-plane.env
+ExecStart=/usr/bin/java -jar /opt/sessionlayer/controlplane.jar
+Restart=on-failure
+RestartSec=2s
+
+AmbientCapabilities=
+CapabilityBoundingSet=
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallFilter=@system-service
+SystemCallFilter=~@mount @swap @reboot @module @debug @cpu-emulation @obsolete
+SystemCallArchitectures=native
+LimitCORE=0
+
+[Install]
+WantedBy=multi-user.target

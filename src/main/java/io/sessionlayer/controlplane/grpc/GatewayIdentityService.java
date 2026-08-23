@@ -1,0 +1,93 @@
+package io.sessionlayer.controlplane.grpc;
+
+import com.google.protobuf.ByteString;
+import io.grpc.stub.StreamObserver;
+import io.sessionlayer.controlplane.gateway.GatewayEnrollmentService;
+import io.sessionlayer.controlplane.gateway.GatewayRenewalService;
+import io.sessionlayer.controlplane.gateway.GatewayServerCertificateService;
+import io.sessionlayer.controlplane.gateway.IssuedIdentity;
+import io.sessionlayer.controlplane.gateway.IssuedServerCertificate;
+import io.sessionlayer.controlplane.grpc.v1.EnrollGatewayRequest;
+import io.sessionlayer.controlplane.grpc.v1.EnrollGatewayResponse;
+import io.sessionlayer.controlplane.grpc.v1.GatewayIdentityGrpc;
+import io.sessionlayer.controlplane.grpc.v1.IssueGatewayServerCertificateRequest;
+import io.sessionlayer.controlplane.grpc.v1.IssueGatewayServerCertificateResponse;
+import io.sessionlayer.controlplane.grpc.v1.RenewGatewayIdentityRequest;
+import io.sessionlayer.controlplane.grpc.v1.RenewGatewayIdentityResponse;
+import io.sessionlayer.controlplane.mtls.CertificateFingerprints;
+import io.sessionlayer.controlplane.mtls.MtlsContext;
+import io.sessionlayer.controlplane.mtls.MtlsPeer;
+import io.sessionlayer.controlplane.mtls.MtlsProperties;
+import org.springframework.stereotype.Service;
+
+@Service
+public class GatewayIdentityService extends GatewayIdentityGrpc.GatewayIdentityImplBase {
+
+	private final GatewayEnrollmentService enrollment;
+	private final GatewayRenewalService renewal;
+	private final GatewayServerCertificateService serverCertificates;
+	private final MtlsProperties properties;
+
+	public GatewayIdentityService(GatewayEnrollmentService enrollment, GatewayRenewalService renewal,
+			GatewayServerCertificateService serverCertificates, MtlsProperties properties) {
+		this.enrollment = enrollment;
+		this.renewal = renewal;
+		this.serverCertificates = serverCertificates;
+		this.properties = properties;
+	}
+
+	@Override
+	public void enrollGateway(EnrollGatewayRequest request, StreamObserver<EnrollGatewayResponse> observer) {
+		ReactiveBridge.forward(
+				enrollment.enroll(request.getEnrollmentToken(), request.getPkcs10Csr().toByteArray(),
+						request.getGatewayName()).map(GatewayIdentityService::toEnrollResponse),
+				observer, properties.getRpcTimeout(), "EnrollGateway");
+	}
+
+	@Override
+	public void renewGatewayIdentity(RenewGatewayIdentityRequest request,
+			StreamObserver<RenewGatewayIdentityResponse> observer) {
+		MtlsPeer peer = MtlsContext.peer();
+		String presentedFingerprint = CertificateFingerprints.sha256Hex(peer.certificate());
+		ReactiveBridge.forward(
+				renewal.renew(peer.gatewayId(), presentedFingerprint, request.getPkcs10Csr().toByteArray(),
+						request.getCurrentGeneration()).map(GatewayIdentityService::toRenewResponse),
+				observer, properties.getRpcTimeout(), "RenewGatewayIdentity");
+	}
+
+	@Override
+	public void issueGatewayServerCertificate(IssueGatewayServerCertificateRequest request,
+			StreamObserver<IssueGatewayServerCertificateResponse> observer) {
+		MtlsPeer peer = MtlsContext.peer();
+		ReactiveBridge.forward(
+				serverCertificates.issue(peer.gatewayId(), request.getPkcs10Csr().toByteArray())
+						.map(GatewayIdentityService::toServerCertResponse),
+				observer, properties.getRpcTimeout(), "IssueGatewayServerCertificate");
+	}
+
+	private static IssueGatewayServerCertificateResponse toServerCertResponse(IssuedServerCertificate issued) {
+		return IssueGatewayServerCertificateResponse.newBuilder()
+				.setCertificate(ByteString.copyFrom(issued.certificate()))
+				.addAllCaChain(issued.caChain().stream().map(ByteString::copyFrom).toList())
+				.setGatewayName(issued.gatewayName()).setNotBeforeEpochSeconds(issued.notBeforeEpochSeconds())
+				.setNotAfterEpochSeconds(issued.notAfterEpochSeconds()).build();
+	}
+
+	private static EnrollGatewayResponse toEnrollResponse(IssuedIdentity issued) {
+		return EnrollGatewayResponse.newBuilder().setCertificate(ByteString.copyFrom(issued.certificate()))
+				.addAllCaChain(caChain(issued)).setGatewayId(issued.gatewayId().toString())
+				.setGeneration(issued.generation()).setNotBeforeEpochSeconds(issued.notBeforeEpochSeconds())
+				.setNotAfterEpochSeconds(issued.notAfterEpochSeconds()).build();
+	}
+
+	private static RenewGatewayIdentityResponse toRenewResponse(IssuedIdentity issued) {
+		return RenewGatewayIdentityResponse.newBuilder().setCertificate(ByteString.copyFrom(issued.certificate()))
+				.addAllCaChain(caChain(issued)).setGatewayId(issued.gatewayId().toString())
+				.setGeneration(issued.generation()).setNotBeforeEpochSeconds(issued.notBeforeEpochSeconds())
+				.setNotAfterEpochSeconds(issued.notAfterEpochSeconds()).build();
+	}
+
+	private static Iterable<ByteString> caChain(IssuedIdentity issued) {
+		return issued.caChain().stream().map(ByteString::copyFrom).toList();
+	}
+}

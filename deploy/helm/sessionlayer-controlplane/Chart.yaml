@@ -1,0 +1,16 @@
+apiVersion: v2
+name: sessionlayer-controlplane
+description: SessionLayer Control Plane, the API, policy, identity and certificate-authority service.
+type: application
+version: 0.1.0
+appVersion: "v0.0.2"
+# policy/v1 PodDisruptionBudget.
+kubeVersion: ">=1.21.0-0"
+home: https://github.com/SessionLayer/ControlPlane
+sources:
+  - https://github.com/SessionLayer/ControlPlane
+keywords:
+  - ssh
+  - access
+  - zero-trust
+  - session-recording

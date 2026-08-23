@@ -1,0 +1,19 @@
+version: v2
+modules:
+  - path: .
+lint:
+  use:
+    - STANDARD
+  except:
+    # The version-negotiation service is deliberately named `Handshake` (not
+    # `HandshakeService`) and exchanges `ClientHello`/`ServerHello` messages,
+    # mirroring the TLS handshake vocabulary. The three exceptions below relax
+    # only a *naming convention*; every substantive rule (package/version/
+    # directory match, casing, import hygiene, enum-zero) stays on.
+    - SERVICE_SUFFIX
+    - RPC_REQUEST_STANDARD_NAME
+    - RPC_RESPONSE_STANDARD_NAME
+  disallow_comment_ignores: true
+breaking:
+  use:
+    - FILE
