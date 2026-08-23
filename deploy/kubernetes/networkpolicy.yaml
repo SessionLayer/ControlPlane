@@ -1,0 +1,70 @@
+# Two of the four egress peers here (the WORM object store, your OIDC issuer)
+# are typically OUTSIDE the cluster and often behind a CDN/shared IP range
+# that a CIDR block cannot scope tightly. Where the peer is a real
+# CIDR-stable endpoint, replace the placeholder below; where it isn't (e.g.
+# public SaaS IdP, AWS S3), prefer your CNI's FQDN-based policy support (e.g.
+# Cilium CiliumNetworkPolicy toFQDNs) or a VPC-level control (security group /
+# endpoint policy) over NetworkPolicy, which has no DNS-based match in the
+# core API.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sessionlayer-controlplane
+  labels: { app.kubernetes.io/name: sessionlayer-controlplane }
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: sessionlayer-controlplane }
+  policyTypes: ["Ingress", "Egress"]
+
+  ingress:
+    # Agents reach this port too, and often run on fleet nodes outside this
+    # cluster; widen with an ipBlock for your node subnet if so - the
+    # podSelector below only covers in-cluster callers.
+    - from:
+        - podSelector:
+            matchLabels: { app.kubernetes.io/name: sessionlayer-gateway }
+      ports:
+        - { protocol: TCP, port: 9443 }
+    # REST + OIDC pages: browsers via the Dashboard, admins, automation. This
+    # is deliberately broad - it is meant to sit behind a TLS-terminating L7
+    # load balancer/ingress, which can be anywhere in the cluster or outside
+    # it; the load balancer + OIDC/mTLS auth are the real gate, not this rule.
+    - ports:
+        - { protocol: TCP, port: 8080 }
+
+  egress:
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels: { k8s-app: kube-dns }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+    - to:
+        - podSelector:
+            matchLabels: { app.kubernetes.io/name: postgresql }
+      ports:
+        - { protocol: TCP, port: 5432 }
+    # WORM object store. Placeholder CIDR - scope to your object store's real
+    # range, or see the FQDN note above for public S3.
+    - to:
+        - ipBlock: { cidr: 10.30.0.0/16 }
+      ports:
+        - { protocol: TCP, port: 443 }
+    # Your OIDC issuer (metadata, JWKS, token endpoint). Placeholder CIDR -
+    # see the FQDN note above; drop this rule entirely if OIDC is disabled.
+    - to:
+        - ipBlock: { cidr: 10.40.0.0/16 }
+      ports:
+        - { protocol: TCP, port: 443 }
+    - to:
+        - podSelector:
+            matchLabels: { app.kubernetes.io/name: vault }
+      ports:
+        - { protocol: TCP, port: 8200 }
+    - to:
+        - podSelector:
+            matchLabels: { app.kubernetes.io/name: otel-collector }
+      ports:
+        - { protocol: TCP, port: 4317 }

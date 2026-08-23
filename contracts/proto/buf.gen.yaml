@@ -1,0 +1,16 @@
+# This file DOCUMENTS the canonical plugin set; nothing in CI runs it. Each
+# consumer repo generates its own bindings from the SAME .proto sources with its
+# native build tooling - protobuf-maven-plugin + protoc-gen-grpc-java for the
+# Java Control Plane, tonic-build / prost-build in build.rs for the Rust Gateway
+# and Agent - so no generated code is checked in here and nothing depends on the
+# buf.build remote plugins below.
+version: v2
+plugins:
+  - remote: buf.build/community/neoeinstein-prost:v0.4.0
+    out: gen/rust
+  - remote: buf.build/community/neoeinstein-tonic:v0.4.1
+    out: gen/rust
+  - remote: buf.build/protocolbuffers/java:v27.2
+    out: gen/java
+  - remote: buf.build/grpc/java:v1.68.1
+    out: gen/java

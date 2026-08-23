@@ -1,0 +1,183 @@
+replicaCount: 2
+
+image:
+  repository: ghcr.io/sessionlayer/controlplane
+  tag: ""
+  digest: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  automountServiceAccountToken: false
+
+secrets:
+  existingSecret: ""
+
+database:
+  # Two Postgres roles on purpose: Flyway migrates as the owner, the request
+  # path runs as the restricted cp_runtime role.
+  r2dbcUrl: "r2dbc:postgresql://postgres.sessionlayer.svc:5432/sessionlayer"
+  r2dbcUsername: "cp_runtime"
+  flywayUrl: "jdbc:postgresql://postgres.sessionlayer.svc:5432/sessionlayer"
+  flywayUsername: "sessionlayer"
+
+mtls:
+  # The gRPC plane Gateways and Agents dial. The built-in default is 9090; 9443
+  # is what every SessionLayer deployment example exposes, and the Gateway's
+  # cp_mtls_endpoint and the Agent's --cp-endpoint both default to it.
+  port: 9443
+  extraHostnames: []
+
+recording:
+  worm:
+    endpoint: ""
+    region: "us-east-1"
+    bucket: "sessionlayer-recordings"
+    pathStyleAccess: false
+
+oidc:
+  enabled: true
+  issuer: ""
+  clientId: ""
+  redirectUri: ""
+
+java:
+  # Without this the JVM's default MaxRAMPercentage of 25% undersizes the heap
+  # against the memory limit below for a WebFlux, gRPC and R2DBC workload.
+  toolOptions: "-XX:MaxRAMPercentage=75.0"
+
+sessionLimits:
+  defaultMaxConcurrent: ""
+
+bootstrap:
+  adminSubject: ""
+
+service:
+  type: ClusterIP
+  # Fixed rather than release-derived: the Gateway's cp_mtls_endpoint and the
+  # Agent's --cp-endpoint both default to controlplane.<namespace>.svc, and a
+  # release-prefixed name would silently break both. One Control Plane per
+  # namespace follows from this.
+  name: "controlplane"
+  annotations: {}
+  ports:
+    rest: 8080
+    mtlsGrpc: 9443
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+probes:
+  # /actuator/health/readiness reflects Spring Boot's own ReadinessState, which
+  # does not flip to ACCEPTING_TRAFFIC until Flyway and both bounded
+  # ApplicationRunners have finished. This probe is what gates traffic on the
+  # migration; there is deliberately no migration initContainer or Job.
+  readiness:
+    enabled: true
+    periodSeconds: 5
+    timeoutSeconds: 1
+    failureThreshold: 3
+  liveness:
+    enabled: true
+    periodSeconds: 15
+    timeoutSeconds: 1
+    failureThreshold: 3
+  # 60 x 5s = 5 minutes. That slack covers a peer pod holding the Flyway
+  # migration lock during a rolling update, plus the two bounded
+  # ApplicationRunners (60s and 30s) and JVM start. Shortening it is how a slow
+  # migration turns into a restart loop mid-lock-wait.
+  startup:
+    enabled: true
+    periodSeconds: 5
+    timeoutSeconds: 1
+    failureThreshold: 60
+
+terminationGracePeriodSeconds: 30
+
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    # Two replicas can run Flyway at once during a rollout, which is safe:
+    # Flyway takes a database-level lock, so the second pod waits, then finds
+    # nothing pending. Keeping a replica available throughout is therefore the
+    # cheap half of the trade. Schema forward-compatibility across the two
+    # image versions coexisting during a rollout stays an application concern.
+    maxUnavailable: 0
+
+tmpVolume:
+  medium: Memory
+  sizeLimit: 256Mi
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+networkPolicy:
+  enabled: true
+  gatewayPodSelector:
+    app.kubernetes.io/name: sessionlayer-gateway
+  # Matches an Agent running as an ordinary pod. It does NOT match the Agent
+  # DaemonSet: that chart requires hostNetwork (it splices to the node's own
+  # loopback), so its connections arrive from the node address and no
+  # podSelector can see them. Name your node ranges in extraGrpcIngressCidrs
+  # for those - without it the Agents' mTLS channel is refused and the only
+  # symptom is on their side, "failed to establish mTLS channel ... transport
+  # error", with nothing in this Control Plane's log.
+  agentPodSelector:
+    app.kubernetes.io/name: sessionlayer-agent
+  dnsPodSelector:
+    k8s-app: kube-dns
+  postgresPodSelector:
+    app.kubernetes.io/name: postgresql
+  otelPodSelector: {}
+  wormCidrs: []
+  oidcCidrs: []
+  # Ranges allowed to reach the mTLS gRPC port. Node ranges belong here when
+  # Agents run as a hostNetwork DaemonSet; see agentPodSelector above.
+  extraGrpcIngressCidrs: []
+  extraIngress: []
+  extraEgress: []
+
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+priorityClassName: ""
+
+# Additional environment for the container. The Control Plane refuses to start
+# on a development key-encryption key unless
+# SESSIONLAYER_CA_LOCAL_ALLOW_DEV_KEK is set to true; this chart deliberately
+# exposes no value for that flag, so setting it is an explicit act.
+extraEnv: []
+extraEnvFrom: []
+extraVolumes: []
+extraVolumeMounts: []

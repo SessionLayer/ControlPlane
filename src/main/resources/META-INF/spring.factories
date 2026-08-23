@@ -1,0 +1,3 @@
+# Spring Boot 4 still reads FailureAnalyzer registrations from here.
+org.springframework.boot.diagnostics.FailureAnalyzer=\
+io.sessionlayer.controlplane.ca.backend.local.KekFailureAnalyzer

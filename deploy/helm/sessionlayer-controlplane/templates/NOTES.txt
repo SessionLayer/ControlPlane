@@ -1,0 +1,49 @@
+{{ .Chart.Name }} {{ .Chart.Version }} installed as release {{ .Release.Name }} in namespace {{ .Release.Namespace }}.
+
+Image:   {{ include "sessionlayer-controlplane.image" . }}
+{{- if not .Values.image.digest }}
+         Pinned by tag. Set image.digest to pin the exact bytes.
+{{- end }}
+Service: {{ .Values.service.name }}.{{ .Release.Namespace }}.svc, REST {{ .Values.service.ports.rest }}, mTLS gRPC {{ .Values.service.ports.mtlsGrpc }}
+
+Watch the migration and the readiness flip:
+
+  kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ include "sessionlayer-controlplane.fullname" . }}
+
+Readiness does not report ACCEPTING_TRAFFIC until Flyway and both bootstrap
+runners have finished, so a pod that stays unready during a first install is
+still migrating. The startup probe allows {{ mul .Values.probes.startup.periodSeconds .Values.probes.startup.failureThreshold }}s before it gives up.
+{{ if not .Values.bootstrap.adminSubject }}
+No bootstrap.adminSubject is set, so the first platform admin credential is
+printed once to the pod log. Claim it now:
+
+  kubectl -n {{ .Release.Namespace }} logs deploy/{{ include "sessionlayer-controlplane.fullname" . }} | grep -i bootstrap
+{{ end }}
+{{- if .Values.networkPolicy.enabled }}
+{{- if or (not .Values.networkPolicy.wormCidrs) (and .Values.oidc.enabled (not .Values.networkPolicy.oidcCidrs)) }}
+
+NetworkPolicy is on and denies egress that has not been named:
+{{- if not .Values.networkPolicy.wormCidrs }}
+  - the WORM object store (networkPolicy.wormCidrs is empty), so recording
+    lifecycle calls fail until you add its range.
+{{- end }}
+{{- if and .Values.oidc.enabled (not .Values.networkPolicy.oidcCidrs) }}
+  - your OIDC issuer (networkPolicy.oidcCidrs is empty), so login fails until
+    you add its range.
+{{- end }}
+A placeholder range would have permitted egress to hosts that are not yours,
+so these start closed. NetworkPolicy has no DNS match in the core API; for a
+public S3 or SaaS identity provider use your CNI's FQDN policy instead.
+{{- end }}
+{{- else }}
+
+NetworkPolicy is disabled, so egress from this pod is unrestricted.
+{{- end }}
+{{- if and .Values.networkPolicy.enabled (not .Values.networkPolicy.extraGrpcIngressCidrs) }}
+
+networkPolicy.extraGrpcIngressCidrs is empty, so only Gateways and Agents
+running as ordinary pods can reach the mTLS gRPC port. The Agent DaemonSet
+cannot: it requires hostNetwork, so its connections come from the node address
+and no podSelector matches them. Add your node ranges, or those Agents fail
+their join with "transport error" and nothing appears in this log.
+{{- end }}

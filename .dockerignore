@@ -1,0 +1,14 @@
+# Keep the build context to what `mvnw package` reads. src/test deliberately
+# stays: the build runs -DskipTests, which skips test *execution* and still
+# compiles test sources, so excluding them would break the build rather than
+# trim it.
+.git
+.github
+target
+audit
+docs
+deploy
+scripts
+junit.xml
+*.md
+!README.md
