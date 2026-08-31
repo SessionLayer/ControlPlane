@@ -37,7 +37,7 @@
 		<spotless-maven-plugin.version>3.10.0</spotless-maven-plugin.version>
 		<maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
 		<checkstyle.version>14.0.0</checkstyle.version>
-		<openapi-generator.version>7.24.0</openapi-generator.version>
+		<openapi-generator.version>7.25.0</openapi-generator.version>
 
 		<!--
 		  BouncyCastle (NOT managed by the Spring Boot BOM) for the internal mTLS CA:
