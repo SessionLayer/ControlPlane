@@ -24,7 +24,7 @@
 # deploy/systemd/ establish is the whole defence here, not a second layer on
 # top of one.
 
-FROM --platform=$BUILDPLATFORM amazoncorretto:25@sha256:10a3c794ac57ecfc386938283fba9da351c5f0bda3a155482a1193b9806f1854 AS jar
+FROM --platform=$BUILDPLATFORM amazoncorretto:26@sha256:2f180ed0eeb1258ce4c96edda216b7d47a36d1a4d7bc19d06fa1db0646c3d7f0 AS jar
 WORKDIR /src
 
 # The Maven wrapper unpacks the distribution itself and has no Java fallback for
