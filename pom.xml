@@ -48,7 +48,7 @@
 		  licence (MIT-style) is GPL-3.0-compatible. Pinned explicitly because the BOM
 		  does not manage it.
 		-->
-		<bouncycastle.version>1.85</bouncycastle.version>
+		<bouncycastle.version>1.86</bouncycastle.version>
 
 		<!--
 		  RE2/J is guaranteed to run in time linear in the input, so a
