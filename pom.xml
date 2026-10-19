@@ -62,7 +62,7 @@
 
 		<awssdk.version>2.53.2</awssdk.version>
 
-		<azure.sdk.bom.version>1.3.8</azure.sdk.bom.version>
+		<azure.sdk.bom.version>1.3.9</azure.sdk.bom.version>
 
 		<!--
 		  Override the Boot-managed PostgreSQL JDBC driver (42.7.11) to 42.7.13:
